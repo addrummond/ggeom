@@ -97,8 +97,8 @@ func GetReflexVertIndices(p *Polygon2) []int {
 	return vs
 }
 
-type Label struct {
-	p1a, p1b, p2a, p2b int
+type label struct {
+	a, b, c int
 }
 
 // Follows the algorithm described on p. 4 of
@@ -111,7 +111,7 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	nrm := len(rq) * len(p.verts)
 	mrn := len(rp) * len(q.verts)
 
-	labs := make(map[Label]bool)
+	labs := make(map[label]bool)
 
 	if nrm > mrn {
 		return getConvolutionCycle(labs, p, p.IndexOfBottommost(), q, q.IndexOfBottommost(), rq)
@@ -120,7 +120,7 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	}
 }
 
-func getConvolutionCycle(labs map[Label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
+func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
 	cs := GetSingleConvolutionCycle(labs, p, pstart, q, qstart)
 
 	for j := 0; j < len(rq); j++ {
@@ -141,7 +141,7 @@ func getConvolutionCycle(labs map[Label]bool, p *Polygon2, pstart int, q *Polygo
 			p2 := p.verts[(i+1)%len(p.verts)]
 			pseg := p2.Sub(p1)
 
-			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[Label{i, i + 1, j, -1}] {
+			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
 				pstart = i
 				qstart = rq[j]
 				ncs := GetSingleConvolutionCycle(labs, p, i, q, rq[j])
@@ -157,7 +157,7 @@ func getConvolutionCycle(labs map[Label]bool, p *Polygon2, pstart int, q *Polygo
 	return cs
 }
 
-func GetSingleConvolutionCycle(labs map[Label]bool, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
+func GetSingleConvolutionCycle(labs map[label]bool, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
 	points := make([]Vec2, 0, len(p.verts)+len(q.verts))
 	i := i0
 	j := j0
@@ -191,14 +191,13 @@ func GetSingleConvolutionCycle(labs map[Label]bool, p *Polygon2, i0 int, q *Poly
 		if incp {
 			t := p.verts[ip1].Add(q.verts[j])
 			points = append(points, t)
-			labs[Label{i, i + 1, j, -1}] = true
+			labs[label{i, i + 1, j}] = true
 			s = t
 			i = ip1
 		}
 		if incq {
 			t := p.verts[i].Add(q.verts[jp1])
 			points = append(points, t)
-			labs[Label{i, -1, j, j + 1}] = true
 			s = t
 			j = jp1
 		}
