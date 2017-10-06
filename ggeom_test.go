@@ -87,21 +87,34 @@ func r(i float64) big.Rat {
 	return r
 }
 
+func sofsofv2(s [][][]float64) [][]Vec2 {
+	v2s := make([][]Vec2, 0)
+	for _, vs := range s {
+		rvs := make([]Vec2, 0)
+		for _, v := range vs {
+			rvs = append(rvs, Vec2{r(v[0]), r(v[1])})
+		}
+		v2s = append(v2s, rvs)
+	}
+
+	return v2s
+}
+
 func TestIsBetweenAnticlockwise(t *testing.T) {
-	false_cases := [][]Vec2{
-		{{r(-1), r(1)}, {r(0), r(1)}, {r(1), r(1)}},
-		{{r(-1), r(0)}, {r(0), r(1)}, {r(1), r(0)}},
-		{{r(-0.01), r(999)}, {r(0.0001), r(1023)}, {r(0.01), r(1000)}},
-	}
-	true_cases := [][]Vec2{
-		{{r(-30), r(-20)}, {r(-1), r(-10)}, {r(2), r(-40)}},
-		{{r(-1000), r(0)}, {r(0), r(-1000)}, {r(1000), r(0)}},
-		{{r(-0.01), r(-999)}, {r(0.0001), r(-1000)}, {r(0.01), r(-1000)}},
-	}
-	true_irreversible_cases := [][]Vec2{
-		{{r(0), r(1)}, {r(0), r(1)}, {r(0), r(1)}},
-		{{r(0), r(1)}, {r(0), r(2)}, {r(0), r(3)}},
-	}
+	false_cases := sofsofv2([][][]float64{
+		{{-1, 1}, {0, 1}, {1, 1}},
+		{{-1, 0}, {0, 1}, {1, 0}},
+		{{-0.01, 999}, {0.0001, 1023}, {0.01, 1000}},
+	})
+	true_cases := sofsofv2([][][]float64{
+		{{-30, -20}, {-1, -10}, {2, -40}},
+		{{-1000, 0}, {0, -1000}, {1000, 0}},
+		{{-0.01, -999}, {0.0001, -1000}, {0.01, -1000}},
+	})
+	true_irreversible_cases := sofsofv2([][][]float64{
+		{{0, 1}, {0, 1}, {0, 1}},
+		{{0, 1}, {0, 2}, {0, 3}},
+	})
 
 	for _, c := range false_cases {
 		if IsBetweenAnticlockwise(c[0], c[1], c[2]) {
