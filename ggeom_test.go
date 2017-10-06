@@ -64,7 +64,7 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 			d2 := Vec2{d.x*cosv + d.y*sinv, d.x*-sinv + d.y*cosv}.Scale(Scalar(arrowLen))
 			h1 := p2.Add(d1)
 			h2 := p2.Add(d2)
-			fmt.Printf("Debug: d1=%+v |%f|,  d2=%+v |%f|\n\n", d1, d1.Length(), d2, d2.Length())
+			//fmt.Printf("Debug: d1=%+v |%f|,  d2=%+v |%f|\n\n", d1, d1.Length(), d2, d2.Length())
 			canvas.Line(tx(p2.x), ty(p2.y), tx(h1.x), ty(h1.y), format)
 			canvas.Line(tx(p2.x), ty(p2.y), tx(h2.x), ty(h2.y), format)
 		}
@@ -115,10 +115,11 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 }
 
 func TestConvolve(t *testing.T) {
-	p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}}
+	//p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}}
+	p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}, {0, -5}}}
 	p2 := Polygon2{verts: []Vec2{{0, 2}, {-1, 0}, {1, 0}}}
 
-	cs, _ := GetConvolutionCycle(&p1, &p2)
+	cs := GetConvolutionCycle(&p1, &p2)
 
 	svgout, _ := os.Create("out.svg")
 	canvas := svg.New(svgout)

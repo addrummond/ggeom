@@ -1,9 +1,7 @@
 package ggeom
 
 import (
-	"fmt"
 	"math"
-	"os"
 )
 
 type Scalar float64
@@ -69,17 +67,98 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	return a.Det(b) >= 0 && b.Det(c) >= 0
 }
 
+func ACIsReflex(p1, p2, p3 Vec2) bool {
+	return p1.Sub(p2).Det(p3.Sub(p2)) > 0
+}
+
+func NReflexVerts(p *Polygon2) int {
+	rp := 0
+	for i := 0; i < len(p.verts)-1; i++ {
+		p1 := p.verts[i]
+		p2 := p.verts[i+1]
+		p3 := p.verts[(i+2)%len(p.verts)]
+		if ACIsReflex(p1, p2, p3) {
+			rp++
+		}
+	}
+	return rp
+}
+
+func GetReflexVertIndices(p *Polygon2) []int {
+	vs := make([]int, 0, len(p.verts)/2)
+	for i := 0; i < len(p.verts)-1; i++ {
+		p1 := p.verts[i]
+		p2 := p.verts[i+1]
+		p3 := p.verts[(i+2)%len(p.verts)]
+		if ACIsReflex(p1, p2, p3) {
+			vs = append(vs, i+1)
+		}
+	}
+	return vs
+}
+
 type Label struct {
 	p1a, p1b, p2a, p2b int
 }
 
-func GetConvolutionCycle(p *Polygon2, q *Polygon2) ([]Vec2, map[Label]bool) {
-	return getConvolutionCycleGivenStartingVertices(p, p.IndexOfBottommost(), q, q.IndexOfBottommost())
+// Follows the algorithm described on p. 4 of
+//     Ron Wein. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method.
+func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
+	// Get the number of reflex vertices for each polygon.
+	rp := GetReflexVertIndices(p)
+	rq := GetReflexVertIndices(q)
+
+	nrm := len(rq) * len(p.verts)
+	mrn := len(rp) * len(q.verts)
+
+	labs := make(map[Label]bool)
+
+	if nrm > mrn {
+		return getConvolutionCycle(labs, p, p.IndexOfBottommost(), q, q.IndexOfBottommost(), rq)
+	} else {
+		return getConvolutionCycle(labs, q, q.IndexOfBottommost(), p, p.IndexOfBottommost(), rp)
+	}
 }
 
-func getConvolutionCycleGivenStartingVertices(p *Polygon2, i0 int, q *Polygon2, j0 int) ([]Vec2, map[Label]bool) {
+func getConvolutionCycle(labs map[Label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
+	cs := GetSingleConvolutionCycle(labs, p, pstart, q, qstart)
+
+	for j := 0; j < len(rq); j++ {
+		var q1i int
+		if j == 0 {
+			q1i = len(rq) - 1
+		} else {
+			q1i = j - 1
+		}
+		q1 := q.verts[rq[q1i]]
+		q2 := q.verts[rq[j]]
+		q3 := q.verts[rq[(j+1)%len(rq)]]
+		qseg1 := q2.Sub(q1)
+		qseg2 := q3.Sub(q2)
+
+		for i := 0; i < len(p.verts); i++ {
+			p1 := p.verts[i]
+			p2 := p.verts[(i+1)%len(p.verts)]
+			pseg := p2.Sub(p1)
+
+			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[Label{i, i + 1, j, -1}] {
+				pstart = i
+				qstart = rq[j]
+				ncs := GetSingleConvolutionCycle(labs, p, i, q, rq[j])
+				if len(cs) > 0 && len(ncs) > 0 && cs[len(cs)-1] == ncs[0] {
+					cs = append(cs, ncs[1:]...)
+				} else {
+					cs = append(cs, ncs...)
+				}
+			}
+		}
+	}
+
+	return cs
+}
+
+func GetSingleConvolutionCycle(labs map[Label]bool, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
 	points := make([]Vec2, 0, len(p.verts)+len(q.verts))
-	usedLabels := make(map[Label]bool)
 	i := i0
 	j := j0
 	s := p.verts[i].Add(q.verts[j])
@@ -106,21 +185,20 @@ func getConvolutionCycleGivenStartingVertices(p *Polygon2, i0 int, q *Polygon2, 
 		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
 
 		if !(incp || incq) {
-			fmt.Fprintf(os.Stderr, "No segment could be added in a loop iteration in 'computeConvolutionCycle'; this is a bug.\n%+v <- %+v <- %+v\n%+v <- %+v <- %+v\n", qjminus1TOqj, piTOpiplus1, qjTOqjplus1, piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-			panic("Panicked due to bug in 'computeConvolutionCycle'")
+			break
 		}
 
 		if incp {
 			t := p.verts[ip1].Add(q.verts[j])
 			points = append(points, t)
-			usedLabels[Label{p1a: i, p1b: i + 1, p2a: j, p2b: -1}] = true
+			labs[Label{i, i + 1, j, -1}] = true
 			s = t
 			i = ip1
 		}
 		if incq {
 			t := p.verts[i].Add(q.verts[jp1])
 			points = append(points, t)
-			usedLabels[Label{p1a: i, p1b: -1, p2a: j, p2b: j + 1}] = true
+			labs[Label{i, -1, j, j + 1}] = true
 			s = t
 			j = jp1
 		}
@@ -130,5 +208,5 @@ func getConvolutionCycleGivenStartingVertices(p *Polygon2, i0 int, q *Polygon2, 
 		}
 	}
 
-	return points, usedLabels
+	return points
 }
