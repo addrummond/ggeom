@@ -39,12 +39,18 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 	ty := func(y Scalar) float64 { return height - ((float64(y) - miny + arrowLen) * scale) }
 
 	for si, s := range strips {
+		xs := make([]float64, 0)
+		ys := make([]float64, 0)
 		format := formats[si]
-		for i := 0; i < len(s); i++ {
-			p1 := s[i]
-			p2 := s[(i+1)%len(s)]
-			canvas.Line(tx(p1.x), ty(p1.y), tx(p2.x), ty(p2.y), format)
+
+		for i := 0; i <= len(s); i++ {
+			p := s[i%len(s)]
+
+			xs = append(xs, tx(p.x))
+			ys = append(ys, ty(p.y))
 		}
+
+		canvas.Polyline(xs, ys, format)
 	}
 
 	for si, s := range strips {
@@ -64,7 +70,6 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 			d2 := Vec2{d.x*cosv + d.y*sinv, d.x*-sinv + d.y*cosv}.Scale(Scalar(arrowLen))
 			h1 := p2.Add(d1)
 			h2 := p2.Add(d2)
-			//fmt.Printf("Debug: d1=%+v |%f|,  d2=%+v |%f|\n\n", d1, d1.Length(), d2, d2.Length())
 			canvas.Line(tx(p2.x), ty(p2.y), tx(h1.x), ty(h1.y), format)
 			canvas.Line(tx(p2.x), ty(p2.y), tx(h2.x), ty(h2.y), format)
 		}
@@ -121,9 +126,9 @@ func TestConvolve(t *testing.T) {
 
 	cs := GetConvolutionCycle(&p1, &p2)
 
+	fmt.Printf("P1: %+v\n\nP2: %+v\n\nConv: %+v\n", p1, p2, cs)
+
 	svgout, _ := os.Create("out.svg")
 	canvas := svg.New(svgout)
-	debugDrawLineStrips(canvas, [][]Vec2{p1.verts, cs}, 20, []string{"stroke: black; stroke-width: 4", "stroke: red; stroke-width: 1"})
-
-	fmt.Printf("P1: %+v\n\nP2: %+v\n\nConv: %+v\n", p1, p2, cs)
+	debugDrawLineStrips(canvas, [][]Vec2{p1.verts, cs}, 20, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 }

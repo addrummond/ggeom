@@ -121,7 +121,8 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 }
 
 func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
-	cs := GetSingleConvolutionCycle(labs, p, pstart, q, qstart)
+	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
+	appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
 	for j := 0; j < len(rq); j++ {
 		var q1i int
@@ -144,12 +145,7 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
 				pstart = i
 				qstart = rq[j]
-				ncs := GetSingleConvolutionCycle(labs, p, i, q, rq[j])
-				if len(cs) > 0 && len(ncs) > 0 && cs[len(cs)-1] == ncs[0] {
-					cs = append(cs, ncs[1:]...)
-				} else {
-					cs = append(cs, ncs...)
-				}
+				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
 			}
 		}
 	}
@@ -157,13 +153,14 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 	return cs
 }
 
-func GetSingleConvolutionCycle(labs map[label]bool, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
-	points := make([]Vec2, 0, len(p.verts)+len(q.verts))
+func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
 	i := i0
 	j := j0
 	s := p.verts[i].Add(q.verts[j])
 
-	points = append(points, s)
+	if len(points) == 0 || s != points[len(points)-1] {
+		points = append(points, s)
+	}
 
 	for {
 		ip1 := (i + 1) % len(p.verts)
@@ -188,19 +185,20 @@ func GetSingleConvolutionCycle(labs map[label]bool, p *Polygon2, i0 int, q *Poly
 			break
 		}
 
+		var t Vec2
 		if incp {
-			t := p.verts[ip1].Add(q.verts[j])
-			points = append(points, t)
+			t = p.verts[ip1].Add(q.verts[j])
 			labs[label{i, i + 1, j}] = true
 			s = t
 			i = ip1
 		}
 		if incq {
-			t := p.verts[i].Add(q.verts[jp1])
-			points = append(points, t)
+			t = p.verts[i].Add(q.verts[jp1])
 			s = t
 			j = jp1
 		}
+
+		points = append(points, t)
 
 		if i == i0 && j == j0 {
 			break
