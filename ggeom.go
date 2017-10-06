@@ -79,7 +79,7 @@ func (a Vec2) ApproxLength() float64 {
 func (a Vec2) ApproxScale(v float64) Vec2 {
 	x, _ := a.x.Float64()
 	y, _ := a.y.Float64()
-	l := math.Sqrt(x + y*y)
+	l := math.Sqrt(x*x + y*y)
 	var nx, ny big.Rat
 	nx.SetFloat64((x * v) / l)
 	ny.SetFloat64((y * v) / l)
