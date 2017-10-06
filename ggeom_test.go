@@ -2,6 +2,7 @@ package ggeom
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 
@@ -9,18 +10,18 @@ import (
 )
 
 func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, formats []string) {
-	var minx, miny, maxx, maxy float64 = float64(strips[0][0].x), float64(strips[0][0].y), float64(strips[0][0].x), float64(strips[0][0].y)
+	var minx, miny, maxx, maxy float64 = strips[0][0].ApproxX(), float64(strips[0][0].ApproxY()), float64(strips[0][0].ApproxX()), float64(strips[0][0].ApproxY())
 	for _, s := range strips {
 		for _, p := range s {
-			if float64(p.x) < minx {
-				minx = float64(p.x)
-			} else if float64(p.x) > maxx {
-				maxx = float64(p.x)
+			if p.ApproxX() < minx {
+				minx = p.ApproxX()
+			} else if p.ApproxX() > maxx {
+				maxx = p.ApproxX()
 			}
-			if float64(p.y) < miny {
-				miny = float64(p.y)
-			} else if float64(p.y) > maxy {
-				maxy = float64(p.y)
+			if p.ApproxY() < miny {
+				miny = p.ApproxY()
+			} else if p.ApproxY() > maxy {
+				maxy = p.ApproxY()
 			}
 		}
 	}
@@ -35,8 +36,8 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 
 	canvas.Start(width, height)
 
-	tx := func(x Scalar) float64 { return (float64(x) - minx + arrowLen) * scale }
-	ty := func(y Scalar) float64 { return height - ((float64(y) - miny + arrowLen) * scale) }
+	tx := func(x float64) float64 { return (x - minx + arrowLen) * scale }
+	ty := func(y float64) float64 { return height - ((y - miny + arrowLen) * scale) }
 
 	for si, s := range strips {
 		xs := make([]float64, 0)
@@ -46,8 +47,8 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 		for i := 0; i <= len(s); i++ {
 			p := s[i%len(s)]
 
-			xs = append(xs, tx(p.x))
-			ys = append(ys, ty(p.y))
+			xs = append(xs, tx(p.ApproxX()))
+			ys = append(ys, ty(p.ApproxY()))
 		}
 
 		canvas.Polyline(xs, ys, format)
@@ -57,41 +58,49 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 		format := formats[si]
 
 		sp := s[0]
-		canvas.Square(tx(sp.x-Scalar(arrowLen/2)), ty(sp.y-Scalar(arrowLen/4)), arrowLen*scale*0.5, "fill: black")
+		canvas.Square(tx(sp.ApproxX()-(arrowLen/2)), ty(sp.ApproxY()-(arrowLen/4)), arrowLen*scale*0.5, "fill: black")
 
 		for i := 1; i < len(s); i++ {
 			p1 := s[i-1]
 			p2 := s[i%len(s)]
 			d := p2.Sub(p1)
 
-			const sinv = Scalar(0.309)
-			const cosv = Scalar(-0.951)
-			d1 := Vec2{d.x*cosv - d.y*sinv, d.x*sinv + d.y*cosv}.Scale(Scalar(arrowLen))
-			d2 := Vec2{d.x*cosv + d.y*sinv, d.x*-sinv + d.y*cosv}.Scale(Scalar(arrowLen))
+			const sinv = 0.309
+			const cosv = -0.951
+			dx := d.ApproxX()
+			dy := d.ApproxY()
+			d1 := ApproxVec2(dx*cosv-dy*sinv, dx*sinv+dy*cosv).ApproxScale(arrowLen)
+			d2 := ApproxVec2(dx*cosv+dy*sinv, dx*-sinv+dy*cosv).ApproxScale(arrowLen)
 			h1 := p2.Add(d1)
 			h2 := p2.Add(d2)
-			canvas.Line(tx(p2.x), ty(p2.y), tx(h1.x), ty(h1.y), format)
-			canvas.Line(tx(p2.x), ty(p2.y), tx(h2.x), ty(h2.y), format)
+			canvas.Line(tx(p2.ApproxX()), ty(p2.ApproxY()), tx(h1.ApproxX()), ty(h1.ApproxY()), format)
+			canvas.Line(tx(p2.ApproxX()), ty(p2.ApproxY()), tx(h2.ApproxX()), ty(h2.ApproxY()), format)
 		}
 	}
 
 	canvas.End()
 }
 
+func r(i float64) big.Rat {
+	var r big.Rat
+	r.SetFloat64(i)
+	return r
+}
+
 func TestIsBetweenAnticlockwise(t *testing.T) {
 	false_cases := [][]Vec2{
-		{{-1, 1}, {0, 1}, {1, 1}},
-		{{-1, 0}, {0, 1}, {1, 0}},
-		{{-0.01, 999}, {0.0001, 10}, {0.01, 1000}},
+		{{r(-1), r(1)}, {r(0), r(1)}, {r(1), r(1)}},
+		{{r(-1), r(0)}, {r(0), r(1)}, {r(1), r(0)}},
+		{{r(-0.01), r(999)}, {r(0.0001), r(10)}, {r(0.01), r(1000)}},
 	}
 	true_cases := [][]Vec2{
-		{{-30, -20}, {-1, -10}, {2, -40}},
-		{{-1000, 0}, {0, -1000}, {1000, 0}},
-		{{-0.01, -999}, {0.0001, -10}, {0.01, -1000}},
+		{{r(-30), r(-20)}, {r(-1), r(-10)}, {r(2), r(-40)}},
+		{{r(-1000), r(0)}, {r(0), r(-1000)}, {r(1000), r(0)}},
+		{{r(-0.01), r(-999)}, {r(0.0001), r(-10)}, {r(0.01), r(-1000)}},
 	}
 	true_irreversible_cases := [][]Vec2{
-		{{0, 1}, {0, 1}, {0, 1}},
-		{{0, 1}, {0, 2}, {0, 3}},
+		{{r(0), r(1)}, {r(0), r(1)}, {r(0), r(1)}},
+		{{r(0), r(1)}, {r(0), r(2)}, {r(0), r(3)}},
 	}
 
 	for _, c := range false_cases {
@@ -121,8 +130,9 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 
 func TestConvolve(t *testing.T) {
 	//p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}}
-	p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}, {0, -5}}}
-	p2 := Polygon2{verts: []Vec2{{0, 2}, {-1, 0}, {1, 0}}}
+
+	p1 := Polygon2{verts: []Vec2{{r(10), r(10)}, {r(-10), r(10)}, {r(-10), r(-10)}, {r(10), r(-10)}, {r(0), r(-5)}}}
+	p2 := Polygon2{verts: []Vec2{{r(0), r(2)}, {r(-1), r(0)}, {r(1), r(0)}}}
 
 	cs := GetConvolutionCycle(&p1, &p2)
 

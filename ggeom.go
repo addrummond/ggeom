@@ -2,9 +2,10 @@ package ggeom
 
 import (
 	"math"
+	"math/big"
 )
 
-type Scalar float64
+type Scalar = big.Rat
 
 type Vec2 struct {
 	x Scalar
@@ -20,28 +21,69 @@ type Polygon2 struct {
 	verts []Vec2
 }
 
+func (a Vec2) ApproxX() float64 {
+	v, _ := a.x.Float64()
+	return v
+}
+func (a Vec2) ApproxY() float64 {
+	v, _ := a.y.Float64()
+	return v
+}
+
+func ApproxVec2(x, y float64) Vec2 {
+	var xr, yr big.Rat
+	xr.SetFloat64(x)
+	yr.SetFloat64(y)
+	return Vec2{xr, yr}
+}
+
+func (a Vec2) Eq(b Vec2) bool {
+	return a.x.Cmp(&b.x) == 0 && a.y.Cmp(&b.y) == 0
+}
+
 func (a Vec2) Add(b Vec2) Vec2 {
-	return Vec2{x: a.x + b.x, y: a.y + b.y}
+	var newx, newy Scalar
+	newx.Add(&a.x, &b.x)
+	newy.Add(&a.y, &b.y)
+	return Vec2{x: newx, y: newy}
 }
 func (a Vec2) Sub(b Vec2) Vec2 {
-	return Vec2{x: a.x - b.x, y: a.y - b.y}
+	var newx, newy Scalar
+	newx.Sub(&a.x, &b.x)
+	newy.Sub(&a.y, &b.y)
+	return Vec2{x: newx, y: newy}
 }
 
 func (a Vec2) Dot(b Vec2) Scalar {
-	return a.x*b.x + a.y*b.y
+	var v1, v2 Scalar
+	v1.Mul(&a.x, &b.x)
+	v2.Mul(&a.y, &b.y)
+	v1.Add(&v1, &v2)
+	return v1
 }
 
 func (a Vec2) Det(b Vec2) Scalar {
-	return a.x*b.y - a.y*b.x
+	var v1, v2 Scalar
+	v1.Mul(&a.x, &b.y)
+	v2.Mul(&a.y, &b.x)
+	v1.Sub(&v1, &v2)
+	return v1
 }
 
-func (a Vec2) Length() Scalar {
-	return Scalar(math.Sqrt(float64(a.x*a.x) + float64(a.y*a.y)))
+func (a Vec2) ApproxLength() float64 {
+	x, _ := a.x.Float64()
+	y, _ := a.y.Float64()
+	return math.Sqrt(x + y*y)
 }
 
-func (a Vec2) Scale(v Scalar) Vec2 {
-	l := Scalar(math.Sqrt(float64(a.x*a.x) + float64(a.y*a.y)))
-	return Vec2{(a.x * v) / l, (a.y * v) / l}
+func (a Vec2) ApproxScale(v float64) Vec2 {
+	x, _ := a.x.Float64()
+	y, _ := a.y.Float64()
+	l := math.Sqrt(x + y*y)
+	var nx, ny big.Rat
+	nx.SetFloat64((x * v) / l)
+	ny.SetFloat64((y * v) / l)
+	return Vec2{nx, ny}
 }
 
 // Uses y,x ordering
@@ -49,11 +91,11 @@ func (p *Polygon2) IndexOfBottommost() int {
 	var minx, miny Scalar = p.verts[0].x, p.verts[0].y
 	var mini int
 	for i, vert := range p.verts[1:] {
-		if vert.y < miny {
+		if vert.y.Cmp(&miny) < 0 {
 			mini = i + 1
 			miny = vert.y
 			minx = vert.x
-		} else if vert.y == miny && vert.x < minx {
+		} else if vert.y.Cmp(&miny) == 0 && vert.x.Cmp(&minx) < 0 {
 			mini = i + 1
 			minx = vert.x
 		}
@@ -64,11 +106,14 @@ func (p *Polygon2) IndexOfBottommost() int {
 // True iff b is reached before c going anticlockwise from a
 func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	// See AndyG's answer to https://stackoverflow.com/questions/13640931/how-to-determine-if-a-vector-is-between-two-other-vectors
-	return a.Det(b) >= 0 && b.Det(c) >= 0
+	ab := a.Det(b)
+	bc := b.Det(c)
+	return (&ab).Sign() >= 0 && (&bc).Sign() >= 0
 }
 
 func ACIsReflex(p1, p2, p3 Vec2) bool {
-	return p1.Sub(p2).Det(p3.Sub(p2)) > 0
+	v := p1.Sub(p2).Det(p3.Sub(p2))
+	return (&v).Sign() > 0
 }
 
 func NReflexVerts(p *Polygon2) int {
@@ -158,7 +203,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 	j := j0
 	s := p.verts[i].Add(q.verts[j])
 
-	if len(points) == 0 || s != points[len(points)-1] {
+	if len(points) == 0 || !s.Eq(points[len(points)-1]) {
 		points = append(points, s)
 	}
 
