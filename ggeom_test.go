@@ -2,7 +2,7 @@ package ggeom
 
 import (
 	"fmt"
-	"math/big"
+	"math"
 	"os"
 	"testing"
 
@@ -81,42 +81,23 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 	canvas.End()
 }
 
-func r(i float64) big.Rat {
-	var r big.Rat
-	r.SetFloat64(i)
-	return r
-}
-
-func sofsofv2(s [][][]float64) [][]Vec2 {
-	v2s := make([][]Vec2, 0)
-	for _, vs := range s {
-		rvs := make([]Vec2, 0)
-		for _, v := range vs {
-			rvs = append(rvs, Vec2{r(v[0]), r(v[1])})
-		}
-		v2s = append(v2s, rvs)
-	}
-
-	return v2s
-}
-
 func TestIsBetweenAnticlockwise(t *testing.T) {
-	false_cases := sofsofv2([][][]float64{
+	falseCases := SofSofVec2([][][]float64{
 		{{-1, 1}, {0, 1}, {1, 1}},
 		{{-1, 0}, {0, 1}, {1, 0}},
 		{{-0.01, 999}, {0.0001, 1023}, {0.01, 1000}},
 	})
-	true_cases := sofsofv2([][][]float64{
+	trueCases := SofSofVec2([][][]float64{
 		{{-30, -20}, {-1, -10}, {2, -40}},
 		{{-1000, 0}, {0, -1000}, {1000, 0}},
 		{{-0.01, -999}, {0.0001, -1000}, {0.01, -1000}},
 	})
-	true_irreversible_cases := sofsofv2([][][]float64{
+	trueIrreversibleCases := SofSofVec2([][][]float64{
 		{{0, 1}, {0, 1}, {0, 1}},
 		{{0, 1}, {0, 2}, {0, 3}},
 	})
 
-	for _, c := range false_cases {
+	for _, c := range falseCases {
 		if IsBetweenAnticlockwise(c[0], c[1], c[2]) {
 			t.Error()
 		}
@@ -125,7 +106,7 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 		}
 	}
 
-	for _, c := range true_cases {
+	for _, c := range trueCases {
 		if !IsBetweenAnticlockwise(c[0], c[1], c[2]) {
 			t.Error()
 		}
@@ -134,8 +115,74 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 		}
 	}
 
-	for _, c := range true_irreversible_cases {
+	for _, c := range trueIrreversibleCases {
 		if !IsBetweenAnticlockwise(c[0], c[1], c[2]) {
+			t.Error()
+		}
+	}
+}
+
+func TestFastSegmentsDontIntersect(t *testing.T) {
+	trueTests := SofSofVec2([][][]float64{
+		// Two parallel non-colinear vertical lines
+		{{-1, 1}, {-1, 0}, {1, 1}, {1, 0}},
+	})
+
+	falseTests := SofSofVec2([][][]float64{
+		// Two parallel non-colinear vertical lines with too-big coords
+		{{-1, math.MaxFloat64}, {-1, 0}, {1, math.MaxFloat64}, {1, 0}},
+		// Two parallel non-colinear diagonal lines with overlapping bounding rects
+		{{-1, -2}, {1, 2}, {-1.1, -2}, {0.9, 2}},
+	})
+
+	for _, vs := range trueTests {
+		if !FastSegmentsDontIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
+			t.Error()
+		}
+	}
+	for _, vs := range falseTests {
+		if FastSegmentsDontIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
+			t.Error()
+		}
+	}
+}
+
+func TestSegmentsIntersect(t *testing.T) {
+	falseTests := SofSofVec2([][][]float64{
+		// Two parallel non-colinear vertical lines
+		{{-1, 1}, {-1, 0}, {1, 1}, {1, 0}},
+		// Two parallel non-colinear vertical lines with big coords
+		{{-1, math.MaxFloat64}, {-1, 0}, {1, math.MaxFloat64}, {1, 0}},
+		// Two parallel non-colinear diagonal lines with overlapping bounding rects
+		{{-1, -2}, {1, 2}, {-1.1, -2}, {0.9, 2}},
+	})
+
+	trueTests := SofSofVec2([][][]float64{
+		// A cross.
+		{{-10, -10}, {10, 10}, {-10, 10}, {10, -10}},
+		// As above but with segments pointing the other way.
+		{{10, 10}, {-10, -10}, {10, -10}, {-10, 10}},
+		// Only barely intersect.
+		{{-5, 0}, {5, math.SmallestNonzeroFloat64}, {-5, math.SmallestNonzeroFloat64}, {5, 0}},
+		// A T
+		{{-100, 5}, {100, 5}, {1, 5}, {1, -0.001}},
+		// Colinear with overlap
+		{{-100, 5}, {100, 5}, {90, 5}, {101, 5}},
+		// Colinear with overlap
+		{{5, -100}, {5, 100}, {5, 90}, {5, 101}},
+		// Colinear with overlap
+		{{-1, -1}, {1, 1}, {0.5, 0.5}, {2, 2}},
+		// Colinear joned at tip.
+		{{-100, 5}, {100, 5}, {100, 5}, {101, 5}},
+	})
+
+	for _, vs := range trueTests {
+		if !SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
+			t.Error()
+		}
+	}
+	for _, vs := range falseTests {
+		if SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
 			t.Error()
 		}
 	}

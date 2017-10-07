@@ -12,6 +12,33 @@ type Vec2 struct {
 	y Scalar
 }
 
+func r(i float64) big.Rat {
+	var r big.Rat
+	r.SetFloat64(i)
+	return r
+}
+
+func SofVec2(s [][]float64) []Vec2 {
+	v2s := make([]Vec2, 0, len(s))
+	for _, v := range s {
+		v2s = append(v2s, Vec2{r(v[0]), r(v[1])})
+	}
+	return v2s
+}
+
+func SofSofVec2(s [][][]float64) [][]Vec2 {
+	v2s := make([][]Vec2, 0, len(s))
+	for _, vs := range s {
+		rvs := make([]Vec2, 0)
+		for _, v := range vs {
+			rvs = append(rvs, Vec2{r(v[0]), r(v[1])})
+		}
+		v2s = append(v2s, rvs)
+	}
+
+	return v2s
+}
+
 type Segment2 struct {
 	from Vec2
 	to   Vec2
@@ -37,7 +64,7 @@ func ApproxVec2(x, y float64) Vec2 {
 	return Vec2{xr, yr}
 }
 
-func (a Vec2) Eq(b Vec2) bool {
+func (a *Vec2) Eq(b *Vec2) bool {
 	return a.x.Cmp(&b.x) == 0 && a.y.Cmp(&b.y) == 0
 }
 
@@ -147,7 +174,7 @@ type label struct {
 }
 
 // Follows the algorithm described on p. 4 of
-//     Ron Wein. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method.
+//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
 func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	// Get the number of reflex vertices for each polygon.
 	rp := GetReflexVertIndices(p)
@@ -203,7 +230,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 	j := j0
 	s := p.verts[i].Add(q.verts[j])
 
-	if len(points) == 0 || !s.Eq(points[len(points)-1]) {
+	if len(points) == 0 || !(&s).Eq(&points[len(points)-1]) {
 		points = append(points, s)
 	}
 
@@ -251,4 +278,181 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 	}
 
 	return points
+}
+
+// Anything that's bigger/smaller than the maximum positive/negative integer that can be exactly
+// represented in a float (whose predecesor can also be exactly represented)
+// we treat as too big for approximate calculations using float64 to be
+// possible. This is too conservative, but it's convenient for testing
+// because it's easy to initialize big.Rats that are bigger than this
+// from a float64 value. In practice, very few coordinates will have values
+// bigger than this.
+var maxv *big.Rat = big.NewRat(4503599627370496, 1)
+
+func inRange(v *big.Rat) bool {
+	var abs big.Rat
+	abs.Abs(v)
+	return abs.Cmp(maxv) <= 0
+}
+
+// Given three colinear points p, q, r, the function checks if
+// point q lies on line segment 'pr
+func onSegment(p, q, r *Vec2) bool {
+	var maxpxrx, minpxrx, maxpyry, minpyry *big.Rat
+	if p.x.Cmp(&r.x) >= 0 {
+		maxpxrx = &p.x
+		minpxrx = &r.x
+	} else {
+		maxpxrx = &r.x
+		minpxrx = &p.x
+	}
+	if p.y.Cmp(&r.y) >= 0 {
+		maxpyry = &p.y
+		minpyry = &r.y
+	} else {
+		maxpyry = &r.y
+		minpyry = &p.y
+	}
+
+	if q.x.Cmp(maxpxrx) <= 0 && q.x.Cmp(minpxrx) >= 0 &&
+		q.y.Cmp(maxpyry) <= 0 && q.y.Cmp(minpyry) >= 0 {
+		return true
+	}
+	return false
+}
+
+// To find orientation of ordered triplet (p, q, r).
+// The function returns following values
+// 0 --> p, q and r are colinear
+// 1 --> Clockwise
+// 2 --> Counterclockwise
+func orientation(p, q, r *Vec2) int {
+	var qySubPy big.Rat
+	qySubPy.Sub(&q.y, &p.y)
+	var rxSubQx big.Rat
+	rxSubQx.Sub(&r.x, &q.x)
+	var fst big.Rat
+	fst.Mul(&qySubPy, &rxSubQx)
+
+	var qxSubPx big.Rat
+	qxSubPx.Sub(&q.x, &p.x)
+	var rySubQy big.Rat
+	rySubQy.Sub(&r.y, &q.y)
+	var snd big.Rat
+	snd.Mul(&qxSubPx, &rySubQy)
+
+	// Presumably, comparison is going to be a bit cheaper than subtraction
+	// with a big.Rat, so rather than doing a subtraction and looking at
+	// the sign, as in the original example code, we compare directly.
+	c := fst.Cmp(&snd)
+	if c == 0 {
+		return 0 // colinear
+	} else if c == 1 {
+		return 1 // clockwise
+	} else {
+		return 2 // anticlockwise
+	}
+}
+
+func SegmentsIntersect(p1, p2, q1, q2 *Vec2) bool {
+	// Instances where one segment joins the end of another are likely to be quite
+	// common when dealing with polygons, so we should be able to save a fair
+	// bit of big.Rat arithmetic by checking for this case.
+	if p1.Eq(q1) || p1.Eq(q2) || p2.Eq(q1) || p2.Eq(q2) {
+		return true
+	}
+
+	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
+		return false
+	}
+
+	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
+	// and http://www.cdn.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+	// and http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
+	// and http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
+	// (first code sample on p. 373 of last one seem to be correct, arguments
+	//  'orientation' seem mixed up in some of the others -- or I misread somehow)
+
+	// Find the four orientations needed for general and special case
+	o1 := orientation(p1, q1, q2)
+	o2 := orientation(p2, q1, q2)
+	o3 := orientation(p1, p2, q1)
+	o4 := orientation(p1, p2, q2)
+
+	if o1 != o2 && o3 != o4 {
+		return true // the segments intersect (general case)
+	} else if o1 == 0 && onSegment(q1, p2, q2) {
+		return true
+	} else if o2 == 0 && onSegment(q1, p2, q2) {
+		return true
+	} else if o3 == 0 && onSegment(p1, q1, p2) {
+		return true
+	} else if 04 == 0 && onSegment(p1, q2, p1) {
+		return true
+	} else {
+		return false
+	}
+}
+
+var pinf = math.Inf(1)
+var ninf = math.Inf(-1)
+
+// FastSegmentsDontIntersect tests whether it is possible to quickly determine that the segements
+// do not intersect using inexact arithmetic. We do a simple
+// check that rejects segement pairs that have no x or y
+// overlap. The good thing about this test is that it's easy
+// to get the reasoning about floating point precision
+// correct, since the test can be done using comparisons
+// withouot any arithmetic.
+func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
+	if inRange(&s1a.x) && inRange(&s1a.y) && inRange(&s1b.x) && inRange(&s1b.y) && inRange(&s2a.x) && inRange(&s2a.y) && inRange(&s2b.x) && inRange(&s2b.y) {
+		f1ax := s1a.ApproxX()
+		f1ay := s1a.ApproxY()
+		f1bx := s1b.ApproxX()
+		f1by := s1b.ApproxY()
+
+		f2ax := s2a.ApproxX()
+		f2ay := s2a.ApproxY()
+		f2bx := s2b.ApproxX()
+		f2by := s2b.ApproxY()
+
+		// Assuming that math.Rat is doing it's job correctly,
+		// we can be sure that the true value of each coordinate lies between
+		// the next lowest and next highest float64.
+		f1axl := math.Nextafter(f1ax, ninf)
+		f1ayl := math.Nextafter(f1ay, ninf)
+		f1bxl := math.Nextafter(f1bx, ninf)
+		f1byl := math.Nextafter(f1by, ninf)
+
+		f1axh := math.Nextafter(f1ax, pinf)
+		f1ayh := math.Nextafter(f1ay, pinf)
+		f1bxh := math.Nextafter(f1bx, pinf)
+		f1byh := math.Nextafter(f1by, pinf)
+
+		f2axl := math.Nextafter(f2ax, ninf)
+		f2ayl := math.Nextafter(f2ay, ninf)
+		f2bxl := math.Nextafter(f2bx, ninf)
+		f2byl := math.Nextafter(f2by, ninf)
+
+		f2axh := math.Nextafter(f2ax, pinf)
+		f2ayh := math.Nextafter(f2ay, pinf)
+		f2bxh := math.Nextafter(f2bx, pinf)
+		f2byh := math.Nextafter(f2by, pinf)
+
+		s2rightofs1 := f2axl > f1axh && f2axl > f1bxh && f2bxl > f1axh && f2bxl > f1bxh
+		s1rightofs2 := f2axh < f1axl && f2axh < f1bxl && f2bxh < f1axl && f2bxh < f1bxl
+
+		if s1rightofs2 || s2rightofs1 {
+			return true
+		}
+
+		s2aboves1 := f2ayl > f1ayh && f2ayl > f1byh && f2byl > f1ayh && f2byl > f1byh
+		s1aboves2 := f2ayh < f1ayl && f2ayh < f1byl && f1byh < f1ayl && f2byh < f1byl
+
+		if s1aboves2 || s2aboves1 {
+			return true
+		}
+	}
+
+	return false
 }
