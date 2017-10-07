@@ -306,6 +306,7 @@ func onSegment(p, q, r *Vec2) bool {
 		maxpxrx = &r.x
 		minpxrx = &p.x
 	}
+
 	if p.y.Cmp(&r.y) >= 0 {
 		maxpyry = &p.y
 		minpyry = &r.y
@@ -456,3 +457,23 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 
 	return false
 }
+
+// for j <- 1 to size(R) do
+//     A.insert(r_j, BE)
+//     for i <- 1 to size(BE) do
+//         BC(BE_i) <- BC(BE_i) + 1
+//         foreach halfedge h around the vertex target(BE_i) do
+//             if h is clockwise between BE_i and BE_i+1 then SC(h) <- SC(h) + 1
+//         end for
+//     end for
+//
+// Traverse A in BFS order and calculate IC(f) for each face f using BC(e) of the halfedges.
+//
+// foreach face f in A do
+//     if IC(f) > 0 then inside(f) <- true
+// foreach halfedge e in A do
+//     if IC(face(e)) = BC(e) then boundary(e) <- true
+// foreach halfedge e in A do
+//     if IC(face(e)) = SC(target(e)) then boundary(target(e)) <- true
+//
+// return A
