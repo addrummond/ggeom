@@ -2,9 +2,9 @@ package ggeom
 
 import (
 	"github.com/addrummond/ggeom/redblacktree"
-	"github.com/emirpasic/gods/trees/binaryheap"
 	"math"
 	"math/big"
+	"sort"
 )
 
 type Scalar = big.Rat
@@ -605,221 +605,67 @@ func NondegenerateSegementIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	return Vec2{x, y}
 }
 
-func scalarComparator(a, b interface{}) int {
-	aAsserted := a.(*Scalar)
-	bAsserted := b.(*Scalar)
-	return aAsserted.Cmp(bAsserted)
+const (
+	start = 0
+	end = 1
+	cross = 1
+)
+
+type bentleyEvent struct {
+	kind int
+	i int
+}
+
+type bySegmentX struct {
+	events []bentleyEvent;
+	points []Vec2;
+}
+func (s bySegmentX) Len() int {
+	return len(s.events)
+}
+func (s bySegmentX) Swap(i, j int) {
+	s.events[i], s.events[j] = s.events[j], s.events[i]
+}
+func (s bySegmentX) Less(i, j int) bool {
+	xa1 := &s.points[s.events[i].i].x
+	xa2 := &s.points[(s.events[i].i+1)%len(s.points)].x
+	xb1 := &s.points[s.events[j].i].x
+	xb2 := &s.points[(s.events[j].i+1)%len(s.points)].x
+	
+	if xa1.Cmp(xa2) <= 0 {
+		return xa1.Cmp(xb1) < 0 && xa1.Cmp(xb2) < 0
+	} else {
+		return xa2.Cmp(xb1) < 0 && xa2.Cmp(xb2) < 0
+	}
 }
 
 // An implementation of the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. (Loop is implicity closed
 // by segement from last point to first point.)
 // Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
+// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 func SegmentLoopIntersections(points []Vec2) {
-	const (
-		LeftEndpoint  = 0
-		RightEndPoint = 1
-		CrossingPoint = 2
-		Deleted = 3
-	)
-
-	type event struct {
-		kind       int
-		seg1, seg2 int // index of first point in each segment
-		point      *Vec2
+	events := make([]bentleyEvent, 0, len(points)*2)
+	for i := 0; i < len(points); i++ {
+		events = append(events,
+			bentleyEvent {
+				kind: start,
+				i: i,
+			},
+			bentleyEvent {
+				kind: end,
+				i: (i+1)%len(points),
+			},
+		)
 	}
+	sort.Sort(bySegmentX { events: events, points: points })
 
-	eventComparator := func(a, b interface{}) int {
-		aAsserted := a.(*event)
-		bAsserted := b.(*event)
-		return aAsserted.point.x.Cmp(&bAsserted.point.x)
-	}
+	tree := redblacktree.NewWith()
 
-	events := binaryheap.NewWith(eventComparator)
+	for _,si := range segments {
+		p1 := &points[si]
+		p2 := &points[(si+1)%len(segments)]
 
-	markAsDeleted := func (p *Vec2) {
-		for it := events.Iterator(); it.Next(); {
-			evt := it.Value().(*event);
-			if p.Eq(evt.point) {
-				evt.kind = Deleted
-			}
-		}
-	}
 
-	// Initialize priority queue with endpoints of input segments.
-	for i := 0; i < len(points)-1; i++ {
-		from := &points[i]
-		to := &points[(i+1)%len(points)]
-		kind := LeftEndpoint
-		if to.x.Cmp(&from.x) > 0 {
-			kind = RightEndPoint
-		}
-		events.Push(event{
-			kind:  kind,
-			seg1:  i,
-			seg2:  -1,
-			point: to,
-		})
-	}
-
-	tree := redblacktree.NewWith(scalarComparator)
-
-	for events.Size() > 0 {
-		eventI, _ := events.Pop()
-		event := eventI.(*event)
-
-		if event.kind == Deleted {
-			continue;
-		}
-
-		switch event.kind {
-		case LeftEndpoint:
-			{
-				tree.Put(&event.point.y, event.seg1)
-
-				p2 := &points[(event.seg1+1)%len(points)]
-				it1 := tree.PutAndGetIterator(&p2.y, event.seg1)
-				it2 := it1
-				var sega, segb int = -1, -1
-				if it1.Prev() {
-					sega = it1.Value().(int);
-				}
-				if it2.Next() {
-					segb = it2.Value().(int);
-				}
-				
-				if sega != -1 {
-					if segb != -1 {
-						intersects, _, p := SegmentIntersection(&points[sega], &points[(sega+1)%len(points)], &points[segb], &points[(segb+1)%len(points)])
-						if (intersects) {
-							markAsDeleted(&p)
-						}
-					}
-					intersects, _, p := SegmentIntersection(&points[event.seg1], &points[(event.seg1+1)%len(points)], &points[sega], &points[(sega+1)%len(points)])
-					if intersects {
-						//events.Push(event {
-						//	kind: ???,
-						//	seg1: 
-						//})
-					}
-				}
-			}
-		case RightEndPoint:
-			{
-
-			}
-		case CrossingPoint:
-			{
-
-			}
-		}
 	}
 }
-
-// Description of what a doubly-linked edge list is on p. 31 of:
-//     M. de Berg, M. van Kreveld, M. Overmars, and O. Schwarzkopf. Computational Geometry: Algorithms and Applications. Springer-Verlag, Berlin, Germany, 2nd edition, 2000.
-
-// for j <- 1 to size(R) do
-//     A.insert(r_j, BE)
-//     for i <- 1 to size(BE) do
-//         BC(BE_i) <- BC(BE_i) + 1
-//         foreach halfedge h around the vertex target(BE_i) do
-//             if h is clockwise between BE_i and BE_i+1 then SC(h) <- SC(h) + 1
-//         end for
-//     end for
-//
-// Traverse A in BFS order and calculate IC(f) for each face f using BC(e) of the halfedges.
-//
-// foreach face f in A do
-//     if IC(f) > 0 then inside(f) <- true
-// foreach halfedge e in A do
-//     if IC(face(e)) = BC(e) then boundary(e) <- true
-// foreach halfedge e in A do
-//     if IC(face(e)) = SC(target(e)) then boundary(target(e)) <- true
-//
-// return A
-
-type vertex struct {
-	coordinates  *Vec2
-	incidentEdge *halfEdge // arbitrary half-edge that has this vertex as origin
-
-	// Fields specific to algorithm in masters thesis.
-	boundary bool // is on the boundary of Union(R)
-}
-
-type halfEdge struct {
-	origin       *Vec2     // destination = this.twin.origin
-	twin         *halfEdge // it's twin half-edge (pointing in the other direction)
-	incidentFace *face     // the face that this half-edge bounds
-	next         *halfEdge // next edge on the boundary of incidentFace
-	previous     *halfEdge // previous edge on the boundary of incidentFace
-
-	// Fields specific to algorithm in masters thesis.
-	bc       int  // boundary count
-	sc       int  // slice count
-	boundary bool // is on the boundary of Union(R)
-}
-
-type face struct {
-	outerComponent  *halfEdge  // a half edge on the outer boundary of this face
-	innerComponents []halfEdge // a pointer to a half-edge on the boundary of each hole in the face
-
-	// Fields specific to algorithm in masters thesis.
-	ic     int  // inside count
-	inside bool // is inside Union(R)
-}
-
-type arrangement struct {
-	vertices  []vertex
-	halfEdges []halfEdge
-	faces     []face
-}
-
-/*func insertEdgesIntoArrangement(edges []Vec2, arr *arrangement) {
-	var prevHalfEdge1 *halfEdge = nil
-	var nextHalfEdge2 *halfEdge = nil
-
-	startI := len(arr.halfEdges)
-
-	for i := 0; i < len(edges); i++ {
-		v1 := &edges[i]
-		v2 := &edges[(i+1)%len(edges)]
-
-		var h1, h2 halfEdge
-
-		h1.origin = v1
-		h1.twin = &h2
-		h1.incidentFace = nil
-		h1.previous = prevHalfEdge1
-		if prevHalfEdge1 != nil {
-			prevHalfEdge1.next = &h1
-		}
-
-		h2.origin = v2
-		h2.twin = &h1
-		h2.incidentFace = nil
-		h2.previous = nextHalfEdge2
-		if nextHalfEdge2 != nil {
-			nextHalfEdge2.previous = &h2
-		}
-
-		arr.halfEdges = append(arr.halfEdges, h1, h2)
-	}
-
-	if len(arr.halfEdges) - startI > 0 {
-		arr.halfEdges[len(arr.halfEdges)-1].previous = &(arr.halfEdges[startI])
-		arr.halfEdges[len(arr.halfEdges)-2].next = &(arr.halfEdges[startI-1])
-	}
-}
-
-func arrangementUnion(edges []Vec2) arrangement {
-	var arr arrangement
-
-	insertEdgesIntoArrangement(edges, &arr)
-
-	for i := 0; i < len(arr.halfEdges); ++i {
-		he1 := arr.halfEdges[i]
-		he1.bc++
-
-	}
-}*/
