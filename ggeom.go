@@ -357,16 +357,7 @@ func orientation(p, q, r *Vec2) int {
 	}
 }
 
-// Returns (intersects or not, degenerate case or not). Degenerate
-// cases are those where no single intersection point is defined.
-func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
-	// Instances where one segment joins the end of another are likely to be quite
-	// common when dealing with polygons, so we should be able to save a fair
-	// bit of big.Rat arithmetic by checking for this case.
-	if p1.Eq(q1) || p1.Eq(q2) || p2.Eq(q1) || p2.Eq(q2) {
-		return true, false // the segements intersect; not degenerate
-	}
-
+func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, bool) {
 	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
 		return false, false // the segements definitely don't intersect; won't be a degenerate case
 	}
@@ -397,6 +388,64 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
 	} else {
 		return false, false
 	}
+}
+
+// Returns true and the intersection point if two segements
+// share a point and do not otherwise overlap.
+func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+	var r Vec2
+
+	if p1.Eq(q1) {
+		if ! onSegment(p1, q2, p2) {
+			r = *p1
+			return true, r
+		} else {
+			return false, r
+		}
+	} else if p1.Eq(q2) {
+		if ! onSegment(p1, q1, p2) {
+			r = *p1
+			return true, r
+		} else {
+			return false, r
+		}
+	} else if p2.Eq(q1) {
+		if ! onSegment(p2, q2, p1) {
+			r = *p2
+			return true, r
+		} else {
+			return false, r
+		}
+	} else if p2.Eq(q2) {
+		if ! onSegment(p2, q1, p1) {
+			r = *p2
+			return true, r
+		} else {
+			return false, r
+		}
+	}
+}
+
+// Returns (intersects or not, degenerate case or not). Degenerate
+// cases are those where no single intersection point is defined.
+func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
+	// Instances where one segment joins the end of another are likely to be quite
+	// common when dealing with polygons, so we should be able to save a fair
+	// bit of big.Rat arithmetic by checking for this case.
+	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
+	if (adj) {
+		return true, false // the segements intersect; not degenerate
+	}
+
+	return segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+}
+
+// Returns a boolean indicating whether the segments intersect,
+// a boolean indicating whether there is a unique intersection point,
+// and the intersection point itself (set to (0,0) if
+// there is no unique intersection point).
+func SegmentItersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+
 }
 
 var pinf = math.Inf(1)
