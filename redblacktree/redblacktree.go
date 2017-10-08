@@ -100,6 +100,63 @@ func (tree *Tree) Put(key interface{}, value interface{}) {
 	tree.size++
 }
 
+// addrummond: Add this modification of 'Put' that returns an iterator to the new node.
+func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator {
+	pos := func (n *Node) position {
+		position := between
+		if n.Parent == nil {
+			position = begin
+		}
+		if n.Left == nil && n.Right == nil {
+			position = end
+		}
+		return position
+	}
+
+	var insertedNode *Node
+	if tree.Root == nil {
+		tree.Root = &Node{Key: key, Value: value, color: red}
+		insertedNode = tree.Root
+	} else {
+		node := tree.Root
+		loop := true
+		for loop {
+			compare := tree.Comparator(key, node.Key)
+			switch {
+			case compare == 0:
+				node.Key = key
+				node.Value = value
+				return Iterator {
+					tree: tree,
+					node: node,
+					position: pos(node),
+				}
+			case compare < 0:
+				if node.Left == nil {
+					node.Left = &Node{Key: key, Value: value, color: red}
+					insertedNode = node.Left
+					loop = false
+				} else {
+					node = node.Left
+				}
+			case compare > 0:
+				if node.Right == nil {
+					node.Right = &Node{Key: key, Value: value, color: red}
+					insertedNode = node.Right
+					loop = false
+				} else {
+					node = node.Right
+				}
+			}
+		}
+		insertedNode.Parent = node
+	}
+	tree.insertCase1(insertedNode)
+	tree.size++
+
+	return Iterator { tree: tree, node: insertedNode, position: pos(insertedNode) }
+}
+
 // Get searches the node in the tree by key and returns its value or nil if key is not found in tree.
 // Second return parameter is true if key was found, otherwise false.
 // Key should adhere to the comparator's type assertion, otherwise method panics.
