@@ -234,9 +234,8 @@ func TestSegmentIntersection(t *testing.T) {
 		{{1,2}, {-1,-2}, {-1,-2}, {-2,-4}, {-1,-2}},                  // Two adjacent diagonal lines
 		{{1,2}, {5,2}, {5,2}, {7,2}, {5,2}},                          // Two adjacent horizontal lines
 		{{2,1}, {2,5}, {2,5}, {2,7}, {2,5}},                          // Two adjacent vertical lines		
-		{{-1,-1}, {2,2}, {-11,-11}, {1,1}, {NONE, NONE}},             // Non-intersecting non-parallel
+		{{-1,-1}, {2,2}, {-11,-12}, {1,-2}, {NONE, NONE}},            // Non-intersecting non-parallel
 		{{-2,-4}, {2,4}, {-3,-5}, {1,3}, {NONE, NONE}},               // Non-intersecting parallel
-		
 	})
 
 	for _,tst := range tests {

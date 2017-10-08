@@ -357,17 +357,19 @@ func orientation(p, q, r *Vec2) int {
 	}
 }
 
-func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, bool) {
+// If the segements do not intersect or intersect in the non-degenerate case,
+// the second member of the return value is nil. Otherwise, it is set to
+// an arbitrarily chosen member of the subset of {p1,p2,q1,q2} that lies
+// along the intersection.
+func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
-		return false, false // the segements definitely don't intersect; won't be a degenerate case
+		return false, nil // the segements definitely don't intersect; won't be a degenerate case
 	}
 
 	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
 	// and http://www.cdn.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 	// and http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
 	// and http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
-	// (first code sample on p. 373 of last one seem to be correct, arguments
-	//  'orientation' seem mixed up in some of the others -- or I misread somehow)
 
 	// Find the four orientations needed for general and special case
 	o1 := orientation(p1, q1, q2)
@@ -376,17 +378,17 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, bool) {
 	o4 := orientation(p1, p2, q2)
 
 	if o1 != o2 && o3 != o4 {
-		return true, false // the segments intersect; not degenerate
-	} else if o1 == 0 && onSegment(q1, p2, q2) {
-		return true, true
+		return true, nil // the segments intersect; not degenerate
+	} else if o1 == 0 && onSegment(q1, p1, q2) {
+		return true, p1
 	} else if o2 == 0 && onSegment(q1, p2, q2) {
-		return true, true
+		return true, q2
 	} else if o3 == 0 && onSegment(p1, q1, p2) {
-		return true, true
-	} else if 04 == 0 && onSegment(p1, q2, p1) {
-		return true, true
+		return true, p1
+	} else if o4 == 0 && onSegment(p1, q2, p2) {
+		return true, q2
 	} else {
-		return false, false
+		return false, nil
 	}
 }
 
@@ -428,15 +430,15 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	}
 }
 
-// Returns (intersects or not, degenerate case or not). Degenerate
-// cases are those where no single intersection point is defined.
-func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
+// Returns (intersects or not, point on overlap iff degenerate intersection). Degenerate
+// intersections are those where no single intersection point is defined.
+func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	// Instances where one segment joins the end of another are likely to be quite
 	// common when dealing with polygons, so we should be able to save a fair
 	// bit of big.Rat arithmetic by checking for this case.
 	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
 	if (adj) {
-		return true, false // the segements intersect; not degenerate
+		return true, nil // the segements intersect; not degenerate
 	}
 
 	return segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
@@ -445,7 +447,8 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
 // Returns a boolean indicating whether the segments intersect,
 // a boolean indicating whether there is a unique intersection point,
 // and the intersection point itself (set to (0,0) if
-// there is no unique intersection point).
+// the segements don't intersect, or a point arbitrarily chosen
+// from the subset of {p1,p2,q1,q2} that lies along the intersection.
 func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2);
 	if adj {
@@ -453,10 +456,10 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
 	}
 
 	var v Vec2
-	intersect, degenerate := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect {
-		if degenerate {
-			return true, false, v
+		if degeneratePt != nil {
+			return true, false, *degeneratePt
 		} else {
 			return true, true, NondegenerateSegementIntersection(p1, p2, q1, q2)
 		}
