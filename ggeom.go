@@ -620,6 +620,7 @@ func SegmentLoopIntersections(points []Vec2) {
 		LeftEndpoint  = 0
 		RightEndPoint = 1
 		CrossingPoint = 2
+		Deleted = 3
 	)
 
 	type event struct {
@@ -635,6 +636,15 @@ func SegmentLoopIntersections(points []Vec2) {
 	}
 
 	events := binaryheap.NewWith(eventComparator)
+
+	markAsDeleted := func (p *Vec2) {
+		for it := events.Iterator(); it.Next(); {
+			evt := it.Value().(*event);
+			if p.Eq(evt.point) {
+				evt.kind = Deleted
+			}
+		}
+	}
 
 	// Initialize priority queue with endpoints of input segments.
 	for i := 0; i < len(points)-1; i++ {
@@ -658,6 +668,10 @@ func SegmentLoopIntersections(points []Vec2) {
 		eventI, _ := events.Pop()
 		event := eventI.(*event)
 
+		if event.kind == Deleted {
+			continue;
+		}
+
 		switch event.kind {
 		case LeftEndpoint:
 			{
@@ -666,11 +680,28 @@ func SegmentLoopIntersections(points []Vec2) {
 				p2 := &points[(event.seg1+1)%len(points)]
 				it1 := tree.PutAndGetIterator(&p2.y, event.seg1)
 				it2 := it1
+				var sega, segb int = -1, -1
 				if it1.Prev() {
-
+					sega = it1.Value().(int);
 				}
 				if it2.Next() {
-
+					segb = it2.Value().(int);
+				}
+				
+				if sega != -1 {
+					if segb != -1 {
+						intersects, _, p := SegmentIntersection(&points[sega], &points[(sega+1)%len(points)], &points[segb], &points[(segb+1)%len(points)])
+						if (intersects) {
+							markAsDeleted(&p)
+						}
+					}
+					intersects, _, p := SegmentIntersection(&points[event.seg1], &points[(event.seg1+1)%len(points)], &points[sega], &points[(sega+1)%len(points)])
+					if intersects {
+						//events.Push(event {
+						//	kind: ???,
+						//	seg1: 
+						//})
+					}
 				}
 			}
 		case RightEndPoint:
