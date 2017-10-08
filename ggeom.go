@@ -1,10 +1,10 @@
 package ggeom
 
 import (
-	"math"
-	"math/big"
 	"github.com/addrummond/ggeom/redblacktree"
 	"github.com/emirpasic/gods/trees/binaryheap"
+	"math"
+	"math/big"
 )
 
 type Scalar = big.Rat
@@ -357,16 +357,18 @@ func orientation(p, q, r *Vec2) int {
 	}
 }
 
-func SegmentsIntersect(p1, p2, q1, q2 *Vec2) bool {
+// Returns (intersects or not, degenerate case or not). Degenerate
+// cases are those where no single intersection point is defined.
+func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
 	// Instances where one segment joins the end of another are likely to be quite
 	// common when dealing with polygons, so we should be able to save a fair
 	// bit of big.Rat arithmetic by checking for this case.
 	if p1.Eq(q1) || p1.Eq(q2) || p2.Eq(q1) || p2.Eq(q2) {
-		return true
+		return true, false // the segements intersect; not degenerate
 	}
 
 	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
-		return false
+		return false, false // the segements definitely don't intersect; won't be a degenerate case
 	}
 
 	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
@@ -383,17 +385,17 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) bool {
 	o4 := orientation(p1, p2, q2)
 
 	if o1 != o2 && o3 != o4 {
-		return true // the segments intersect (general case)
+		return true, false // the segments intersect; not degenerate
 	} else if o1 == 0 && onSegment(q1, p2, q2) {
-		return true
+		return true, true
 	} else if o2 == 0 && onSegment(q1, p2, q2) {
-		return true
+		return true, true
 	} else if o3 == 0 && onSegment(p1, q1, p2) {
-		return true
+		return true, true
 	} else if 04 == 0 && onSegment(p1, q2, p1) {
-		return true
+		return true, true
 	} else {
-		return false
+		return false, false
 	}
 }
 
@@ -460,6 +462,81 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 	return false
 }
 
+// Assumes that segements intersect at a single point and are not parallel.
+func NondegenerateSegementIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
+	var tmp, w Scalar
+	var x, y Scalar
+	var xset, yset bool
+
+	var m Scalar
+	w.Sub(&s1b.x, &s1a.x)
+	if w.Sign() == 0 {
+		// The line is vertical. Thus we know that the x value
+		// of the intersection point will be the x value of the
+		// points on the line.
+		x = s1a.x
+		xset = true
+	} else {
+		tmp.Sub(&s1b.y, &s1a.y)
+		if tmp.Sign() == 0 {
+			// The line is horizontal.
+			y = s1b.y;
+			yset = true;
+		} else {
+			m.Mul(&tmp, w.Inv(&w))
+		}
+	}
+
+	var n Scalar	
+	w.Sub(&s2b.x, &s2a.x)
+	if w.Sign() == 0 {
+		// The line is vertical.
+		x = s2a.x
+		xset = true
+	} else {
+		tmp.Sub(&s2b.y, &s2a.y)
+		if (tmp.Sign() == 0) {
+			// The line is horizontal.
+			y = s2b.y;
+			yset = true;
+		} else {
+			n.Mul(&tmp, w.Inv(&w))
+		}
+	}
+	
+	var c Scalar
+	tmp.Mul(&m, &s1a.x)
+	c.Sub(&s1a.y, &tmp)
+
+	var d Scalar
+	tmp.Mul(&n, &s2a.x)
+	d.Sub(&s2a.y, &tmp)
+
+	// We know that m - n is nonzero because if the lines were both parallel
+	// and intersecting, this would be a degenerate case.
+	if ! xset {
+		x.Sub(&d, &c)
+		if x.Sign() != 0 { // save some unnecessary arithmetic
+			tmp.Sub(&m, &n)
+			tmp.Inv(&tmp)
+			x.Mul(&x, &tmp)
+		}
+	}
+
+	if ! yset {
+		tmp.Mul(&m, &d)
+		y.Mul(&n, &c)
+		y.Sub(&y, &tmp)
+		if y.Sign() != 0 { // save some unnecessary arithmetic
+			tmp.Sub(&n, &m)
+			tmp.Inv(&tmp)
+			y.Mul(&y, &tmp)
+		}
+	}
+
+	return Vec2{x, y}
+}
+
 func scalarComparator(a, b interface{}) int {
 	aAsserted := a.(*Scalar)
 	bAsserted := b.(*Scalar)
@@ -472,18 +549,18 @@ func scalarComparator(a, b interface{}) int {
 // Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 func SegmentLoopIntersections(points []Vec2) {
 	const (
-		LeftEndpoint = 0
+		LeftEndpoint  = 0
 		RightEndPoint = 1
 		CrossingPoint = 2
 	)
 
 	type event struct {
-		kind int;
+		kind       int
 		seg1, seg2 int // index of first point in each segment
-		point *Vec2
+		point      *Vec2
 	}
 
-	eventComparator := func (a, b interface{}) int {
+	eventComparator := func(a, b interface{}) int {
 		aAsserted := a.(*event)
 		bAsserted := b.(*event)
 		return aAsserted.point.x.Cmp(&bAsserted.point.x)
@@ -493,16 +570,16 @@ func SegmentLoopIntersections(points []Vec2) {
 
 	// Initialize priority queue with endpoints of input segments.
 	for i := 0; i < len(points)-1; i++ {
-		from := &points[i]		
+		from := &points[i]
 		to := &points[(i+1)%len(points)]
 		kind := LeftEndpoint
 		if to.x.Cmp(&from.x) > 0 {
 			kind = RightEndPoint
 		}
-		events.Push(event {
-			kind: kind,
-			seg1: i,
-			seg2: -1,
+		events.Push(event{
+			kind:  kind,
+			seg1:  i,
+			seg2:  -1,
 			point: to,
 		})
 	}
@@ -514,23 +591,26 @@ func SegmentLoopIntersections(points []Vec2) {
 		event := eventI.(*event)
 
 		switch event.kind {
-			case LeftEndpoint: {
+		case LeftEndpoint:
+			{
 				tree.Put(&event.point.y, event.seg1)
 
 				p2 := &points[(event.seg1+1)%len(points)]
 				it1 := tree.PutAndGetIterator(&p2.y, event.seg1)
 				it2 := it1
-				if (it1.Prev()) {
-					
+				if it1.Prev() {
+
 				}
-				if (it2.Next()) {
-					
+				if it2.Next() {
+
 				}
 			}
-			case RightEndPoint: {
+		case RightEndPoint:
+			{
 
 			}
-			case CrossingPoint: {
+		case CrossingPoint:
+			{
 
 			}
 		}
@@ -561,39 +641,39 @@ func SegmentLoopIntersections(points []Vec2) {
 // return A
 
 type vertex struct {
-	coordinates *Vec2;
-	incidentEdge *halfEdge; // arbitrary half-edge that has this vertex as origin
+	coordinates  *Vec2
+	incidentEdge *halfEdge // arbitrary half-edge that has this vertex as origin
 
 	// Fields specific to algorithm in masters thesis.
-	boundary bool;          // is on the boundary of Union(R)
+	boundary bool // is on the boundary of Union(R)
 }
 
 type halfEdge struct {
-	origin *Vec2;       // destination = this.twin.origin
-	twin *halfEdge;     // it's twin half-edge (pointing in the other direction)
-	incidentFace *face; // the face that this half-edge bounds
-	next *halfEdge;     // next edge on the boundary of incidentFace
-	previous *halfEdge; // previous edge on the boundary of incidentFace
+	origin       *Vec2     // destination = this.twin.origin
+	twin         *halfEdge // it's twin half-edge (pointing in the other direction)
+	incidentFace *face     // the face that this half-edge bounds
+	next         *halfEdge // next edge on the boundary of incidentFace
+	previous     *halfEdge // previous edge on the boundary of incidentFace
 
 	// Fields specific to algorithm in masters thesis.
-	bc int;             // boundary count
-	sc int;             // slice count
-	boundary bool;      // is on the boundary of Union(R)
+	bc       int  // boundary count
+	sc       int  // slice count
+	boundary bool // is on the boundary of Union(R)
 }
 
 type face struct {
-	outerComponent *halfEdge;   // a half edge on the outer boundary of this face
-	innerComponents []halfEdge; // a pointer to a half-edge on the boundary of each hole in the face
+	outerComponent  *halfEdge  // a half edge on the outer boundary of this face
+	innerComponents []halfEdge // a pointer to a half-edge on the boundary of each hole in the face
 
 	// Fields specific to algorithm in masters thesis.
-	ic int;      // inside count
-	inside bool; // is inside Union(R)
+	ic     int  // inside count
+	inside bool // is inside Union(R)
 }
 
 type arrangement struct {
-	vertices []vertex;
-	halfEdges []halfEdge;
-	faces []face;
+	vertices  []vertex
+	halfEdges []halfEdge
+	faces     []face
 }
 
 /*func insertEdgesIntoArrangement(edges []Vec2, arr *arrangement) {

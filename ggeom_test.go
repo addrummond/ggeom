@@ -177,12 +177,33 @@ func TestSegmentsIntersect(t *testing.T) {
 	})
 
 	for _, vs := range trueTests {
-		if !SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
+		r,_ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
+		if !r {
 			t.Error()
 		}
 	}
 	for _, vs := range falseTests {
-		if SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
+		r,_ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
+		if r {
+			t.Error()
+		}
+	}
+}
+
+func TestNondegenerateSegmentIntersection(t *testing.T) {
+	tests := SofSofVec2([][][]float64 {
+		{{-1,-1}, {1,1}, {-1,1}, {1,-1}, {0,0}},            // A cross centered on zero
+		{{-1,0}, {1,2}, {-1,2}, {1,0}, {0,1}},	            // The case above translated up one unit
+		{{-1,2}, {1,0}, {-1,0}, {1,2}, {0,1}},	            // The case above with points swapped.
+		{{-1,0}, {1,0}, {-0.5,10}, {-0.5,-10}, {-0.5,0}},   // Vertical line intersecting horizontal line
+		{{-1,-1}, {1,-1}, {-0.5,9}, {-0.5,-11}, {-0.5,-1}}, // The case above translated down one unit
+		{{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},    // Horizontal line intersecting with vertical line
+	})
+
+	for _,tst := range tests {
+		p := NondegenerateSegementIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		//fmt.Printf("INT: %f %f\n", p.ApproxX(), p.ApproxY())
+		if ! p.Eq(&tst[4]) {
 			t.Error()
 		}
 	}
