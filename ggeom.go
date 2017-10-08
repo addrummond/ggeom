@@ -512,8 +512,7 @@ func NondegenerateSegementIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	tmp.Mul(&n, &s2a.x)
 	d.Sub(&s2a.y, &tmp)
 
-	// We know that m - n is nonzero because if the lines were both parallel
-	// and intersecting, this would be a degenerate case.
+	// We know that m - n is nonzero because the lines aren't parallel.
 	if ! xset {
 		x.Sub(&d, &c)
 		if x.Sign() != 0 { // save some unnecessary arithmetic
