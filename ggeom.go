@@ -3,6 +3,8 @@ package ggeom
 import (
 	"math"
 	"math/big"
+	"github.com/addrummond/ggeom/redblacktree"
+	"github.com/emirpasic/gods/trees/binaryheap"
 )
 
 type Scalar = big.Rat
@@ -12,8 +14,8 @@ type Vec2 struct {
 	y Scalar
 }
 
-func r(i float64) big.Rat {
-	var r big.Rat
+func r(i float64) Scalar {
+	var r Scalar
 	r.SetFloat64(i)
 	return r
 }
@@ -58,7 +60,7 @@ func (a Vec2) ApproxY() float64 {
 }
 
 func ApproxVec2(x, y float64) Vec2 {
-	var xr, yr big.Rat
+	var xr, yr Scalar
 	xr.SetFloat64(x)
 	yr.SetFloat64(y)
 	return Vec2{xr, yr}
@@ -107,7 +109,7 @@ func (a Vec2) ApproxScale(v float64) Vec2 {
 	x, _ := a.x.Float64()
 	y, _ := a.y.Float64()
 	l := math.Sqrt(x*x + y*y)
-	var nx, ny big.Rat
+	var nx, ny Scalar
 	nx.SetFloat64((x * v) / l)
 	ny.SetFloat64((y * v) / l)
 	return Vec2{nx, ny}
@@ -173,7 +175,7 @@ type label struct {
 	a, b, c int
 }
 
-// Follows the algorithm described on p. 4 of
+// Follows the algorithm described in
 //     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
 func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	// Get the number of reflex vertices for each polygon.
@@ -287,10 +289,10 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 // because it's easy to initialize big.Rats that are bigger than this
 // from a float64 value. In practice, very few coordinates will have values
 // bigger than this.
-var maxv *big.Rat = big.NewRat(4503599627370496, 1)
+var maxv *Scalar = big.NewRat(4503599627370496, 1)
 
-func inRange(v *big.Rat) bool {
-	var abs big.Rat
+func inRange(v *Scalar) bool {
+	var abs Scalar
 	abs.Abs(v)
 	return abs.Cmp(maxv) <= 0
 }
@@ -298,7 +300,7 @@ func inRange(v *big.Rat) bool {
 // Given three colinear points p, q, r, the function checks if
 // point q lies on line segment 'pr
 func onSegment(p, q, r *Vec2) bool {
-	var maxpxrx, minpxrx, maxpyry, minpyry *big.Rat
+	var maxpxrx, minpxrx, maxpyry, minpyry *Scalar
 	if p.x.Cmp(&r.x) >= 0 {
 		maxpxrx = &p.x
 		minpxrx = &r.x
@@ -328,18 +330,18 @@ func onSegment(p, q, r *Vec2) bool {
 // 1 --> Clockwise
 // 2 --> Counterclockwise
 func orientation(p, q, r *Vec2) int {
-	var qySubPy big.Rat
+	var qySubPy Scalar
 	qySubPy.Sub(&q.y, &p.y)
-	var rxSubQx big.Rat
+	var rxSubQx Scalar
 	rxSubQx.Sub(&r.x, &q.x)
-	var fst big.Rat
+	var fst Scalar
 	fst.Mul(&qySubPy, &rxSubQx)
 
-	var qxSubPx big.Rat
+	var qxSubPx Scalar
 	qxSubPx.Sub(&q.x, &p.x)
-	var rySubQy big.Rat
+	var rySubQy Scalar
 	rySubQy.Sub(&r.y, &q.y)
-	var snd big.Rat
+	var snd Scalar
 	snd.Mul(&qxSubPx, &rySubQy)
 
 	// Presumably, comparison is going to be a bit cheaper than subtraction
@@ -458,6 +460,86 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 	return false
 }
 
+func scalarComparator(a, b interface{}) int {
+	aAsserted := a.(*Scalar)
+	bAsserted := b.(*Scalar)
+	return aAsserted.Cmp(bAsserted)
+}
+
+// An implementation of the Bentley Ottmann algorithm for the case where
+// the input segments are connected in a loop. (Loop is implicity closed
+// by segement from last point to first point.)
+// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
+func SegmentLoopIntersections(points []Vec2) {
+	const (
+		LeftEndpoint = 0
+		RightEndPoint = 1
+		CrossingPoint = 2
+	)
+
+	type event struct {
+		kind int;
+		seg1, seg2 int // index of first point in each segment
+		point *Vec2
+	}
+
+	eventComparator := func (a, b interface{}) int {
+		aAsserted := a.(*event)
+		bAsserted := b.(*event)
+		return aAsserted.point.x.Cmp(&bAsserted.point.x)
+	}
+
+	events := binaryheap.NewWith(eventComparator)
+
+	// Initialize priority queue with endpoints of input segments.
+	for i := 0; i < len(points)-1; i++ {
+		from := &points[i]		
+		to := &points[(i+1)%len(points)]
+		kind := LeftEndpoint
+		if to.x.Cmp(&from.x) > 0 {
+			kind = RightEndPoint
+		}
+		events.Push(event {
+			kind: kind,
+			seg1: i,
+			seg2: -1,
+			point: to,
+		})
+	}
+
+	tree := redblacktree.NewWith(scalarComparator)
+
+	for events.Size() > 0 {
+		eventI, _ := events.Pop()
+		event := eventI.(*event)
+
+		switch event.kind {
+			case LeftEndpoint: {
+				tree.Put(&event.point.y, event.seg1)
+
+				p2 := &points[(event.seg1+1)%len(points)]
+				it1 := tree.PutAndGetIterator(&p2.y, event.seg1)
+				it2 := it1
+				if (it1.Prev()) {
+					
+				}
+				if (it2.Next()) {
+					
+				}
+			}
+			case RightEndPoint: {
+
+			}
+			case CrossingPoint: {
+
+			}
+		}
+	}
+}
+
+// Description of what a doubly-linked edge list is on p. 31 of:
+//     M. de Berg, M. van Kreveld, M. Overmars, and O. Schwarzkopf. Computational Geometry: Algorithms and Applications. Springer-Verlag, Berlin, Germany, 2nd edition, 2000.
+
 // for j <- 1 to size(R) do
 //     A.insert(r_j, BE)
 //     for i <- 1 to size(BE) do
@@ -477,3 +559,88 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 //     if IC(face(e)) = SC(target(e)) then boundary(target(e)) <- true
 //
 // return A
+
+type vertex struct {
+	coordinates *Vec2;
+	incidentEdge *halfEdge; // arbitrary half-edge that has this vertex as origin
+
+	// Fields specific to algorithm in masters thesis.
+	boundary bool;          // is on the boundary of Union(R)
+}
+
+type halfEdge struct {
+	origin *Vec2;       // destination = this.twin.origin
+	twin *halfEdge;     // it's twin half-edge (pointing in the other direction)
+	incidentFace *face; // the face that this half-edge bounds
+	next *halfEdge;     // next edge on the boundary of incidentFace
+	previous *halfEdge; // previous edge on the boundary of incidentFace
+
+	// Fields specific to algorithm in masters thesis.
+	bc int;             // boundary count
+	sc int;             // slice count
+	boundary bool;      // is on the boundary of Union(R)
+}
+
+type face struct {
+	outerComponent *halfEdge;   // a half edge on the outer boundary of this face
+	innerComponents []halfEdge; // a pointer to a half-edge on the boundary of each hole in the face
+
+	// Fields specific to algorithm in masters thesis.
+	ic int;      // inside count
+	inside bool; // is inside Union(R)
+}
+
+type arrangement struct {
+	vertices []vertex;
+	halfEdges []halfEdge;
+	faces []face;
+}
+
+/*func insertEdgesIntoArrangement(edges []Vec2, arr *arrangement) {
+	var prevHalfEdge1 *halfEdge = nil
+	var nextHalfEdge2 *halfEdge = nil
+
+	startI := len(arr.halfEdges)
+
+	for i := 0; i < len(edges); i++ {
+		v1 := &edges[i]
+		v2 := &edges[(i+1)%len(edges)]
+
+		var h1, h2 halfEdge
+
+		h1.origin = v1
+		h1.twin = &h2
+		h1.incidentFace = nil
+		h1.previous = prevHalfEdge1
+		if prevHalfEdge1 != nil {
+			prevHalfEdge1.next = &h1
+		}
+
+		h2.origin = v2
+		h2.twin = &h1
+		h2.incidentFace = nil
+		h2.previous = nextHalfEdge2
+		if nextHalfEdge2 != nil {
+			nextHalfEdge2.previous = &h2
+		}
+
+		arr.halfEdges = append(arr.halfEdges, h1, h2)
+	}
+
+	if len(arr.halfEdges) - startI > 0 {
+		arr.halfEdges[len(arr.halfEdges)-1].previous = &(arr.halfEdges[startI])
+		arr.halfEdges[len(arr.halfEdges)-2].next = &(arr.halfEdges[startI-1])
+	}
+}
+
+func arrangementUnion(edges []Vec2) arrangement {
+	var arr arrangement
+
+	insertEdgesIntoArrangement(edges, &arr)
+
+	for i := 0; i < len(arr.halfEdges); ++i {
+		he1 := arr.halfEdges[i]
+		he1.bc++
+
+	}
+}*/
