@@ -209,6 +209,56 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 	}
 }
 
+func TestSegmentIntersection(t *testing.T) {
+	const NONE = -999
+	const NOT_UNIQUE = -9999
+
+	var VNONE Vec2
+	VNONE.x.SetFloat64(NONE)
+	VNONE.y.SetFloat64(NONE)
+
+	var VNOT_UNIQUE Vec2
+	VNOT_UNIQUE.x.SetFloat64(NOT_UNIQUE)
+	VNOT_UNIQUE.y.SetFloat64(NOT_UNIQUE)
+
+	tests := SofSofVec2([][][]float64 {
+		{{-1,-1}, {1,1}, {-1,1}, {1,-1}, {0,0}},                      // A cross centered on zero
+		{{-1,0}, {1,2}, {-1,2}, {1,0}, {0,1}},	                      // The case above translated up one unit
+		{{-1,2}, {1,0}, {-1,0}, {1,2}, {0,1}},	                      // The case above with points swapped.
+		{{-1,0}, {1,0}, {-0.5,10}, {-0.5,-10}, {-0.5,0}},             // Vertical line intersecting horizontal line
+		{{-1,-1}, {1,-1}, {-0.5,9}, {-0.5,-11}, {-0.5,-1}},           // The case above translated down one unit
+	    {{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},              // Horizontal line intersecting with vertical line
+		{{-1, 1}, {1,1}, {-0.5,1}, {0.5,1}, {NOT_UNIQUE,NOT_UNIQUE}}, // One horizontal line that completely overlaps another
+		{{1, -1}, {1,1}, {1,-0.5}, {1,0.5}, {NOT_UNIQUE,NOT_UNIQUE}}, // One vertical line that completely overlaps another		
+		{{-1,-2}, {1,2}, {1,2}, {2,4}, {1,2}},                        // Two adjacent diagonal lines
+		{{1,2}, {-1,-2}, {-1,-2}, {-2,-4}, {-1,-2}},                  // Two adjacent diagonal lines
+		{{1,2}, {5,2}, {5,2}, {7,2}, {5,2}},                          // Two adjacent horizontal lines
+		{{2,1}, {2,5}, {2,5}, {2,7}, {2,5}},                          // Two adjacent vertical lines		
+		{{-1,-1}, {2,2}, {-11,-11}, {1,1}, {NONE, NONE}},             // Non-intersecting non-parallel
+		{{-2,-4}, {2,4}, {-3,-5}, {1,3}, {NONE, NONE}},               // Non-intersecting parallel
+		
+	})
+
+	for _,tst := range tests {
+		intersect, unique, p := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		if intersect {
+			if unique {
+				if ! p.Eq(&tst[4]) {
+					t.Error()
+				}
+			} else {
+				if !tst[4].Eq(&VNOT_UNIQUE) {
+					t.Error()
+				}
+			}
+		} else {
+			if ! tst[4].Eq(&VNONE) {
+				t.Error()
+			}
+		}
+	}
+}
+
 func TestConvolve(t *testing.T) {
 	//p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}}
 

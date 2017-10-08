@@ -396,33 +396,35 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	var r Vec2
 
 	if p1.Eq(q1) {
-		if ! onSegment(p1, q2, p2) {
+		if ! onSegment(p1, q2, p2) && ! onSegment(q1, p2, q2) {
 			r = *p1
 			return true, r
 		} else {
 			return false, r
 		}
 	} else if p1.Eq(q2) {
-		if ! onSegment(p1, q1, p2) {
+		if ! onSegment(q2, p2, q1) && ! onSegment(p1, q1, p2) {
 			r = *p1
 			return true, r
 		} else {
 			return false, r
 		}
 	} else if p2.Eq(q1) {
-		if ! onSegment(p2, q2, p1) {
+		if ! onSegment(p2, q2, p1) && ! onSegment(q1, p1, q2) {
 			r = *p2
 			return true, r
 		} else {
 			return false, r
 		}
-	} else if p2.Eq(q2) {
-		if ! onSegment(p2, q1, p1) {
+	} else if p2.Eq(q2)  {
+		if ! onSegment(p2, q1, p1) && ! onSegment(q2, p1, q1) {
 			r = *p2
 			return true, r
 		} else {
 			return false, r
 		}
+	} else {
+		return false, r
 	}
 }
 
@@ -444,8 +446,23 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, bool) {
 // a boolean indicating whether there is a unique intersection point,
 // and the intersection point itself (set to (0,0) if
 // there is no unique intersection point).
-func SegmentItersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
+	adj, pt := segmentsAdjacent(p1, p2, q1, q2);
+	if adj {
+		return true, true, pt
+	}
 
+	var v Vec2
+	intersect, degenerate := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	if intersect {
+		if degenerate {
+			return true, false, v
+		} else {
+			return true, true, NondegenerateSegementIntersection(p1, p2, q1, q2)
+		}
+	} else {
+		return false, false, v
+	}
 }
 
 var pinf = math.Inf(1)
