@@ -201,7 +201,7 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 	})
 
 	for _,tst := range tests {
-		p := NondegenerateSegementIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		p := NondegenerateSegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
 		//fmt.Printf("INT: %f %f\n", p.ApproxX(), p.ApproxY())
 		if ! p.Eq(&tst[4]) {
 			t.Error()
@@ -260,14 +260,59 @@ func TestSegmentIntersection(t *testing.T) {
 
 func TestSegmentLoopIntersections(t *testing.T) {
 	tests := SofSofVec2([][][]float64 {
-		//{{-3,-5}, {4,5}, {2,6}, {2,-1}, {-3,-2}, {1,-4}, {-2,-2,}, {2,2}, {-5, -5}, {-4,-4}},
-		{{-3,4}, {-1,-2}, {2,1}, {-3,1}, {-3,4}},
+		{{-3,4}, {-1,-2}, {2,1}, {-3,1}, {-3,4}}, // polygon
+		{{-2,1}},                                 // intersection points
 	})
 
-	for _,tst := range tests {
-		intersections := SegmentLoopIntersections(tst)
-		for _,itn := range intersections {
-			fmt.Printf("Intersection: %f, %f\n", itn.p.ApproxX(), itn.p.ApproxY())
+	for i := 0; i < len(tests); i += 2 {
+		ps := tests[i]
+		its1 := tests[i+1]
+		its2 := SegmentLoopIntersections(ps);
+
+		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
+		fmt.Printf("  Expected intersections: ")
+		for i,it := range its1 {
+			if i != 0 {
+				fmt.Printf(";  ")
+			}
+			xf, _ := it.x.Float64()
+			yf, _ := it.y.Float64()
+			fmt.Printf("%v, %v", xf, yf)
+		}
+		fmt.Printf("\n  Computed intersections: ")
+		for i,it := range its2 {
+			if i != 0 {
+				fmt.Printf(";  ")
+			}
+			xf, _ := it.p.x.Float64()
+			yf, _ := it.p.y.Float64()
+			fmt.Printf("%v, %v", xf, yf)
+		}
+		fmt.Printf("\n")
+
+		for _,i1 := range its1 {
+			found := false
+			for _,i2 := range its2 {
+				if i1.Eq(&i2.p) {
+					found = true
+					break
+				}
+			}
+			if ! found {
+				t.Error()
+			}
+		}
+		for _,i1 := range its2 {
+			found := false
+			for _,i2 := range its1 {
+				if i2.Eq(&i1.p) {
+					found = true
+					break
+				}
+			}
+			if ! found {
+				t.Error()
+			}
 		}
 	}
 }

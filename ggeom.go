@@ -360,13 +360,13 @@ func orientation(p, q, r *Vec2) int {
 	}
 }
 
-// If the segements do not intersect or intersect in the non-degenerate case,
+// If the segments do not intersect or intersect in the non-degenerate case,
 // the second member of the return value is nil. Otherwise, it is set to
 // an arbitrarily chosen member of the subset of {p1,p2,q1,q2} that lies
 // along the intersection.
 func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
-		return false, nil // the segements definitely don't intersect; won't be a degenerate case
+		return false, nil // the segments definitely don't intersect; won't be a degenerate case
 	}
 
 	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
@@ -395,7 +395,7 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	}
 }
 
-// Returns true and the intersection point if two segements
+// Returns true and the intersection point if two segments
 // share a point and do not otherwise overlap.
 func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	var r Vec2
@@ -441,7 +441,7 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	// bit of big.Rat arithmetic by checking for this case.
 	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
 	if (adj) {
-		return true, nil // the segements intersect; not degenerate
+		return true, nil // the segments intersect; not degenerate
 	}
 
 	return segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
@@ -450,7 +450,7 @@ func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 // Returns a boolean indicating whether the segments intersect,
 // a boolean indicating whether there is a unique intersection point,
 // and the intersection point itself (set to (0,0) if
-// the segements don't intersect, or a point arbitrarily chosen
+// the segments don't intersect, or a point arbitrarily chosen
 // from the subset of {p1,p2,q1,q2} that lies along the intersection.
 func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2);
@@ -464,7 +464,7 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
 		if degeneratePt != nil {
 			return true, false, *degeneratePt
 		} else {
-			return true, true, NondegenerateSegementIntersection(p1, p2, q1, q2)
+			return true, true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
 		}
 	} else {
 		return false, false, v
@@ -474,9 +474,9 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
 var pinf = math.Inf(1)
 var ninf = math.Inf(-1)
 
-// FastSegmentsDontIntersect tests whether it is possible to quickly determine that the segements
+// FastSegmentsDontIntersect tests whether it is possible to quickly determine that the segments
 // do not intersect using inexact arithmetic. We do a simple
-// check that rejects segement pairs that have no x or y
+// check that rejects segment pairs that have no x or y
 // overlap. The good thing about this test is that it's easy
 // to get the reasoning about floating point precision
 // correct, since the test can be done using comparisons
@@ -534,8 +534,8 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 	return false
 }
 
-// Assumes that segements intersect at a single point and are not parallel.
-func NondegenerateSegementIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
+// Assumes that segments intersect at a single point and are not parallel.
+func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	var tmp, w Scalar
 	var x, y Scalar
 	var xset, yset bool
@@ -619,14 +619,14 @@ type bentleyEvent struct {
 	p *Vec2
 }
 
-func bentleyEventPs(i int, points []Vec2) (*Vec2, *Vec2) {
+func bentleyEventP(i int, points []Vec2) *Vec2 {
 	p1 := &(points[i])
 	p2 := &(points[(i+1)%len(points)])
 
 	if p1.x.Cmp(&p2.x) <= 0 {
-		return p1, p2
+		return p1
 	} else {
-		return p2, p1
+		return p2
 	}
 }
 
@@ -641,7 +641,13 @@ func (s bySegmentX) Swap(i, j int) {
 	s.events[i], s.events[j] = s.events[j], s.events[i]
 }
 func (s bySegmentX) Less(i, j int) bool {
-	return s.events[i].p.x.Cmp(&(s.events[j].p.x)) < 0
+	c := s.events[i].p.x.Cmp(&(s.events[j].p.x))
+	if c != 0 {
+		return c < 0
+	} else {
+		// 'start' is less than 'end'
+		return s.events[i].kind < s.events[j].kind
+	}
 }
 
 type Intersection struct {
@@ -651,30 +657,32 @@ type Intersection struct {
 }
 
 // An implementation of the Bentley Ottmann algorithm for the case where
-// the input segments are connected in a loop. (Loop is implicitly closed
-// by segement from last point to first point.)
-// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
-// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
+// the input segments are connected in a loop. The loop is implicitly closed
+// by segment from last point to first point. This returns all intersections
+// except for the points in the original input.
 func SegmentLoopIntersections(points []Vec2) []Intersection {
+	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
+	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
+
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
-		startp, endp := bentleyEventPs(i, points)
+		bep := bentleyEventP(i, points)
 		events = append(events, 
 			bentleyEvent {
 				kind: start,
 				i: i,
-				p: startp,
+				p: bep,
 			},
 			bentleyEvent {
 				kind: end,
 				i: i,
-				p: endp,
+				p: bep,
 			},
 		)
 	}
 	sort.Sort(bySegmentX { events: events, points: points })
 
-	// Segement indices sorted by y value of leftmost point and then segment index.
+	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
 		y *Scalar
 		seg int
@@ -692,43 +700,48 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
-	lpsm1 := len(points)-1
-	lpsm1 *= lpsm1
-
 	for _,event := range events {
 		p1 := &points[event.i]
 		p2 := &points[(event.i+1)%len(points)]
+
+		//fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.p.x, &event.p.y, &p1.x, &p1.y, &p2.x, &p2.y)
 
 		var segs [2]int
 		starti, endi := 1, 1
 
 		var it1, it2 *redblacktree.Iterator
-		fmt.Printf("HERE KIND %v\n", event.kind)
+		removeFromTreeLater := false
 		if event.kind == start {
-			fmt.Printf("Inserting key %v ||| %+v\n", event.i, &event.p.y)
+			//fmt.Printf("Inserting key %v ||| %+v (%p)\n", event.i, &event.p.y, &event.p.y)
 			it1S := tree.PutAndGetIterator(tkey { &event.p.y, event.i }, event.i)
 			it2S := it1S
 			it1, it2 = &it1S, &it2S
-		} else {
-			tree.Remove(tkey{ &p1.y, event.i })
-
-			fmt.Printf("Retrieving key %v ||| %+v\n", event.i, &event.p.y)			
+		} else if event.kind == end {
+			//fmt.Printf("Retrieving key %v ||| %+v (%p)\n", event.i, &event.p.y, &event.p.y)			
 			it1S, f := tree.GetIterator(tkey { &event.p.y, event.i})
 			if ! f {
-				panic("Could not find segement in 'SegmentLoopIntersections'")
+				panic("Internal error [1] in 'SegmentLoopIntersections'")				
 			}
 			it2S := it1S
 			it1, it2 = &it1S, &it2S
+
+			removeFromTreeLater = true
+		} else {
+			panic(fmt.Sprintf("Internal error [2] in 'SegementLoopIntersections': bad event kind %v", event.kind))
 		}
 
 		if it1.Prev() {
 			segs[0] = it1.Value().(int)
-			fmt.Printf("%i is prev to %i\n", segs[0], event.i)
+			//fmt.Printf("%i is prev to %i\n", segs[0], event.i)
 			starti = 0
 		} else if it2.Next() {
 			segs[1] = it2.Value().(int)
-			fmt.Printf("%i is after %i\n", segs[1], event.i)
+			//fmt.Printf("%i is after %i\n", segs[1], event.i)
 			endi = 2
+		}
+
+		if removeFromTreeLater {
+			tree.Remove(tkey{ &p1.y, event.i })			
 		}
 
 		for i := starti; i < endi; i++ {
@@ -736,15 +749,15 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			psp1 := points[segI]
 			psp2 := points[(segI+1)%len(points)]
-			
+
+			// Relevant fact: there are no values of x such that x*x overflows to zero
+			// for a 32-bit or 64-bit int.
 			d := event.i - segI
 			dd := d*d
-			if dd != 1 && dd != lpsm1 {
-				fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", psp1.ApproxX(), psp1.ApproxY(), psp2.ApproxX(), psp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())				
-
+			if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
 				intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
 				if intersect {
-					fmt.Printf("ADDING INTER %i %i\n", event.i, segI)
+					//fmt.Printf("ADDING INTER %v %v at (%v, %v)\n", event.i, segI, &intersectionPoint.x, &intersectionPoint.y)
 					intersections = append(intersections, Intersection { event.i, segI, intersectionPoint })
 				}
 			}
