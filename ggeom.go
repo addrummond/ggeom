@@ -731,10 +731,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	intersections := make([]Intersection, 0)
 
 	for _,event := range events {
-		p1 := &points[event.i]
-		p2 := &points[(event.i+1)%len(points)]
-
 		//fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
+
 
 		if event.kind == start {
 			fmt.Printf("Inserting %v %v (%p) %v (%p)\n", event.i, &event.left.y, &event.right.y, &event.left.y, &event.right.y)
@@ -749,12 +747,17 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
 				    psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
+					p1 := &points[event.i]
+					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
 						intersections = append(intersections, Intersection { event.i, prevI, intersectionPoint })
 					}
 
-					break
+					// Special case for vertical lines. We have to check all the other segments.
+					if p1.x.Cmp(&p2.x) != 0 {
+						break
+					}
 				}
 			}
 			for it2.Next() {
@@ -764,12 +767,16 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
 				    nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
+					p1 := &points[event.i]
+					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
 						intersections = append(intersections, Intersection { event.i, nextI, intersectionPoint })
 					}
 
-					break
+					if p1.x.Cmp(&p2.x) != 0 {
+						break
+					}
 				}
 			}
 		} else {
