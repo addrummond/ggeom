@@ -710,7 +710,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		starti, endi := 1, 1
 
 		var it1, it2 *redblacktree.Iterator
-		removeFromTreeLater := false
 		if event.kind == start {
 			//fmt.Printf("Inserting key %v ||| %+v (%p)\n", event.i, &event.p.y, &event.p.y)
 			it1S := tree.PutAndGetIterator(tkey { &event.p.y, event.i }, event.i)
@@ -724,8 +723,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 			it2S := it1S
 			it1, it2 = &it1S, &it2S
-
-			removeFromTreeLater = true
 		} else {
 			panic(fmt.Sprintf("Internal error [2] in 'SegementLoopIntersections': bad event kind %v", event.kind))
 		}
@@ -740,7 +737,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			endi = 2
 		}
 
-		if removeFromTreeLater {
+		if event.kind == end {
 			tree.Remove(tkey{ &p1.y, event.i })			
 		}
 
