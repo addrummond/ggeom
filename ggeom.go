@@ -618,6 +618,7 @@ type bentleyEvent struct {
 	i int
 	left *Vec2
 	right *Vec2
+	order int
 }
 
 func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
@@ -698,19 +699,38 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		)
 	}
 	sort.Sort(bySegmentX { events: events, points: points })
+	for i,_ := range(events) {
+		events[i].order = i
+	}
 
 	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
-		y *Scalar
-		seg int
+		segi int
+		order int
+		lefty *Scalar
+		righty *Scalar
 	}
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
-		c := aa.y.Cmp(bb.y)
-		if c != 0 {
-			return c
+
+		if aa.order > bb.order {
+			// a is the new label
+			if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
+				return 1
+			} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
+				return -1
+			} else {
+				return 0
+			}
 		} else {
-			return aa.seg - bb.seg
+			// b is the new label
+			if bb.lefty.Cmp(aa.lefty) > 0 && bb.lefty.Cmp(aa.righty) > 0 {
+				return 1
+			} else if bb.lefty.Cmp(aa.lefty) < 0 && bb.lefty.Cmp(aa.righty) < 0 {
+				return -1
+			} else {
+				return 0
+			}
 		}
 	}
 	tree := redblacktree.NewWith(tcmp)
@@ -724,11 +744,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
 
 		if event.kind == start {
-			it1 := tree.PutAndGetIterator(tkey { &event.left.y, event.i }, event.i)
+			it1 := tree.PutAndGetIterator(tkey { event.i, event.order, &event.left.y, &event.right.y }, event.i)
 			it2 := it1
-			it1.Prev()
 
-			if it1.Prev() {
+			for it1.Prev() {
+				//fmt.Printf("LOOP1 %v\n", it1.Value().(int))
 				prevI := it1.Value().(int)
 				d := event.i - prevI
 				dd := d*d
@@ -739,9 +759,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						intersections = append(intersections, Intersection { event.i, prevI, intersectionPoint })
 					}
+
+					break
 				}
 			}
-			if it2.Next() {
+			for it2.Next() {
 				nextI := it2.Value().(int)
 				d := event.i - nextI
 				dd := d*d
@@ -752,15 +774,17 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						intersections = append(intersections, Intersection { event.i, nextI, intersectionPoint })
 					}
+
+					break
 				}
 			}
 		} else {
-			it1, f := tree.GetIterator(tkey { &event.left.y, event.i})
+			it1, f := tree.GetIterator(tkey { event.i, event.order, &event.left.y, &event.right.y })
 			if ! f {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
 			}
 			it2 := it1
-			if it1.Next() && it2.Next() {
+			for it1.Prev() && it2.Next() {
 				si1 := it1.Value().(int)
 				si2 := it2.Value().(int)
 				d := si1 - si2
@@ -774,10 +798,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						intersections = append(intersections, Intersection { si1, si2, intersectionPoint })
 					}
+
+					break
 				}
 			}
 
-			tree.Remove(tkey{ &p1.y, event.i })
+			// TODO: Should be possible to use the iterator to do this more efficiently.
+			tree.Remove(tkey{ event.i, event.order, &event.left.y, &event.right.y })
 		}
 	}
 
