@@ -618,7 +618,6 @@ type bentleyEvent struct {
 	i int
 	left *Vec2
 	right *Vec2
-	order int
 }
 
 func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
@@ -683,54 +682,48 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		events = append(events, 
-			bentleyEvent {
-				kind: start,
-				i: i,
-				left: left,
-				right: right,
-			},
-			bentleyEvent {
-				kind: end,
-				i: i,
-				left: left,
-				right: right,
-			},
-		)
+		e1 := bentleyEvent {
+			kind: start,
+			i: i,
+			left: left,
+			right: right,
+		}
+		e2 := bentleyEvent {
+			kind: end,
+			i: i,
+			left: left,
+			right: right,
+		}
+		events = append(events, e1, e2)
 	}
 	sort.Sort(bySegmentX { events: events, points: points })
-	for i,_ := range(events) {
-		events[i].order = i
-	}
 
 	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
 		segi int
-		order int
 		lefty *Scalar
 		righty *Scalar
 	}
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
 
-		if aa.order > bb.order {
-			// a is the new label
-			if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
-				return 1
-			} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
-				return -1
-			} else {
-				return 0
-			}
+		// aa is the new node (redblacktree.go always calls the comparison func
+		// with the newn node as first arg).
+
+		if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
+			return 1
+		} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
+			return -1
 		} else {
-			// b is the new label
-			if bb.lefty.Cmp(aa.lefty) > 0 && bb.lefty.Cmp(aa.righty) > 0 {
-				return 1
-			} else if bb.lefty.Cmp(aa.lefty) < 0 && bb.lefty.Cmp(aa.righty) < 0 {
-				return -1
-			} else {
-				return 0
+			c := aa.lefty.Cmp(bb.lefty)
+			if c != 0 {
+				return c
 			}
+			c = aa.righty.Cmp(bb.righty)
+			if c != 0 {
+				return c;
+			}
+			return aa.segi - bb.segi;
 		}
 	}
 	tree := redblacktree.NewWith(tcmp)
@@ -741,14 +734,15 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		p1 := &points[event.i]
 		p2 := &points[(event.i+1)%len(points)]
 
-		fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
+		//fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
 
 		if event.kind == start {
-			it1 := tree.PutAndGetIterator(tkey { event.i, event.order, &event.left.y, &event.right.y }, event.i)
+			fmt.Printf("Inserting %v %v (%p) %v (%p)\n", event.i, &event.left.y, &event.right.y, &event.left.y, &event.right.y)
+			it1 := tree.PutAndGetIterator(tkey { event.i, &event.left.y, &event.right.y }, event.i)
+			fmt.Printf("keys: %v\n", tree.Keys())
 			it2 := it1
 
 			for it1.Prev() {
-				//fmt.Printf("LOOP1 %v\n", it1.Value().(int))
 				prevI := it1.Value().(int)
 				d := event.i - prevI
 				dd := d*d
@@ -779,8 +773,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 		} else {
-			it1, f := tree.GetIterator(tkey { event.i, event.order, &event.left.y, &event.right.y })
+			fmt.Printf("Looking for %v, %v (%p), %v (%p)\n", event.i, &event.left.y, &event.right.y, &event.left.y, &event.right.y)
+			it1, f := tree.GetIterator(tkey { event.i, &event.left.y, &event.right.y })
 			if ! f {
+				fmt.Printf("keys: %v\n", tree.Keys())
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
 			}
 			it2 := it1
@@ -804,7 +800,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			// TODO: Should be possible to use the iterator to do this more efficiently.
-			tree.Remove(tkey{ event.i, event.order, &event.left.y, &event.right.y })
+			fmt.Printf("Removing %v %v %v\n", event.i, &event.left.y, &event.right.y)			
+			tree.Remove(tkey{ event.i, &event.left.y, &event.right.y })
 		}
 	}
 
