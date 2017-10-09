@@ -674,7 +674,8 @@ type Intersection struct {
 // An implementation of the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
 // by segment from last point to first point. This returns all intersections
-// except for the points in the original input.
+// except for the points in the original input (which could all be considered
+// intersection points).
 func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
@@ -708,7 +709,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		aa, bb := a.(tkey), b.(tkey)
 
 		// aa is the new node (redblacktree.go always calls the comparison func
-		// with the newn node as first arg).
+		// with the new node as first arg).
 
 		if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
 			return 1
@@ -751,7 +752,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 					// Special case for vertical lines. We have to check all the other segments.
 					if p1.x.Cmp(&p2.x) != 0 {
-						break
+						//break
 					}
 				}
 			}
