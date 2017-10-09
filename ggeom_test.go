@@ -227,7 +227,7 @@ func TestSegmentIntersection(t *testing.T) {
 		{{-1,2}, {1,0}, {-1,0}, {1,2}, {0,1}},	                      // The case above with points swapped.
 		{{-1,0}, {1,0}, {-0.5,10}, {-0.5,-10}, {-0.5,0}},             // Vertical line intersecting horizontal line
 		{{-1,-1}, {1,-1}, {-0.5,9}, {-0.5,-11}, {-0.5,-1}},           // The case above translated down one unit
-	    {{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},              // Horizontal line intersecting with vertical line
+		{{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},              // Horizontal line intersecting with vertical line
 		{{-1, 1}, {1,1}, {-0.5,1}, {0.5,1}, {NOT_UNIQUE,NOT_UNIQUE}}, // One horizontal line that completely overlaps another
 		{{1, -1}, {1,1}, {1,-0.5}, {1,0.5}, {NOT_UNIQUE,NOT_UNIQUE}}, // One vertical line that completely overlaps another		
 		{{-1,-2}, {1,2}, {1,2}, {2,4}, {1,2}},                        // Two adjacent diagonal lines
@@ -254,6 +254,19 @@ func TestSegmentIntersection(t *testing.T) {
 			if ! tst[4].Eq(&VNONE) {
 				t.Error()
 			}
+		}
+	}
+}
+
+func TestSegmentLoopIntersections(t *testing.T) {
+	tests := SofSofVec2([][][]float64 {
+		{{-3,-5}, {4,5}, {2,6}, {2,-1}, {-3,-2}, {1,-4}, {-2,-2,}, {2,2}, {-5, -5}, {-4,-4}},
+	})
+
+	for _,tst := range tests {
+		intersections := SegmentLoopIntersections(tst)
+		for _,itn := range intersections {
+			fmt.Printf("Intersection: %f, %f\n", itn.p.ApproxX(), itn.p.ApproxY())
 		}
 	}
 }

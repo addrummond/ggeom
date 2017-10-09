@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"fmt"
 )
 
 type Scalar = big.Rat
@@ -613,6 +614,18 @@ const (
 type bentleyEvent struct {
 	kind int
 	i int
+	x *Scalar
+}
+
+func bentleyEventXs(i int, points []Vec2) (*Scalar, *Scalar) {
+	p1x := &(points[i].x)
+	p2x := &(points[(i+1)%len(points)].x)
+
+	if p1x.Cmp(p2x) <= 0 {
+		return p1x, p2x
+	} else {
+		return p2x, p1x
+	}
 }
 
 type bySegmentX struct {
@@ -626,20 +639,7 @@ func (s bySegmentX) Swap(i, j int) {
 	s.events[i], s.events[j] = s.events[j], s.events[i]
 }
 func (s bySegmentX) Less(i, j int) bool {
-	xa1 := &s.points[s.events[i].i].x
-	xa2 := &s.points[(s.events[i].i+1)%len(s.points)].x
-	xb1 := &s.points[s.events[j].i].x
-	xb2 := &s.points[(s.events[j].i+1)%len(s.points)].x
-
-	if xa1.Cmp(xa2) <= 0 {
-		return xa1.Cmp(xb1) < 0 && xa1.Cmp(xb2) < 0
-	} else {
-		return xa2.Cmp(xb1) < 0 && xa2.Cmp(xb2) < 0
-	}
-}
-
-func scalarCmp(a, b interface{}) int {
-	return a.(*Scalar).Cmp(b.(*Scalar))
+	return s.events[i].x.Cmp(s.events[j].x) < 0
 }
 
 type Intersection struct {
@@ -656,21 +656,37 @@ type Intersection struct {
 func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
-		events = append(events,
+		startx, endx := bentleyEventXs(i, points)
+		events = append(events, 
 			bentleyEvent {
 				kind: start,
 				i: i,
+				x: startx,
 			},
 			bentleyEvent {
 				kind: end,
-				i: (i+1)%len(points),
+				i: i,
+				x: endx,
 			},
 		)
 	}
 	sort.Sort(bySegmentX { events: events, points: points })
 
-	// Segement indices sorted by y value of leftmost point.
-	tree := redblacktree.NewWith(scalarCmp)
+	// Segement indices sorted by y value of leftmost point and then segment index.
+	type tkey struct {
+		y *Scalar
+		seg int
+	}
+	tcmp := func (a, b interface{}) int {
+		aa, bb := a.(tkey), b.(tkey)
+		c := aa.y.Cmp(bb.y)
+		if c != 0 {
+			return c
+		} else {
+			return aa.seg - bb.seg
+		}
+	}
+	tree := redblacktree.NewWith(tcmp)
 
 	intersections := make([]Intersection, 0)
 
@@ -678,12 +694,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		p1 := &points[event.i]
 		p2 := &points[(event.i+1)%len(points)]
 
-		it1 := tree.PutAndGetIterator(p1.y, event.i)
+		it1 := tree.PutAndGetIterator(tkey { &p1.y, event.i }, event.i)
 		it2 := it1
 		if it1.Prev() {
 			prevSegI := it1.Value().(int)
 			psp1 := points[prevSegI]
 			psp2 := points[(prevSegI+1)%len(points)]
+			fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", psp1.ApproxX(), psp1.ApproxY(), psp2.ApproxX(), psp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
 			intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
 			if intersect {
 				intersections = append(intersections, Intersection { event.i, prevSegI, intersectionPoint })
@@ -693,6 +710,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			nextSegI := it2.Value().(int)
 			nsp1 := points[nextSegI]
 			nsp2 := points[(nextSegI+1)%len(points)]
+			fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", nsp1.ApproxX(), nsp1.ApproxY(), nsp2.ApproxX(), nsp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
 			intersect, _, intersectionPoint := SegmentIntersection(&nsp1, &nsp2, p1, p2)
 			if intersect {
 				intersections = append(intersections, Intersection { event.i, nextSegI, intersectionPoint })
@@ -700,7 +718,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		}
 
 		if (event.kind == end) {
-			tree.Remove(event.i)
+			tree.Remove(tkey{ &p1.y, event.i })
 		}
 	}
 
