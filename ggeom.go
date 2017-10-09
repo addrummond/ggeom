@@ -617,6 +617,7 @@ const (
 type bentleyEvent struct {
 	kind int
 	i int
+	i2 int
 	left *Vec2
 	right *Vec2
 }
@@ -737,7 +738,15 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
-						intersections = append(intersections, Intersection { event.i, prevI, intersectionPoint })
+						itn := Intersection { event.i, prevI, intersectionPoint }
+						intersections = append(intersections, itn)
+						events.Push(bentleyEvent {
+							kind: cross,
+							i: prevI,
+							i2: event.i,
+							left: &itn.p,
+							right: &itn.p,
+						})
 					}
 
 					break
@@ -754,13 +763,21 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
-						intersections = append(intersections, Intersection { event.i, nextI, intersectionPoint })
+						itn := Intersection { event.i, nextI, intersectionPoint }
+						intersections = append(intersections, itn)
+						events.Push(bentleyEvent {
+							kind: cross,
+							i: nextI,
+							i2: event.i,
+							left: &itn.p,
+							right: &itn.p,
+						})
 					}
 
 					break
 				}
 			}
-		} else {
+		} else if event.kind == end {
 			it1, f := tree.GetIterator(tkey { event.i, &event.left.y, &event.right.y })
 			if ! f {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
@@ -779,7 +796,15 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					pb2 := &points[(si2+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
 					if intersect {
-						intersections = append(intersections, Intersection { si1, si2, intersectionPoint })
+						itn := Intersection { si1, si2, intersectionPoint }
+						intersections = append(intersections, itn)
+						events.Push(bentleyEvent {
+							kind: cross,
+							i: si1,
+							i2: si2,
+							left: &itn.p,
+							right: &itn.p,
+						})
 					}
 
 					break
@@ -787,6 +812,33 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			tree.RemoveAt(it3)
+		} else if event.kind == cross {
+			s1 := &points[event.i]
+			s2 := &points[(event.i+1)%len(points)]
+			t1 := &points[event.i2]
+			t2 := &points[(event.i2+1)%len(points)]
+
+			if s1.x.Cmp(&s2.x) > 0 {
+				s1, s2 = s2, s1
+			}
+			if t1.x.Cmp(&t2.x) > 0 {
+				t1, t2 = t2, t1
+			}
+			if s1.y.Cmp(&s2.y) > 0 {
+				s1, s2, t1, t2 = t1, t2, s1, s2
+			}
+
+			sIt, sItExists := tree.GetIterator(tkey { event.i, &s1.y, &s2.y })
+			tIt, tItExists := tree.GetIterator(tkey { event.i2, &t1.y, &t2.y })
+
+			// r above s
+			// u below t
+			if sItExists && sIt.Prev() {
+				r := sIt.Value().(int)
+			}
+			if tItExists && tIt.Next() {
+				u := tIt.Value().(int)
+			}
 		}
 	}
 
