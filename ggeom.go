@@ -1,10 +1,10 @@
 package ggeom
 
 import (
+	"github.com/emirpasic/gods/trees/binaryheap"
 	"github.com/addrummond/ggeom/redblacktree"
 	"math"
 	"math/big"
-	"sort"
 	"fmt"
 )
 
@@ -611,6 +611,7 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 const (
 	start = 0
 	end = 1
+	cross = 2
 )
 
 type bentleyEvent struct {
@@ -631,40 +632,6 @@ func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
 	}
 }
 
-type bySegmentX struct {
-	events []bentleyEvent;
-	points []Vec2;
-}
-func (s bySegmentX) Len() int {
-	return len(s.events)
-}
-func (s bySegmentX) Swap(i, j int) {
-	s.events[i], s.events[j] = s.events[j], s.events[i]
-}
-func (s bySegmentX) Less(i, j int) bool {
-	var x1, x2 *Scalar
-
-	if s.events[i].kind == start {
-		x1 = &(s.events[i].left.x)
-	} else {
-		x1 = &(s.events[i].right.x)
-	}
-
-	if s.events[j].kind == start {
-		x2 = &(s.events[j].left.x)
-	} else {
-		x2 = &(s.events[j].right.x)
-	}
-
-	c := x1.Cmp(x2)
-	if c != 0 {
-		return c < 0
-	} else {
-		// 'start' is less than 'end'
-		return s.events[i].kind < s.events[j].kind
-	}
-}
-
 type Intersection struct {
 	seg1 int
 	seg2 int
@@ -680,7 +647,20 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 
-	events := make([]bentleyEvent, 0, len(points)*2)
+	hcmp := func (a, b interface {}) int {
+		aa, bb := a.(bentleyEvent), b.(bentleyEvent)
+		c := aa.left.x.Cmp(&bb.left.x)
+		if c != 0 {
+			return c
+		} else if aa.kind == start && bb.kind != start {
+			return -1
+		} else if bb.kind == start && aa.kind != start {
+			return 1
+		} else {
+			return 0
+		}
+	}
+	events := binaryheap.NewWith(hcmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
 		e1 := bentleyEvent {
@@ -695,9 +675,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			left: left,
 			right: right,
 		}
-		events = append(events, e1, e2)
+		events.Push(e1)
+		events.Push(e2)
 	}
-	sort.Sort(bySegmentX { events: events, points: points })
 
 	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
@@ -731,7 +711,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
-	for _,event := range events {
+	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
+		event := e.(bentleyEvent)
+		//fmt.Printf("Event: [x=%v], %v\n", &event.left.x, &event)
+
 		if event.kind == start {
 			it1 := tree.PutAndGetIterator(tkey { event.i, &event.left.y, &event.right.y }, event.i)
 			it2 := it1
@@ -750,10 +733,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						intersections = append(intersections, Intersection { event.i, prevI, intersectionPoint })
 					}
 
-					// Special case for vertical lines. We have to check all the other segments.
-					if p1.x.Cmp(&p2.x) != 0 {
-						//break
-					}
+					break
 				}
 			}
 			for it2.Next() {
@@ -770,9 +750,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						intersections = append(intersections, Intersection { event.i, nextI, intersectionPoint })
 					}
 
-					if p1.x.Cmp(&p2.x) != 0 {
-						break
-					}
+					break
 				}
 			}
 		} else {
