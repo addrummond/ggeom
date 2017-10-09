@@ -616,17 +616,17 @@ const (
 type bentleyEvent struct {
 	kind int
 	i int
-	x *Scalar
+	p *Vec2
 }
 
-func bentleyEventXs(i int, points []Vec2) (*Scalar, *Scalar) {
-	p1x := &(points[i].x)
-	p2x := &(points[(i+1)%len(points)].x)
+func bentleyEventPs(i int, points []Vec2) (*Vec2, *Vec2) {
+	p1 := &(points[i])
+	p2 := &(points[(i+1)%len(points)])
 
-	if p1x.Cmp(p2x) <= 0 {
-		return p1x, p2x
+	if p1.x.Cmp(&p2.x) <= 0 {
+		return p1, p2
 	} else {
-		return p2x, p1x
+		return p2, p1
 	}
 }
 
@@ -641,7 +641,7 @@ func (s bySegmentX) Swap(i, j int) {
 	s.events[i], s.events[j] = s.events[j], s.events[i]
 }
 func (s bySegmentX) Less(i, j int) bool {
-	return s.events[i].x.Cmp(s.events[j].x) < 0
+	return s.events[i].p.x.Cmp(&(s.events[j].p.x)) < 0
 }
 
 type Intersection struct {
@@ -658,17 +658,17 @@ type Intersection struct {
 func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
-		startx, endx := bentleyEventXs(i, points)
+		startp, endp := bentleyEventPs(i, points)
 		events = append(events, 
 			bentleyEvent {
 				kind: start,
 				i: i,
-				x: startx,
+				p: startp,
 			},
 			bentleyEvent {
 				kind: end,
 				i: i,
-				x: endx,
+				p: endp,
 			},
 		)
 	}
@@ -700,38 +700,38 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		p2 := &points[(event.i+1)%len(points)]
 
 		var segs [2]int
-		start, end := 1, 1
+		starti, endi := 1, 1
 
 		var it1, it2 *redblacktree.Iterator
-		found := true
+		fmt.Printf("HERE KIND %v\n", event.kind)
 		if event.kind == start {
-			it1S := tree.PutAndGetIterator(tkey { &p1.y, event.i }, event.i)
+			fmt.Printf("Inserting key %v ||| %+v\n", event.i, &event.p.y)
+			it1S := tree.PutAndGetIterator(tkey { &event.p.y, event.i }, event.i)
 			it2S := it1S
 			it1, it2 = &it1S, &it2S
 		} else {
 			tree.Remove(tkey{ &p1.y, event.i })
 
-			it1S, f := tree.GetIterator(tkey { &p1.y, event.i})
-			found = f
-			if f {
-			    it2S := it1S
-				it1, it2 = &it1S, &it2S
+			fmt.Printf("Retrieving key %v ||| %+v\n", event.i, &event.p.y)			
+			it1S, f := tree.GetIterator(tkey { &event.p.y, event.i})
+			if ! f {
+				panic("Could not find segement in 'SegmentLoopIntersections'")
 			}
+			it2S := it1S
+			it1, it2 = &it1S, &it2S
 		}
 
-		if found {
-			if it1.Prev() {
-				segs[0] = it1.Value().(int)
-				fmt.Printf("%i is prev to %i\n", segs[0], event.i)
-				start = 0
-			} else if it2.Next() {
-				segs[1] = it2.Value().(int)
-				fmt.Printf("%i is after %i\n", segs[1], event.i)
-				end = 2
-			}
+		if it1.Prev() {
+			segs[0] = it1.Value().(int)
+			fmt.Printf("%i is prev to %i\n", segs[0], event.i)
+			starti = 0
+		} else if it2.Next() {
+			segs[1] = it2.Value().(int)
+			fmt.Printf("%i is after %i\n", segs[1], event.i)
+			endi = 2
 		}
 
-		for i := start; i < end; i++ {
+		for i := starti; i < endi; i++ {
 			segI := segs[i]
 
 			psp1 := points[segI]
