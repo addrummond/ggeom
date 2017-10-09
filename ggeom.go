@@ -649,15 +649,21 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	hcmp := func (a, b interface {}) int {
 		aa, bb := a.(bentleyEvent), b.(bentleyEvent)
-		c := aa.left.x.Cmp(&bb.left.x)
+
+		x1, x2 := &aa.left.x, &bb.left.x
+		if aa.kind != start {
+			x1 = &aa.right.x
+		}
+		if bb.kind != start {
+			x2 = &bb.right.x
+		}
+
+		c := x1.Cmp(x2)
 		if c != 0 {
 			return c
-		} else if aa.kind == start && bb.kind != start {
-			return -1
-		} else if bb.kind == start && aa.kind != start {
-			return 1
 		} else {
-			return 0
+			// 'start' is less than 'end'
+			return aa.kind - bb.kind
 		}
 	}
 	events := binaryheap.NewWith(hcmp)
@@ -713,7 +719,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
 		event := e.(bentleyEvent)
-		//fmt.Printf("Event: [x=%v], %v\n", &event.left.x, &event)
+		fmt.Printf("Event: [x=%v], %v\n", &event.left.x, &event)
+		fmt.Printf("Keys: %v\n", tree.Keys())
 
 		if event.kind == start {
 			it1 := tree.PutAndGetIterator(tkey { event.i, &event.left.y, &event.right.y }, event.i)
