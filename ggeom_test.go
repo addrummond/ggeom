@@ -260,11 +260,11 @@ func TestSegmentIntersection(t *testing.T) {
 
 func TestSegmentLoopIntersections(t *testing.T) {
 	tests := SofSofVec2([][][]float64 {
-		//{{-3,4}, {-1,-2}, {2,1}, {-3,1}, {-3,4}}, // polygon
-		//{{-2,1}},                                 // intersection points
+		{{-3,4}, {-1,-2}, {2,1}, {-3,1}}, // polygon
+		{{-2,1}},                         // intersection points
 		/////
 		{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
-		{},
+		{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {

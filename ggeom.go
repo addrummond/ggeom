@@ -731,12 +731,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	intersections := make([]Intersection, 0)
 
 	for _,event := range events {
-		//fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
-
 		if event.kind == start {
-			fmt.Printf("Inserting %v %v (%p) %v (%p)\n", event.i, &event.left.y, &event.right.y, &event.left.y, &event.right.y)
 			it1 := tree.PutAndGetIterator(tkey { event.i, &event.left.y, &event.right.y }, event.i)
-			fmt.Printf("keys: %v\n", tree.Keys())
 			it2 := it1
 
 			for it1.Prev() {
@@ -779,10 +775,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 		} else {
-			fmt.Printf("Looking for %v, %v (%p), %v (%p)\n", event.i, &event.left.y, &event.right.y, &event.left.y, &event.right.y)
 			it1, f := tree.GetIterator(tkey { event.i, &event.left.y, &event.right.y })
 			if ! f {
-				fmt.Printf("keys: %v\n", tree.Keys())
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
 			}
 			it2 := it1
@@ -806,8 +800,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 
-			// TODO: Should be possible to use the iterator to do this more efficiently.
-			fmt.Printf("Removing %v %v %v\n", event.i, &event.left.y, &event.right.y)			
 			tree.RemoveAt(it3)
 		}
 	}
