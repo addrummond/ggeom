@@ -616,17 +616,18 @@ const (
 type bentleyEvent struct {
 	kind int
 	i int
-	p *Vec2
+	left *Vec2
+	right *Vec2
 }
 
-func bentleyEventP(i int, points []Vec2) *Vec2 {
+func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
 	p1 := &(points[i])
 	p2 := &(points[(i+1)%len(points)])
 
 	if p1.x.Cmp(&p2.x) <= 0 {
-		return p1
+		return p1, p2
 	} else {
-		return p2
+		return p2, p1
 	}
 }
 
@@ -641,7 +642,21 @@ func (s bySegmentX) Swap(i, j int) {
 	s.events[i], s.events[j] = s.events[j], s.events[i]
 }
 func (s bySegmentX) Less(i, j int) bool {
-	c := s.events[i].p.x.Cmp(&(s.events[j].p.x))
+	var x1, x2 *Scalar
+
+	if s.events[i].kind == start {
+		x1 = &(s.events[i].left.x)
+	} else {
+		x1 = &(s.events[i].right.x)
+	}
+
+	if s.events[j].kind == start {
+		x2 = &(s.events[j].left.x)
+	} else {
+		x2 = &(s.events[j].right.x)
+	}
+
+	c := x1.Cmp(x2)
 	if c != 0 {
 		return c < 0
 	} else {
@@ -666,17 +681,19 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
-		bep := bentleyEventP(i, points)
+		left, right := bentleyEventPs(i, points)
 		events = append(events, 
 			bentleyEvent {
 				kind: start,
 				i: i,
-				p: bep,
+				left: left,
+				right: right,
 			},
 			bentleyEvent {
 				kind: end,
 				i: i,
-				p: bep,
+				left: left,
+				right: right,
 			},
 		)
 	}
@@ -704,60 +721,63 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		p1 := &points[event.i]
 		p2 := &points[(event.i+1)%len(points)]
 
-		//fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.p.x, &event.p.y, &p1.x, &p1.y, &p2.x, &p2.y)
+		fmt.Printf("Event[%v] k=%v  p = %v, %v;  p1 = %v, %v;  p2 = %v, %v\n", event.i, event.kind, &event.left.x, &event.left.y, &p1.x, &p1.y, &p2.x, &p2.y)
 
-		var segs [2]int
-		starti, endi := 1, 1
-
-		var it1, it2 *redblacktree.Iterator
 		if event.kind == start {
-			//fmt.Printf("Inserting key %v ||| %+v (%p)\n", event.i, &event.p.y, &event.p.y)
-			it1S := tree.PutAndGetIterator(tkey { &event.p.y, event.i }, event.i)
-			it2S := it1S
-			it1, it2 = &it1S, &it2S
-		} else if event.kind == end {
-			//fmt.Printf("Retrieving key %v ||| %+v (%p)\n", event.i, &event.p.y, &event.p.y)			
-			it1S, f := tree.GetIterator(tkey { &event.p.y, event.i})
-			if ! f {
-				panic("Internal error [1] in 'SegmentLoopIntersections'")				
-			}
-			it2S := it1S
-			it1, it2 = &it1S, &it2S
-		} else {
-			panic(fmt.Sprintf("Internal error [2] in 'SegementLoopIntersections': bad event kind %v", event.kind))
-		}
+			it1 := tree.PutAndGetIterator(tkey { &event.left.y, event.i }, event.i)
+			it2 := it1
+			it1.Prev()
 
-		if it1.Prev() {
-			segs[0] = it1.Value().(int)
-			//fmt.Printf("%i is prev to %i\n", segs[0], event.i)
-			starti = 0
-		} else if it2.Next() {
-			segs[1] = it2.Value().(int)
-			//fmt.Printf("%i is after %i\n", segs[1], event.i)
-			endi = 2
-		}
-
-		if event.kind == end {
-			tree.Remove(tkey{ &p1.y, event.i })			
-		}
-
-		for i := starti; i < endi; i++ {
-			segI := segs[i]
-
-			psp1 := points[segI]
-			psp2 := points[(segI+1)%len(points)]
-
-			// Relevant fact: there are no values of x such that x*x overflows to zero
-			// for a 32-bit or 64-bit int.
-			d := event.i - segI
-			dd := d*d
-			if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
-				intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
-				if intersect {
-					//fmt.Printf("ADDING INTER %v %v at (%v, %v)\n", event.i, segI, &intersectionPoint.x, &intersectionPoint.y)
-					intersections = append(intersections, Intersection { event.i, segI, intersectionPoint })
+			if it1.Prev() {
+				prevI := it1.Value().(int)
+				d := event.i - prevI
+				dd := d*d
+				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+				    psp1 := &points[prevI]
+					psp2 := &points[(prevI+1)%len(points)]
+					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
+					if intersect {
+						intersections = append(intersections, Intersection { event.i, prevI, intersectionPoint })
+					}
 				}
 			}
+			if it2.Next() {
+				nextI := it2.Value().(int)
+				d := event.i - nextI
+				dd := d*d
+				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+				    nsp1 := &points[nextI]
+					nsp2 := &points[(nextI+1)%len(points)]
+					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
+					if intersect {
+						intersections = append(intersections, Intersection { event.i, nextI, intersectionPoint })
+					}
+				}
+			}
+		} else {
+			it1, f := tree.GetIterator(tkey { &event.left.y, event.i})
+			if ! f {
+				panic("Internal error [1] in 'SegmentLoopIntersections'")
+			}
+			it2 := it1
+			if it1.Next() && it2.Next() {
+				si1 := it1.Value().(int)
+				si2 := it2.Value().(int)
+				d := si1 - si2
+				dd := d*d
+				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+					pa1 := &points[si1]
+					pa2 := &points[(si1+1)%len(points)]
+					pb1 := &points[si2]
+					pb2 := &points[(si2+1)%len(points)]
+					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
+					if intersect {
+						intersections = append(intersections, Intersection { si1, si2, intersectionPoint })
+					}
+				}
+			}
+
+			tree.Remove(tkey{ &p1.y, event.i })
 		}
 	}
 
