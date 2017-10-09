@@ -608,7 +608,6 @@ func NondegenerateSegementIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 const (
 	start = 0
 	end = 1
-	cross = 1
 )
 
 type bentleyEvent struct {
@@ -631,7 +630,7 @@ func (s bySegmentX) Less(i, j int) bool {
 	xa2 := &s.points[(s.events[i].i+1)%len(s.points)].x
 	xb1 := &s.points[s.events[j].i].x
 	xb2 := &s.points[(s.events[j].i+1)%len(s.points)].x
-	
+
 	if xa1.Cmp(xa2) <= 0 {
 		return xa1.Cmp(xb1) < 0 && xa1.Cmp(xb2) < 0
 	} else {
@@ -639,12 +638,22 @@ func (s bySegmentX) Less(i, j int) bool {
 	}
 }
 
+func scalarCmp(a, b interface{}) int {
+	return a.(*Scalar).Cmp(b.(*Scalar))
+}
+
+type Intersection struct {
+	seg1 int
+	seg2 int
+	p Vec2
+}
+
 // An implementation of the Bentley Ottmann algorithm for the case where
-// the input segments are connected in a loop. (Loop is implicity closed
+// the input segments are connected in a loop. (Loop is implicitly closed
 // by segement from last point to first point.)
 // Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 // http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
-func SegmentLoopIntersections(points []Vec2) {
+func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := make([]bentleyEvent, 0, len(points)*2)
 	for i := 0; i < len(points); i++ {
 		events = append(events,
@@ -660,12 +669,40 @@ func SegmentLoopIntersections(points []Vec2) {
 	}
 	sort.Sort(bySegmentX { events: events, points: points })
 
-	tree := redblacktree.NewWith()
+	// Segement indices sorted by y value of leftmost point.
+	tree := redblacktree.NewWith(scalarCmp)
 
-	for _,si := range segments {
-		p1 := &points[si]
-		p2 := &points[(si+1)%len(segments)]
+	intersections := make([]Intersection, 0)
 
+	for _,event := range events {
+		p1 := &points[event.i]
+		p2 := &points[(event.i+1)%len(points)]
 
+		it1 := tree.PutAndGetIterator(p1.y, event.i)
+		it2 := it1
+		if it1.Prev() {
+			prevSegI := it1.Value().(int)
+			psp1 := points[prevSegI]
+			psp2 := points[(prevSegI+1)%len(points)]
+			intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
+			if intersect {
+				intersections = append(intersections, Intersection { event.i, prevSegI, intersectionPoint })
+			}
+		}
+		if it2.Next() {
+			nextSegI := it2.Value().(int)
+			nsp1 := points[nextSegI]
+			nsp2 := points[(nextSegI+1)%len(points)]
+			intersect, _, intersectionPoint := SegmentIntersection(&nsp1, &nsp2, p1, p2)
+			if intersect {
+				intersections = append(intersections, Intersection { event.i, nextSegI, intersectionPoint })
+			}
+		}
+
+		if (event.kind == end) {
+			tree.Remove(event.i)
+		}
 	}
+
+	return intersections
 }
