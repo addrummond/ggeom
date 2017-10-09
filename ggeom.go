@@ -8,6 +8,8 @@ import (
 	"fmt"
 )
 
+var _ = fmt.Printf
+
 type Scalar = big.Rat
 
 type Vec2 struct {
@@ -690,35 +692,62 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
+	lpsm1 := len(points)-1
+	lpsm1 *= lpsm1
+
 	for _,event := range events {
 		p1 := &points[event.i]
 		p2 := &points[(event.i+1)%len(points)]
 
-		it1 := tree.PutAndGetIterator(tkey { &p1.y, event.i }, event.i)
-		it2 := it1
-		if it1.Prev() {
-			prevSegI := it1.Value().(int)
-			psp1 := points[prevSegI]
-			psp2 := points[(prevSegI+1)%len(points)]
-			fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", psp1.ApproxX(), psp1.ApproxY(), psp2.ApproxX(), psp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
-			intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
-			if intersect {
-				intersections = append(intersections, Intersection { event.i, prevSegI, intersectionPoint })
-			}
-		}
-		if it2.Next() {
-			nextSegI := it2.Value().(int)
-			nsp1 := points[nextSegI]
-			nsp2 := points[(nextSegI+1)%len(points)]
-			fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", nsp1.ApproxX(), nsp1.ApproxY(), nsp2.ApproxX(), nsp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
-			intersect, _, intersectionPoint := SegmentIntersection(&nsp1, &nsp2, p1, p2)
-			if intersect {
-				intersections = append(intersections, Intersection { event.i, nextSegI, intersectionPoint })
+		var segs [2]int
+		start, end := 1, 1
+
+		var it1, it2 *redblacktree.Iterator
+		found := true
+		if event.kind == start {
+			it1S := tree.PutAndGetIterator(tkey { &p1.y, event.i }, event.i)
+			it2S := it1S
+			it1, it2 = &it1S, &it2S
+		} else {
+			tree.Remove(tkey{ &p1.y, event.i })
+
+			it1S, f := tree.GetIterator(tkey { &p1.y, event.i})
+			found = f
+			if f {
+			    it2S := it1S
+				it1, it2 = &it1S, &it2S
 			}
 		}
 
-		if (event.kind == end) {
-			tree.Remove(tkey{ &p1.y, event.i })
+		if found {
+			if it1.Prev() {
+				segs[0] = it1.Value().(int)
+				fmt.Printf("%i is prev to %i\n", segs[0], event.i)
+				start = 0
+			} else if it2.Next() {
+				segs[1] = it2.Value().(int)
+				fmt.Printf("%i is after %i\n", segs[1], event.i)
+				end = 2
+			}
+		}
+
+		for i := start; i < end; i++ {
+			segI := segs[i]
+
+			psp1 := points[segI]
+			psp2 := points[(segI+1)%len(points)]
+			
+			d := event.i - segI
+			dd := d*d
+			if dd != 1 && dd != lpsm1 {
+				fmt.Printf("Testing intersection: %f,%f %f,%f | %f,%f, %f,%f\n", psp1.ApproxX(), psp1.ApproxY(), psp2.ApproxX(), psp2.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())				
+
+				intersect, _, intersectionPoint := SegmentIntersection(&psp1, &psp2, p1, p2)
+				if intersect {
+					fmt.Printf("ADDING INTER %i %i\n", event.i, segI)
+					intersections = append(intersections, Intersection { event.i, segI, intersectionPoint })
+				}
+			}
 		}
 	}
 

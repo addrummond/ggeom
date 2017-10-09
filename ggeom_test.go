@@ -260,7 +260,8 @@ func TestSegmentIntersection(t *testing.T) {
 
 func TestSegmentLoopIntersections(t *testing.T) {
 	tests := SofSofVec2([][][]float64 {
-		{{-3,-5}, {4,5}, {2,6}, {2,-1}, {-3,-2}, {1,-4}, {-2,-2,}, {2,2}, {-5, -5}, {-4,-4}},
+		//{{-3,-5}, {4,5}, {2,6}, {2,-1}, {-3,-2}, {1,-4}, {-2,-2,}, {2,2}, {-5, -5}, {-4,-4}},
+		{{-3,4}, {-1,-2}, {2,1}, {-3,1}, {-3,4}},
 	})
 
 	for _,tst := range tests {

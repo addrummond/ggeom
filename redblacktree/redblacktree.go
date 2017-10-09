@@ -100,19 +100,20 @@ func (tree *Tree) Put(key interface{}, value interface{}) {
 	tree.size++
 }
 
+// addrummond: utility function to help when constructing iterators from nodes.
+func pos(n *Node) position {
+	position := between
+	if n.Parent == nil {
+		position = begin
+	}
+	if n.Left == nil && n.Right == nil {
+		position = end
+	}
+	return position
+}
+
 // addrummond: Add this modification of 'Put' that returns an iterator to the new node.
 func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator {
-	pos := func (n *Node) position {
-		position := between
-		if n.Parent == nil {
-			position = begin
-		}
-		if n.Left == nil && n.Right == nil {
-			position = end
-		}
-		return position
-	}
-
 	var insertedNode *Node
 	if tree.Root == nil {
 		tree.Root = &Node{Key: key, Value: value, color: red}
@@ -166,6 +167,17 @@ func (tree *Tree) Get(key interface{}) (value interface{}, found bool) {
 		return node.Value, true
 	}
 	return nil, false
+}
+
+// addrummond: Variant of the above that returns an iterator. The iterator
+// is set to the beginning if the second return value is false.
+func (tree *Tree) GetIterator(key interface{}) (Iterator, bool) {
+	node := tree.lookup(key)
+	if node != nil {
+		var it Iterator = Iterator { tree: tree, node: node, position: pos(node) }
+		return it, true
+	}
+	return tree.Iterator(), false
 }
 
 // Remove remove the node from the tree by key.
