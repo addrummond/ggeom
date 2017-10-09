@@ -212,6 +212,37 @@ func (tree *Tree) Remove(key interface{}) {
 	tree.size--
 }
 
+// addrummond: Remove given an iterator
+func (tree *Tree) RemoveAt(it Iterator) {
+	var child *Node
+	node := it.node
+	if node == nil {
+		return
+	}
+	if node.Left != nil && node.Right != nil {
+		pred := node.Left.maximumNode()
+		node.Key = pred.Key
+		node.Value = pred.Value
+		node = pred
+	}
+	if node.Left == nil || node.Right == nil {
+		if node.Right == nil {
+			child = node.Left
+		} else {
+			child = node.Right
+		}
+		if node.color == black {
+			node.color = nodeColor(child)
+			tree.deleteCase1(node)
+		}
+		tree.replaceNode(node, child)
+		if node.Parent == nil && child != nil {
+			child.color = black
+		}
+	}
+	tree.size--
+}
+
 // Empty returns true if tree does not contain any nodes
 func (tree *Tree) Empty() bool {
 	return tree.size == 0
