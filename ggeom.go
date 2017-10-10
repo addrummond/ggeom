@@ -719,7 +719,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
-	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
+	i := 0
+	for e, notEmpty := events.Pop(); notEmpty && i < events.Size()*10; e, notEmpty = events.Pop() {
 		event := e.(bentleyEvent)
 		fmt.Printf("Event: [x=%v], %v\n", &event.left.x, &event)
 		fmt.Printf("Keys: %v\n", tree.Keys())
@@ -843,39 +844,51 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tree.SwapAt(sIt, tIt)
 			sIt, tIt = tIt, sIt
 
+			var u, r int
+			var u1, u2, r1, r2 *Vec2
 			if sItExists && sIt.Prev() {
-				u := sIt.Value().(int)
-				u1 := &points[u]
-				u2 := &points[(u+1)%len(points)]
+				u = sIt.Value().(int)
+				u1 = &points[u]
+				u2 = &points[(u+1)%len(points)]
 
 				intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 				if intersect {
+					itn := Intersection { u, si, intersectionPoint }
+					intersections = append(intersections, itn)
 					events.Push(bentleyEvent {
 						kind: cross,
 						i: u,
 						i2: si,
-						left: &intersectionPoint,
-						right: &intersectionPoint,
+						left: &itn.p,
+						right: &itn.p,
 					})
 				}
 			}
 			if tItExists && tIt.Next() {
-				r := tIt.Value().(int)
-				r1 := &points[r]
-				r2 := &points[(r+1)%len(points)]
+				r = tIt.Value().(int)
+				r1 = &points[r]
+				r2 = &points[(r+1)%len(points)]
 
 				intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 				if intersect {
+					itn := Intersection { r, ti, intersectionPoint }
+					intersections = append(intersections, itn)
 					events.Push(bentleyEvent {
 						kind: cross,
 						i: r,
 						i2: ti,
-						left: &intersectionPoint,
-						right: &intersectionPoint,
+						left: &itn.p,
+						right: &itn.p,
 					})
 				}
 			}
+
+			if sItExists && tItExists {
+				// Remove any crossing points involving the segmens r and s and t and u.
+			}
 		}
+
+		i += 1
 	}
 
 	return intersections
