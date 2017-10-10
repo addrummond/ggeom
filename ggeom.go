@@ -620,6 +620,7 @@ type bentleyEvent struct {
 	i2 int
 	left *Vec2
 	right *Vec2
+	deleted bool
 }
 
 func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
@@ -650,7 +651,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
 
 	hcmp := func (a, b interface {}) int {
-		aa, bb := a.(bentleyEvent), b.(bentleyEvent)
+		aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
 
 		x1, x2 := &aa.left.x, &bb.left.x
 		if aa.kind != start {
@@ -683,8 +684,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			left: left,
 			right: right,
 		}
-		events.Push(e1)
-		events.Push(e2)
+		events.Push(&e1)
+		events.Push(&e2)
 	}
 
 	// Segment indices sorted by y value of leftmost point and then segment index.
@@ -719,10 +720,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
-	i := 0
-	for e, notEmpty := events.Pop(); notEmpty && i < events.Size()*10; e, notEmpty = events.Pop() {
-		event := e.(bentleyEvent)
-		fmt.Printf("Event: [x=%v], %v\n", &event.left.x, &event)
+	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
+		event := e.(*bentleyEvent)
+		if event.deleted {
+			continue
+		}
+
+		fmt.Printf("Event: kind=%v [x=%v], %v\n", event.kind, &event.left.x, &event)
 		fmt.Printf("Keys: %v\n", tree.Keys())
 
 		if event.kind == start {
@@ -742,7 +746,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						itn := Intersection { event.i, prevI, intersectionPoint }
 						intersections = append(intersections, itn)
-						events.Push(bentleyEvent {
+						events.Push(&bentleyEvent {
 							kind: cross,
 							i: prevI,
 							i2: event.i,
@@ -767,7 +771,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						itn := Intersection { event.i, nextI, intersectionPoint }
 						intersections = append(intersections, itn)
-						events.Push(bentleyEvent {
+						events.Push(&bentleyEvent {
 							kind: cross,
 							i: nextI,
 							i2: event.i,
@@ -800,7 +804,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						itn := Intersection { si1, si2, intersectionPoint }
 						intersections = append(intersections, itn)
-						events.Push(bentleyEvent {
+						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si1,
 							i2: si2,
@@ -853,9 +857,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 				intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 				if intersect {
+					fmt.Printf("ADDING 1\n")
 					itn := Intersection { u, si, intersectionPoint }
 					intersections = append(intersections, itn)
-					events.Push(bentleyEvent {
+					events.Push(&bentleyEvent {
 						kind: cross,
 						i: u,
 						i2: si,
@@ -871,9 +876,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 				intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 				if intersect {
+					fmt.Printf("ADDING 2\n")					
 					itn := Intersection { r, ti, intersectionPoint }
 					intersections = append(intersections, itn)
-					events.Push(bentleyEvent {
+					events.Push(&bentleyEvent {
 						kind: cross,
 						i: r,
 						i2: ti,
@@ -884,11 +890,18 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			if sItExists && tItExists {
-				// Remove any crossing points involving the segmens r and s and t and u.
+				// Remove any crossing points involving the segments r,s or t,u.
+				// TODO: Efficient implementation.
+				fmt.Printf("EVENTS SIZE %v\n", events.Size())
+				for it := events.Iterator(); it.Next(); {
+					e := it.Value().(*bentleyEvent)
+					if (e.i == r && e.i2 == si) || (e.i == si && e.i2 == r) || (e.i == ti && e.i2 == u) || (e.i == u && e.i2 == ti) {
+						fmt.Printf("Deleting event!\n")
+						e.deleted = true
+					}
+				}
 			}
 		}
-
-		i += 1
 	}
 
 	return intersections
