@@ -610,8 +610,8 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 
 const (
 	start = 0
-	end = 1
-	cross = 2
+	cross = 1
+	end = 2	
 )
 
 type bentleyEvent struct {
@@ -647,6 +647,7 @@ type Intersection struct {
 func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
+	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
 
 	hcmp := func (a, b interface {}) int {
 		aa, bb := a.(bentleyEvent), b.(bentleyEvent)
@@ -663,7 +664,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		if c != 0 {
 			return c
 		} else {
-			// 'start' is less than 'end'
+			// 'start' < 'cross' < 'end'
 			return aa.kind - bb.kind
 		}
 	}
@@ -817,6 +818,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			s2 := &points[(event.i+1)%len(points)]
 			t1 := &points[event.i2]
 			t2 := &points[(event.i2+1)%len(points)]
+			si := event.i		
+			ti := event.i2
 
 			if s1.x.Cmp(&s2.x) > 0 {
 				s1, s2 = s2, s1
@@ -826,18 +829,51 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 			if s1.y.Cmp(&s2.y) > 0 {
 				s1, s2, t1, t2 = t1, t2, s1, s2
+				si, ti = ti, si
 			}
 
-			sIt, sItExists := tree.GetIterator(tkey { event.i, &s1.y, &s2.y })
-			tIt, tItExists := tree.GetIterator(tkey { event.i2, &t1.y, &t2.y })
+			sIt, sItExists := tree.GetIterator(tkey { si, &s1.y, &s2.y })
+			tIt, tItExists := tree.GetIterator(tkey { ti, &t1.y, &t2.y })
 
-			// r above s
-			// u below t
+			if ! (sItExists && tItExists) {
+				fmt.Printf("Exists %v %v\n", sItExists, tItExists)
+				panic("Internal error [2] in 'SegmentLoopIntersections'")
+			}
+
+			tree.SwapAt(sIt, tIt)
+			sIt, tIt = tIt, sIt
+
 			if sItExists && sIt.Prev() {
-				r := sIt.Value().(int)
+				u := sIt.Value().(int)
+				u1 := &points[u]
+				u2 := &points[(u+1)%len(points)]
+
+				intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+				if intersect {
+					events.Push(bentleyEvent {
+						kind: cross,
+						i: u,
+						i2: si,
+						left: &intersectionPoint,
+						right: &intersectionPoint,
+					})
+				}
 			}
 			if tItExists && tIt.Next() {
-				u := tIt.Value().(int)
+				r := tIt.Value().(int)
+				r1 := &points[r]
+				r2 := &points[(r+1)%len(points)]
+
+				intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+				if intersect {
+					events.Push(bentleyEvent {
+						kind: cross,
+						i: r,
+						i2: ti,
+						left: &intersectionPoint,
+						right: &intersectionPoint,
+					})
+				}
 			}
 		}
 	}

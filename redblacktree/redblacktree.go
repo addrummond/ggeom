@@ -180,6 +180,13 @@ func (tree *Tree) GetIterator(key interface{}) (Iterator, bool) {
 	return tree.Iterator(), false
 }
 
+// addrummond: Swaps two nodes in the tree (if node a was associated with key k,
+// and node b with key l, a is now associated with l and b with k). Also updates
+// the iterators so that they point at the original nodes.
+func (tree *Tree) SwapAt(a, b Iterator) {
+	a.node.Value, b.node.Value = b.node.Value, a.node.Value
+}
+
 // Remove remove the node from the tree by key.
 // Key should adhere to the comparator's type assertion, otherwise method panics.
 func (tree *Tree) Remove(key interface{}) {
