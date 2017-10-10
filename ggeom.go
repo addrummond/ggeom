@@ -143,6 +143,21 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	return (&ab).Sign() >= 0 && (&bc).Sign() >= 0
 }
 
+// -1 for counterclockwise, 0 for colinear, 1 for clockwise
+func ClockOrientation(p1 Vec2, p2 Vec2, p3 Vec2) int {
+	// http://www.geeksforgeeks.org/orientation-3-ordered-points/
+	var v1, v2, v3 Scalar
+	v1.Sub(&p2.y, &p1.y)
+	v2.Sub(&p3.x, &p2.x)
+	v1.Mul(&v1, &v2)
+	v2.Sub(&p2.x, &p1.x)
+	v3.Sub(&p3.y, &p2.y)
+	v2.Mul(&v2, &v3)
+	v2.Sub(&v1, &v2)
+
+	return v2.Sign()
+}
+
 func ACIsReflex(p1, p2, p3 Vec2) bool {
 	v := p1.Sub(p2).Det(p3.Sub(p2))
 	return (&v).Sign() > 0
@@ -699,31 +714,40 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
 		segi int
-		lefty *Scalar
-		righty *Scalar
+		left *Vec2
+		right *Vec2
 	}
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
 
-		// We want to find out if the 'new' segement (the one that starts
-		// further to the right) is above or below the 'old' segment.
-		// TODO
+		c := aa.right.y.Cmp(&bb.left.y)
+		if c == 0 {
+			return aa.segi - bb.segi
+		} else {
+			return c
+		}
 
-		if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
+		/*if aa.left.Eq(bb.left) == 0 && aa.right.y.Cmp(&bb.right.y) == 0 {
+			return aa.segi - bb.segi;
+		} else {
+			return aa.right.y.Cmp(&bb.left.y)
+		}*/
+
+		/*if aa.left.y.Cmp(&bb.left.y) > 0 && aa.left.y.Cmp(&bb.right.y) > 0 {
 			return 1
-		} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
+		} else if aa.left.y.Cmp(&bb.left.y) < 0 && aa.left.y.Cmp(&bb.right.y) < 0 {
 			return -1
 		} else {
-			c := aa.lefty.Cmp(bb.lefty)
+			c := aa.left.y.Cmp(&bb.left.y)
 			if c != 0 {
 				return c
 			}
-			c = aa.righty.Cmp(bb.righty)
+			c = aa.right.y.Cmp(&bb.right.y)
 			if c != 0 {
 				return c;
 			}
 			return aa.segi - bb.segi;
-		}
+		}*/
 	}
 	tree := redblacktree.NewWith(tcmp)
 
@@ -739,7 +763,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		fmt.Printf("Keys: %v\n", tree.Keys())
 
 		if event.kind == start {
-			it1 := tree.PutAndGetIterator(tkey { event.i, &event.left.y, &event.right.y }, event.i)
+			fmt.Printf("Inserting with segi %v\n", event.i)
+			it1 := tree.PutAndGetIterator(tkey { event.i, event.left, event.right }, event.i)
 			it2 := it1
 
 			for it1.Prev() {
@@ -785,9 +810,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 		} else if event.kind == end {
-			it1, f := tree.GetIterator(tkey { event.i, &event.left.y, &event.right.y })
+			it1, f := tree.GetIterator(tkey { event.i, event.left, event.right })
 			if ! f {
-				panic("Internal error [1] in 'SegmentLoopIntersections'")
+				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
 			it2 := it1
 			it3 := it1
@@ -837,8 +862,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				si, ti = ti, si
 			}
 
-			sIt, sItExists := tree.GetIterator(tkey { si, &s1.y, &s2.y })
-			tIt, tItExists := tree.GetIterator(tkey { ti, &t1.y, &t2.y })
+			sIt, sItExists := tree.GetIterator(tkey { si, s1, s2 })
+			tIt, tItExists := tree.GetIterator(tkey { ti, t1, t2 })
 
 			if ! (sItExists && tItExists) {
 				fmt.Printf("Exists %v %v\n", sItExists, tItExists)

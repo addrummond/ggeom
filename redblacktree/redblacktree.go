@@ -125,6 +125,8 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator
 			compare := tree.Comparator(key, node.Key)
 			switch {
 			case compare == 0:
+				// addrummond: Added because this shouold never happen in the calling code.
+				panic("Replacement during insertion")
 				node.Key = key
 				node.Value = value
 				return Iterator {
