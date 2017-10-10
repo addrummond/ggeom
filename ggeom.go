@@ -705,9 +705,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
 
-		// aa is the new node (redblacktree.go always calls the comparison func
-		// with the new node as first arg).
-
 		if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
 			return 1
 		} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
@@ -751,6 +748,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
 						itn := Intersection { event.i, prevI, intersectionPoint }
+						fmt.Printf("ADDING [-1] %v, %v at (%v, %v)\n", event.i, prevI, &itn.p.x, &itn.p.y)
+						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: prevI,
@@ -773,6 +772,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
 						itn := Intersection { event.i, nextI, intersectionPoint }
+						intersections = append(intersections, itn)						
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: nextI,
@@ -803,6 +803,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
 					if intersect {
 						itn := Intersection { si1, si2, intersectionPoint }
+						//fmt.Printf("ADDING [-3] %v, %v at (%v, %v)\n", si1, si2, &itn.p.x, &itn.p.y)
+						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si1,
