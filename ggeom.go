@@ -851,8 +851,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tree.SwapAt(sIt, tIt)
 			sIt, tIt = tIt, sIt
 
-			var u, r int
+			var u, r int = -1, -1
 			var u1, u2, r1, r2 *Vec2
+
+			nInserted := 0
 
 			for sIt.Prev() {
 				u = sIt.Value().(int)				
@@ -862,7 +864,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 					intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 					if intersect {
-						fmt.Printf("ADDING [1] %v, %v at (%v, %v)\n", u, si, &intersectionPoint.x, &intersectionPoint.y)
 						itn := Intersection { u, si, intersectionPoint }
 						events.Push(&bentleyEvent {
 							kind: cross,
@@ -871,6 +872,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &itn.p,
 							right: &itn.p,
 						})
+						nInserted++
 					}
 
 					break
@@ -892,23 +894,48 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
+						nInserted++
 					}
 
 					break
 				}
 			}
 
-			// Remove any crossing points involving the segments r,s or t,u.
-			// TODO: Efficient implementation.
-			for it := events.Iterator(); it.Next(); {
-				e := it.Value().(*bentleyEvent)
-				if (e.i == r && e.i2 == si) || (e.i == si && e.i2 == r) || (e.i == ti && e.i2 == u) || (e.i == u && e.i2 == ti) {
-					fmt.Printf("Deleting event!\n")
-					e.deleted = true
+			if u1 != nil && r1 != nil {
+				intersect, _, intersectionPoint := SegmentIntersection(t1, t2, u1, u2)
+				if intersect {
+					fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
+					removeCrossing(events, nInserted, &intersectionPoint)
+				}
+				fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)				
+				intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
+				if intersect {
+					fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)					
+					removeCrossing(events, nInserted, &intersectionPoint)
 				}
 			}
 		}
 	}
 
 	return intersections
+}
+
+func removeCrossing(events *binaryheap.Heap, skip int, intersectionPoint *Vec2) {
+	// Remove any crossing points involving the segments r,s or t,u.
+	it := events.Iterator()
+	it.End()
+	for i := 0; i < skip; i++ {
+		it.Prev()
+	}
+	for it.Prev() {
+		e := it.Value().(*bentleyEvent)
+		if e.kind != cross {
+			break;
+		}
+
+		if (e.left.Eq(intersectionPoint)) {
+			fmt.Printf("Deleting event!\n")
+			e.deleted = true
+		}
+	}
 }
