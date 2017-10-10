@@ -720,34 +720,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
 
-		c := aa.right.y.Cmp(&bb.left.y)
+		c := aa.left.y.Cmp(&bb.left.y)
 		if c == 0 {
 			return aa.segi - bb.segi
 		} else {
 			return c
 		}
-
-		/*if aa.left.Eq(bb.left) == 0 && aa.right.y.Cmp(&bb.right.y) == 0 {
-			return aa.segi - bb.segi;
-		} else {
-			return aa.right.y.Cmp(&bb.left.y)
-		}*/
-
-		/*if aa.left.y.Cmp(&bb.left.y) > 0 && aa.left.y.Cmp(&bb.right.y) > 0 {
-			return 1
-		} else if aa.left.y.Cmp(&bb.left.y) < 0 && aa.left.y.Cmp(&bb.right.y) < 0 {
-			return -1
-		} else {
-			c := aa.left.y.Cmp(&bb.left.y)
-			if c != 0 {
-				return c
-			}
-			c = aa.right.y.Cmp(&bb.right.y)
-			if c != 0 {
-				return c;
-			}
-			return aa.segi - bb.segi;
-		}*/
 	}
 	tree := redblacktree.NewWith(tcmp)
 
@@ -763,8 +741,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		fmt.Printf("Keys: %v\n", tree.Keys())
 
 		if event.kind == start {
-			fmt.Printf("Inserting with segi %v\n", event.i)
 			it1 := tree.PutAndGetIterator(tkey { event.i, event.left, event.right }, event.i)
+			fmt.Printf("Inserting with segi %v for size %v\n", event.i, tree.Size())			
 			it2 := it1
 
 			for it1.Prev() {
