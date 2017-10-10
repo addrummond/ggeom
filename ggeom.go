@@ -634,6 +634,12 @@ func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
 	}
 }
 
+func sameOrAdjacent(s1, s2, l int) bool {
+	d := s1 - s2
+	dd := d*d
+	return dd <= 1 || d == l-1 || d == -(l-1)
+}
+
 type Intersection struct {
 	seg1 int
 	seg2 int
@@ -735,9 +741,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
-				d := event.i - prevI
-				dd := d*d
-				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+				if ! sameOrAdjacent(event.i, prevI, len(points)) {
 				    psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
@@ -760,9 +764,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 			for it2.Next() {
 				nextI := it2.Value().(int)
-				d := event.i - nextI
-				dd := d*d
-				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+				if ! sameOrAdjacent(nextI, event.i, len(points)) {
 				    nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
@@ -793,9 +795,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			for it1.Prev() && it2.Next() {
 				si1 := it1.Value().(int)
 				si2 := it2.Value().(int)
-				d := si1 - si2
-				dd := d*d
-				if dd > 1 && d != len(points)-1 && d != -(len(points)-1) {
+				if ! sameOrAdjacent(si1, si2, len(points)) {
 					pa1 := &points[si1]
 					pa2 := &points[(si1+1)%len(points)]
 					pb1 := &points[si2]
@@ -851,48 +851,51 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			var u, r int
 			var u1, u2, r1, r2 *Vec2
 
+			for sIt.Prev() {
+				u = sIt.Value().(int)				
+				if ! sameOrAdjacent(u, si, len(points)) {
+					u1 = &points[u]
+					u2 = &points[(u+1)%len(points)]
 
-			d := u - si
-			dd := d*d
-			if sIt.Prev() && dd > 1 && dd != len(points)-1 && dd != -(len(points)-1) {
-				u = sIt.Value().(int)
-				u1 = &points[u]
-				u2 = &points[(u+1)%len(points)]
+					intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+					if intersect {
+						fmt.Printf("ADDING [1] %v, %v at (%v, %v)\n", u, si, &intersectionPoint.x, &intersectionPoint.y)
+						itn := Intersection { u, si, intersectionPoint }
+						intersections = append(intersections, itn)
+						events.Push(&bentleyEvent {
+							kind: cross,
+							i: u,
+							i2: si,
+							left: &itn.p,
+							right: &itn.p,
+						})
+					}
 
-				intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
-				if intersect {
-					fmt.Printf("ADDING 1\n")
-					itn := Intersection { u, si, intersectionPoint }
-					intersections = append(intersections, itn)
-					events.Push(&bentleyEvent {
-						kind: cross,
-						i: u,
-						i2: si,
-						left: &itn.p,
-						right: &itn.p,
-					})
+					break
 				}
 			}
 			
-			d = r - ti
-			dd = d*d
-			if tIt.Next() && dd > 1 && dd != len(points)-1 && dd != -(len(points)-1) {
+			for tIt.Next() {
 				r = tIt.Value().(int)
-				r1 = &points[r]
-				r2 = &points[(r+1)%len(points)]
+				if ! sameOrAdjacent(r, ti, len(points)) {
+					r1 = &points[r]
+					r2 = &points[(r+1)%len(points)]
 
-				intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
-				if intersect {
-					fmt.Printf("ADDING 2\n")					
-					itn := Intersection { r, ti, intersectionPoint }
-					intersections = append(intersections, itn)
-					events.Push(&bentleyEvent {
-						kind: cross,
-						i: r,
-						i2: ti,
-						left: &itn.p,
-						right: &itn.p,
-					})
+					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+					if intersect {
+						fmt.Printf("ADDING [2] %v, %v at (%v, %v)\n", r, ti, &intersectionPoint.x, &intersectionPoint.y)					
+						itn := Intersection { r, ti, intersectionPoint }
+						intersections = append(intersections, itn)
+						events.Push(&bentleyEvent {
+							kind: cross,
+							i: r,
+							i2: ti,
+							left: &itn.p,
+							right: &itn.p,
+						})
+					}
+
+					break
 				}
 			}
 

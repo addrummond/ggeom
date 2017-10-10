@@ -279,7 +279,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		its2 := SegmentLoopIntersections(ps);
 
 
-		svgout, _ := os.Create("/home/alex/Downloads/out2.svg")
+		svgout, _ := os.Create("out2.svg")
 		canvas := svg.New(svgout)
 		debugDrawLineStrips(canvas, [][]Vec2{ps}, 100, []string{"stroke: black; stroke-width: 4; fill: none"})
 
