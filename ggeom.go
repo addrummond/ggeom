@@ -850,7 +850,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			var u, r int
 			var u1, u2, r1, r2 *Vec2
-			if sItExists && sIt.Prev() {
+
+
+			d := u - si
+			dd := d*d
+			if sIt.Prev() && dd > 1 && dd != len(points)-1 && dd != -(len(points)-1) {
 				u = sIt.Value().(int)
 				u1 = &points[u]
 				u2 = &points[(u+1)%len(points)]
@@ -869,7 +873,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					})
 				}
 			}
-			if tItExists && tIt.Next() {
+			
+			d = r - ti
+			dd = d*d
+			if tIt.Next() && dd > 1 && dd != len(points)-1 && dd != -(len(points)-1) {
 				r = tIt.Value().(int)
 				r1 = &points[r]
 				r2 = &points[(r+1)%len(points)]
