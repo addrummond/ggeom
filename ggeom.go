@@ -640,6 +640,8 @@ func sameOrAdjacent(s1, s2, l int) bool {
 	return dd <= 1 || d == l-1 || d == -(l-1)
 }
 
+
+
 type Intersection struct {
 	seg1 int
 	seg2 int
@@ -749,7 +751,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
 						itn := Intersection { event.i, prevI, intersectionPoint }
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: prevI,
@@ -772,7 +773,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
 						itn := Intersection { event.i, nextI, intersectionPoint }
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: nextI,
@@ -803,7 +803,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
 					if intersect {
 						itn := Intersection { si1, si2, intersectionPoint }
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si1,
