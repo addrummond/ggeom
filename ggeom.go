@@ -737,8 +737,14 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			continue
 		}
 
+		fmt.Printf("Size: %v\n", events.Size())
 		fmt.Printf("Event: kind=%v [x=%v], %v\n", event.kind, &event.left.x, &event)
 		fmt.Printf("Keys: %v\n", tree.Keys())
+		fmt.Printf("Intersections: ")
+		for _,itn := range intersections {
+			fmt.Printf("%v, %v  ", itn.seg1, itn.seg2)
+		}
+		fmt.Printf("\n")
 
 		if event.kind == start {
 			it1 := tree.PutAndGetIterator(tkey { event.i, event.left, event.right }, event.i)
@@ -747,6 +753,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
+				if prevI == event.i {
+					panic("Internal error [100] in 'SegmentLoopIntersections'")
+				}
+
 				if ! sameOrAdjacent(event.i, prevI, len(points)) {
 				    psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
@@ -754,6 +764,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
+						fmt.Printf("Insert 1\n")
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: prevI,
@@ -768,6 +779,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 			for it2.Next() {
 				nextI := it2.Value().(int)
+				if nextI == event.i {
+					panic("Internal error [200] in 'SegmentLoopIntersections'")
+				}
+
 				if ! sameOrAdjacent(nextI, event.i, len(points)) {
 				    nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
@@ -775,6 +790,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
+						fmt.Printf("Insert 2\n")						
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: nextI,
@@ -797,6 +813,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			for it1.Prev() && it2.Next() {
 				si1 := it1.Value().(int)
 				si2 := it2.Value().(int)
+				if si1 == si2 {
+					panic("Internal error [300] in 'SegmentLoopIntersections'")
+				}
+
 				if ! sameOrAdjacent(si1, si2, len(points)) {
 					pa1 := &points[si1]
 					pa2 := &points[(si1+1)%len(points)]
@@ -804,6 +824,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					pb2 := &points[(si2+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
 					if intersect {
+						fmt.Printf("Insert 3\n")						
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si1,
@@ -829,13 +850,17 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			si := event.i		
 			ti := event.i2
 
+			if si == ti {
+				panic("EQUAL!")
+			}
+
 			if s1.x.Cmp(&s2.x) > 0 {
 				s1, s2 = s2, s1
 			}
 			if t1.x.Cmp(&t2.x) > 0 {
 				t1, t2 = t2, t1
 			}
-			if s1.y.Cmp(&s2.y) > 0 {
+			if s1.y.Cmp(&t1.y) > 0 {
 				s1, s2, t1, t2 = t1, t2, s1, s2
 				si, ti = ti, si
 			}
@@ -844,12 +869,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tIt, tItExists := tree.GetIterator(tkey { ti, t1, t2 })
 
 			if ! (sItExists && tItExists) {
-				fmt.Printf("Exists %v %v\n", sItExists, tItExists)
 				panic("Internal error [2] in 'SegmentLoopIntersections'")
 			}
 
 			tree.SwapAt(sIt, tIt)
-			sIt, tIt = tIt, sIt
 
 			var u, r int = -1, -1
 			var u1, u2, r1, r2 *Vec2
@@ -857,20 +880,23 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			nInserted := 0
 
 			for sIt.Prev() {
-				u = sIt.Value().(int)				
+				u = sIt.Value().(int)
+				fmt.Printf("First loop: %v, %v\n", si, u)	
 				if ! sameOrAdjacent(u, si, len(points)) {
 					u1 = &points[u]
 					u2 = &points[(u+1)%len(points)]
 
 					intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 					if intersect {
-						itn := Intersection { u, si, intersectionPoint }
+						if si == u {
+							panic("Internal error [500] in 'SegmentLoopIntersections'")
+						}
 						events.Push(&bentleyEvent {
 							kind: cross,
-							i: u,
-							i2: si,
-							left: &itn.p,
-							right: &itn.p,
+							i: si,
+							i2: u,
+							left: &intersectionPoint,
+							right: &intersectionPoint,
 						})
 						nInserted++
 					}
@@ -878,19 +904,26 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					break
 				}
 			}
+
+			fmt.Printf("Between loops\n")
 			
 			for tIt.Next() {
 				r = tIt.Value().(int)
+				fmt.Printf("Second loop: %v, %v\n", ti, r)
 				if ! sameOrAdjacent(r, ti, len(points)) {
 					r1 = &points[r]
 					r2 = &points[(r+1)%len(points)]
 
 					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 					if intersect {
+						fmt.Printf("Insert B for segment %v with %v above it\n", ti, r)
+						if ti == r {
+							panic("Internal error [100] in 'SegmentLoopIntersections'")
+						}
 						events.Push(&bentleyEvent {
 							kind: cross,
-							i: r,
-							i2: ti,
+							i: ti,
+							i2: r,
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})

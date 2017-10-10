@@ -263,25 +263,29 @@ func TestSegmentIntersection(t *testing.T) {
 
 func TestSegmentLoopIntersections(t *testing.T) {
 	tests := SofSofVec2([][][]float64 {
-		//{{-3,4}, {-1,-2}, {2,1}, {-3,1}}, // polygon
-		//{{-2,1}},                         // intersection points
+		{{-3,4}, {-1,-2}, {2,1}, {-3,1}}, // polygon
+		{{-2,1}},                         // intersection points
 		/////
-		{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
-		{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
+		//{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
+		//{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 		/////
 		//{{0,1},{-1.01,1},{-1.02,-1},{1.03,-1},{1.04,0.5},{-2.05,0.5},{-2.06,-2},{-0.57,-2},{-0.58,2}},
 		//{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
-		ps := tests[i]
-		its1 := tests[i+1]
-		its2 := SegmentLoopIntersections(ps);
+		ps := tests[i]		
 
-
-		svgout, _ := os.Create("out2.svg")
+		svgout, err := os.Create("out2.svg")
+		if err != nil {
+			fmt.Errorf("Error opening SVG: %v\n", err)
+		}
 		canvas := svg.New(svgout)
 		debugDrawLineStrips(canvas, [][]Vec2{ps}, 100, []string{"stroke: black; stroke-width: 4; fill: none"})
+		svgout.Close()
+
+		its1 := tests[i+1]
+		its2 := SegmentLoopIntersections(ps);
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")
