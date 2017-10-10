@@ -864,7 +864,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if intersect {
 						fmt.Printf("ADDING [1] %v, %v at (%v, %v)\n", u, si, &intersectionPoint.x, &intersectionPoint.y)
 						itn := Intersection { u, si, intersectionPoint }
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: u,
