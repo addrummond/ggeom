@@ -39,6 +39,9 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 	tx := func(x float64) float64 { return (x - minx + arrowLen) * scale }
 	ty := func(y float64) float64 { return height - ((y - miny + arrowLen) * scale) }
 
+	// origin marker
+	canvas.Square(tx(-arrowLen/2), ty(-arrowLen/2), arrowLen*scale*0.5, "fill: green")
+
 	for si, s := range strips {
 		xs := make([]float64, 0)
 		ys := make([]float64, 0)
@@ -274,6 +277,11 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		ps := tests[i]
 		its1 := tests[i+1]
 		its2 := SegmentLoopIntersections(ps);
+
+
+		svgout, _ := os.Create("/home/alex/Downloads/out2.svg")
+		canvas := svg.New(svgout)
+		debugDrawLineStrips(canvas, [][]Vec2{ps}, 100, []string{"stroke: black; stroke-width: 4; fill: none"})
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")

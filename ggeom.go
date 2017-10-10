@@ -892,7 +892,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			if sItExists && tItExists {
 				// Remove any crossing points involving the segments r,s or t,u.
 				// TODO: Efficient implementation.
-				fmt.Printf("EVENTS SIZE %v\n", events.Size())
 				for it := events.Iterator(); it.Next(); {
 					e := it.Value().(*bentleyEvent)
 					if (e.i == r && e.i2 == si) || (e.i == si && e.i2 == r) || (e.i == ti && e.i2 == u) || (e.i == u && e.i2 == ti) {
