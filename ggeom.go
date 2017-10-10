@@ -705,6 +705,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	tcmp := func (a, b interface{}) int {
 		aa, bb := a.(tkey), b.(tkey)
 
+		// We want to find out if the 'new' segement (the one that starts
+		// further to the right) is above or below the 'old' segment.
+		// TODO
+
 		if aa.lefty.Cmp(bb.lefty) > 0 && aa.lefty.Cmp(bb.righty) > 0 {
 			return 1
 		} else if aa.lefty.Cmp(bb.lefty) < 0 && aa.lefty.Cmp(bb.righty) < 0 {
@@ -747,15 +751,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
-						itn := Intersection { event.i, prevI, intersectionPoint }
-						fmt.Printf("ADDING [-1] %v, %v at (%v, %v)\n", event.i, prevI, &itn.p.x, &itn.p.y)
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: prevI,
 							i2: event.i,
-							left: &itn.p,
-							right: &itn.p,
+							left: &intersectionPoint,
+							right: &intersectionPoint,
 						})
 					}
 
@@ -771,14 +772,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
-						itn := Intersection { event.i, nextI, intersectionPoint }
-						intersections = append(intersections, itn)						
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: nextI,
 							i2: event.i,
-							left: &itn.p,
-							right: &itn.p,
+							left: &intersectionPoint,
+							right: &intersectionPoint,
 						})
 					}
 
@@ -802,15 +801,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					pb2 := &points[(si2+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
 					if intersect {
-						itn := Intersection { si1, si2, intersectionPoint }
-						//fmt.Printf("ADDING [-3] %v, %v at (%v, %v)\n", si1, si2, &itn.p.x, &itn.p.y)
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si1,
 							i2: si2,
-							left: &itn.p,
-							right: &itn.p,
+							left: &intersectionPoint,
+							right: &intersectionPoint,
 						})
 					}
 
@@ -820,6 +816,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			tree.RemoveAt(it3)
 		} else if event.kind == cross {
+			itn := Intersection { event.i, event.i2, *event.left }
+			intersections = append(intersections, itn)
+
 			s1 := &points[event.i]
 			s2 := &points[(event.i+1)%len(points)]
 			t1 := &points[event.i2]
@@ -884,15 +883,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 					if intersect {
-						fmt.Printf("ADDING [2] %v, %v at (%v, %v)\n", r, ti, &intersectionPoint.x, &intersectionPoint.y)					
-						itn := Intersection { r, ti, intersectionPoint }
-						intersections = append(intersections, itn)
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: r,
 							i2: ti,
-							left: &itn.p,
-							right: &itn.p,
+							left: &intersectionPoint,
+							right: &intersectionPoint,
 						})
 					}
 
@@ -900,15 +896,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 
-			if sItExists && tItExists {
-				// Remove any crossing points involving the segments r,s or t,u.
-				// TODO: Efficient implementation.
-				for it := events.Iterator(); it.Next(); {
-					e := it.Value().(*bentleyEvent)
-					if (e.i == r && e.i2 == si) || (e.i == si && e.i2 == r) || (e.i == ti && e.i2 == u) || (e.i == u && e.i2 == ti) {
-						fmt.Printf("Deleting event!\n")
-						e.deleted = true
-					}
+			// Remove any crossing points involving the segments r,s or t,u.
+			// TODO: Efficient implementation.
+			for it := events.Iterator(); it.Next(); {
+				e := it.Value().(*bentleyEvent)
+				if (e.i == r && e.i2 == si) || (e.i == si && e.i2 == r) || (e.i == ti && e.i2 == u) || (e.i == u && e.i2 == ti) {
+					fmt.Printf("Deleting event!\n")
+					e.deleted = true
 				}
 			}
 		}
