@@ -825,7 +825,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			//fmt.Printf("y value of segment (%v,%v) -> (%v,%v) at x=%v is %v\n", &p1.x, &p1.y, &p2.x, &p2.y, &p1.x, &y)
 
 			tk := tkey{event.i, &p1.x, &y}
-			it1 := tree.PutAndGetIterator(tk, event.i)
+			it1, replaced := tree.PutAndGetIterator(tk, event.i)
+			if replaced {
+				panic("Unexpected replacement")
+			}
 			segToKey[event.i] = tk
 			it2 := it1
 
@@ -891,10 +894,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			itn := Intersection{event.i, event.i2, *event.left}
 			intersections = append(intersections, itn)
 
-			_, found := intersectionPoints.Get(event.left)
-			if !found {
-				intersectionPoints.Put(event.left, true)
-
+			_, replaced := intersectionPoints.PutAndGetIterator(event.left, true)
+			if !replaced {
 				si := event.i
 				ti := event.i2
 

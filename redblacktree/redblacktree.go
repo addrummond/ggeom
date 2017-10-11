@@ -102,7 +102,7 @@ func (tree *Tree) Put(key interface{}, value interface{}) {
 }
 
 // addrummond: Add this modification of 'Put' that returns an iterator to the new node.
-func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator {
+func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) (Iterator, bool) {
 	var insertedNode *Node
 	if tree.Root == nil {
 		tree.Root = &Node{Key: key, Value: value, color: red}
@@ -114,15 +114,13 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator
 			compare := tree.Comparator(key, node.Key)
 			switch {
 			case compare == 0:
-				// addrummond: Added because this shouold never happen in the calling code.
-				panic("Replacement during insertion")
 				node.Key = key
 				node.Value = value
 				return Iterator{
 					tree:     tree,
 					node:     node,
 					position: between,
-				}
+				}, true
 			case compare < 0:
 				if node.Left == nil {
 					node.Left = &Node{Key: key, Value: value, color: red}
@@ -146,7 +144,7 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator
 	tree.insertCase1(insertedNode)
 	tree.size++
 
-	return Iterator{tree: tree, node: insertedNode, position: between}
+	return Iterator{tree: tree, node: insertedNode, position: between}, false
 }
 
 // Get searches the node in the tree by key and returns its value or nil if key is not found in tree.
