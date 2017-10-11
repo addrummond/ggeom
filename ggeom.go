@@ -636,7 +636,6 @@ type bentleyEvent struct {
 	left *Vec2
 	right *Vec2
 	deleted bool
-	vertical bool
 }
 
 func bentleyEventPs(i int, points []Vec2) (*Vec2,*Vec2) {
@@ -694,24 +693,20 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := binaryheap.NewWith(hcmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		vert := left.x.Cmp(&right.x)
 		e1 := bentleyEvent {
 			kind: start,
 			i: i,
 			left: left,
 			right: right,
-			vertical: vert == 0,
 		}
 		events.Push(&e1)
-		if vert != 0 {
-			e2 := bentleyEvent {
-				kind: end,
-				i: i,
-				left: left,
-				right: right,
-			}
-			events.Push(&e2)
+		e2 := bentleyEvent {
+			kind: end,
+			i: i,
+			left: left,
+			right: right,
 		}
+		events.Push(&e2)
 	}
 
 	// Segment indices sorted by y value of leftmost point and then segment index.
@@ -766,7 +761,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			segToKey[event.i] = tk;
 			fmt.Printf("Inserting seg %v\n", event.i)			
 			it2 := it1
-			it3 := it1
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
@@ -812,10 +806,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 					break
 				}
-			}
-
-			if event.vertical {
-				tree.RemoveAt(it3)
 			}
 		} else if event.kind == end {
 			it1, f := tree.GetIterator(segToKey[event.i])
@@ -863,8 +853,20 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			si := event.i		
 			ti := event.i2
 
+
 			if si == ti {
 				panic("Internal error [2] in 'SegementLoopIteration'")
+			}
+
+			if s1.x.Cmp(&s2.x) > 0 {
+				s1, s2 = s2, s1
+			}
+			if t1.x.Cmp(&t2.x) > 0 {
+				t1, t2 = t2, t1
+			}
+			if s1.y.Cmp(&t1.y) < 0 {
+				s1, s2, t1, t2 = t1, t2, s1, s2
+				si, ti = ti, si
 			}
 
 			sIt, sItExists := tree.GetIterator(segToKey[si])
@@ -902,7 +904,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			var u, r int
 			var u1, u2, r1, r2 *Vec2
 
-			for sIt.Next() {
+			for sIt.Prev() {
 				u = sIt.Value().(int)
 				//fmt.Printf("Segment before %v is %v\n", si, u)	
 				if ! sameOrAdjacent(u, si, len(points)) {
@@ -927,7 +929,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			//fmt.Printf("Between loops\n")
 			
-			for tIt.Prev() {
+			for tIt.Next() {
 				r = tIt.Value().(int)
 				//fmt.Printf("Segment after to %v is %v\n", ti, r)
 				if ! sameOrAdjacent(r, ti, len(points)) {
