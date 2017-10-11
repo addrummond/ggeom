@@ -763,6 +763,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
 		segi int
+		x    *Scalar
 		y    *Scalar
 	}
 	tcmp := func(a, b interface{}) int {
@@ -770,7 +771,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 		c := aa.y.Cmp(bb.y)
 		if c == 0 {
-			return aa.segi - bb.segi
+			c = aa.x.Cmp(bb.x)
+			if c != 0 {
+				return c
+			} else {
+				return aa.segi - bb.segi
+			}
 		} else {
 			return c
 		}
@@ -808,8 +814,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
 			y := SegmentYValueAtX(p1, p2, &p1.x)
+			//fmt.Printf("y value of segment (%v,%v) -> (%v,%v) at x=%v is %v\n", &p1.x, &p1.y, &p2.x, &p2.y, &p1.x, &y)
 
-			tk := tkey{event.i, &y}
+			tk := tkey{event.i, &p1.x, &y}
 			it1 := tree.PutAndGetIterator(tk, event.i)
 			segToKey[event.i] = tk
 			it2 := it1
@@ -917,15 +924,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			sKey, tKey := segToKey[si], segToKey[ti]
-			if sKey.y.Cmp(tKey.y) > 0 {
+			if tcmp(sKey, tKey) > 0 {
 				si, ti = ti, si
 				sKey, tKey = tKey, sKey
 			}
-
-			s1 := &points[si]
-			s2 := &points[(si+1)%len(points)]
-			t1 := &points[ti]
-			t2 := &points[(ti+1)%len(points)]
 
 			sIt, sItExists := tree.GetIterator(segToKey[si])
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
@@ -934,12 +936,21 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				panic("Internal error [3] in 'SegmentLoopIntersections'")
 			}
 
-			fmt.Printf("Intersection of %v and %v, y=(%v, %v)\n", si, ti, &s1.y, &t1.y)
+			fmt.Printf("Intersection of %v and %v\n", si, ti)
 
 			if tree.Size() > 2 {
+				if tcmp(tKey, sKey) == 0 {
+					panic("Bad comparison before swap")
+				}
+
 				tree.SwapAt(sIt, tIt)
 				sIt, tIt = tIt, sIt
 				segToKey[si], segToKey[ti] = tKey, sKey
+
+				s1 := &points[si]
+				s2 := &points[(si+1)%len(points)]
+				t1 := &points[ti]
+				t2 := &points[(ti+1)%len(points)]
 
 				vals := tree.Values()
 				keys := tree.Keys()
@@ -982,6 +993,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						r1 = &points[r]
 						r2 = &points[(r+1)%len(points)]
 
+						if u1 != nil && (ti == u && r == si) {
+							fmt.Printf("SKEY %+v, TKEY %+v  [%v, %v]\n", &sKey, &tKey, ti, r)
+							panic("SHOULD NOT HAPPEN")
+						}
+
 						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 						if intersect {
 							fmt.Printf("Inserting B %v x %v\n", ti, r)
@@ -997,9 +1013,36 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						break
 					}
 				}
+
+				/*if u1 != nil && r1 != nil {
+					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, u1, u2)
+					if intersect {
+						//fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
+						removeCrossing(events, &intersectionPoint)
+					}
+					//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)
+					intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
+					if intersect {
+						//fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
+						removeCrossing(events, &intersectionPoint)
+					}
+				}*/
 			}
 		}
 	}
 
 	return intersections
 }
+
+/*func removeCrossing(events *binaryheap.Heap, intersectionPoint *Vec2) {
+	// Remove any crossing points involving the segments r,s or t,u.
+	for it := events.Iterator(); it.Next(); {
+		e := it.Value().(*bentleyEvent)
+
+		if e.left.Eq(intersectionPoint) {
+			fmt.Printf("Deleting event!\n")
+			e.deleted = true
+		}
+	}
+}
+*/
