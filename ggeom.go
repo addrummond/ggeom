@@ -956,10 +956,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					//fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
 					removeCrossing(events, &intersectionPoint)
 				}
-				//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)				
+				//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)
 				intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
 				if intersect {
-					//fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)					
+					//fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
 					removeCrossing(events, &intersectionPoint)
 				}
 			}
