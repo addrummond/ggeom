@@ -760,7 +760,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		events.Push(&e2)
 	}
 
-	// Segment indices sorted by y value of leftmost point and then segment index.
 	type tkey struct {
 		segi int
 		x    *Scalar
@@ -785,13 +784,22 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	segToKey := make(map[int]tkey)
 
 	intersections := make([]Intersection, 0)
+	intersectionPoints := redblacktree.NewWith(func(a, b interface{}) int {
+		aa, bb := a.(*Vec2), b.(*Vec2)
+		c := aa.y.Cmp(&bb.y)
+		if c != 0 {
+			return c
+		} else {
+			return aa.x.Cmp(&bb.x)
+		}
+	})
 
-	//count := 0
+	count := 0
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
-		/*if count > 100 {
+		if count > 100 {
 			break
 		}
-		count++*/
+		count++
 
 		event := e.(*bentleyEvent)
 		if event.deleted {
@@ -879,154 +887,126 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			// can be made.
 
 			tree.RemoveAt(it)
-
-			/*it1, f := tree.GetIterator(segToKey[event.i])
-			if !f {
-				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
-			}
-			it2 := it1
-			it3 := it1
-			for it1.Prev() && it2.Next() {
-				si1 := it1.Value().(int)
-				si2 := it2.Value().(int)
-				if !sameOrAdjacent(si1, si2, len(points)) {
-					pa1 := &points[si1]
-					pa2 := &points[(si1+1)%len(points)]
-					pb1 := &points[si2]
-					pb2 := &points[(si2+1)%len(points)]
-					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
-					if intersect {
-						fmt.Printf("Insert 3 [%v,%v]\n\n", si1, si2)
-						events.Push(&bentleyEvent{
-							kind:  cross,
-							i:     si1,
-							i2:    si2,
-							left:  &intersectionPoint,
-							right: &intersectionPoint,
-						})
-					}
-
-					break
-				}
-			}
-
-			fmt.Printf("Removing seg %v\n", event.i)
-			tree.RemoveAt(it3)*/
 		} else if event.kind == cross {
 			itn := Intersection{event.i, event.i2, *event.left}
 			intersections = append(intersections, itn)
 
-			si := event.i
-			ti := event.i2
+			_, found := intersectionPoints.Get(event.left)
+			if !found {
+				intersectionPoints.Put(event.left, true)
 
-			if si == ti {
-				panic("Internal error [2] in 'SegementLoopIteration'")
-			}
+				si := event.i
+				ti := event.i2
 
-			sKey, tKey := segToKey[si], segToKey[ti]
-			if tcmp(sKey, tKey) > 0 {
-				si, ti = ti, si
-				sKey, tKey = tKey, sKey
-			}
-
-			sIt, sItExists := tree.GetIterator(segToKey[si])
-			tIt, tItExists := tree.GetIterator(segToKey[ti])
-
-			if !(sItExists && tItExists) {
-				panic("Internal error [3] in 'SegmentLoopIntersections'")
-			}
-
-			fmt.Printf("Intersection of %v and %v\n", si, ti)
-
-			if tree.Size() > 2 {
-				if tcmp(tKey, sKey) == 0 {
-					panic("Bad comparison before swap")
+				if si == ti {
+					panic("Internal error [2] in 'SegementLoopIteration'")
 				}
 
-				tree.SwapAt(sIt, tIt)
-				sIt, tIt = tIt, sIt
-				segToKey[si], segToKey[ti] = tKey, sKey
-
-				s1 := &points[si]
-				s2 := &points[(si+1)%len(points)]
-				t1 := &points[ti]
-				t2 := &points[(ti+1)%len(points)]
-
-				vals := tree.Values()
-				keys := tree.Keys()
-				fmt.Printf("Modified tree\n")
-				for i := 0; i < len(vals); i++ {
-					k := keys[i].(tkey)
-					v := vals[i].(int)
-					fmt.Printf("    k=(%v,%v) -> %v\n", k.segi, k.y, v)
+				sKey, tKey := segToKey[si], segToKey[ti]
+				if tcmp(sKey, tKey) > 0 {
+					si, ti = ti, si
+					sKey, tKey = tKey, sKey
 				}
-				fmt.Printf("\n")
 
-				var u, r int
-				var u1, u2, r1, r2 *Vec2
+				sIt, sItExists := tree.GetIterator(segToKey[si])
+				tIt, tItExists := tree.GetIterator(segToKey[ti])
 
-				for sIt.Next() {
-					u = sIt.Value().(int)
-					if !sameOrAdjacent(u, si, len(points)) {
-						u1 = &points[u]
-						u2 = &points[(u+1)%len(points)]
+				if !(sItExists && tItExists) {
+					panic("Internal error [3] in 'SegmentLoopIntersections'")
+				}
 
-						intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+				fmt.Printf("Intersection of %v and %v\n", si, ti)
+
+				if tree.Size() > 2 {
+					if tcmp(tKey, sKey) == 0 {
+						panic("Bad comparison before swap")
+					}
+
+					tree.SwapAt(sIt, tIt)
+					sIt, tIt = tIt, sIt
+					segToKey[si], segToKey[ti] = tKey, sKey
+
+					s1 := &points[si]
+					s2 := &points[(si+1)%len(points)]
+					t1 := &points[ti]
+					t2 := &points[(ti+1)%len(points)]
+
+					vals := tree.Values()
+					keys := tree.Keys()
+					fmt.Printf("Modified tree\n")
+					for i := 0; i < len(vals); i++ {
+						k := keys[i].(tkey)
+						v := vals[i].(int)
+						fmt.Printf("    k=(%v,%v) -> %v\n", k.segi, k.y, v)
+					}
+					fmt.Printf("\n")
+
+					var u, r int
+					var u1, u2, r1, r2 *Vec2
+
+					for sIt.Next() {
+						u = sIt.Value().(int)
+						if !sameOrAdjacent(u, si, len(points)) {
+							u1 = &points[u]
+							u2 = &points[(u+1)%len(points)]
+
+							intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+							if intersect {
+								fmt.Printf("Inserting A %v x %v\n", si, u)
+								events.Push(&bentleyEvent{
+									kind:  cross,
+									i:     si,
+									i2:    u,
+									left:  &intersectionPoint,
+									right: &intersectionPoint,
+								})
+							}
+
+							break
+						}
+					}
+
+					for tIt.Prev() {
+						r = tIt.Value().(int)
+						if !sameOrAdjacent(r, ti, len(points)) {
+							r1 = &points[r]
+							r2 = &points[(r+1)%len(points)]
+
+							if u1 != nil && (ti == u && r == si) || (ti == si && r == u) {
+								fmt.Printf("SKEY %+v, TKEY %+v  [%v, %v]\n", &sKey, &tKey, ti, r)
+								panic("SHOULD NOT HAPPEN")
+							}
+
+							intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+							if intersect {
+								fmt.Printf("Inserting B %v x %v\n", ti, r)
+								events.Push(&bentleyEvent{
+									kind:  cross,
+									i:     ti,
+									i2:    r,
+									left:  &intersectionPoint,
+									right: &intersectionPoint,
+								})
+							}
+
+							break
+						}
+					}
+
+					if u1 != nil && r1 != nil {
+						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, u1, u2)
 						if intersect {
-							fmt.Printf("Inserting A %v x %v\n", si, u)
-							events.Push(&bentleyEvent{
-								kind:  cross,
-								i:     si,
-								i2:    u,
-								left:  &intersectionPoint,
-								right: &intersectionPoint,
-							})
+							fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
+							removeCrossing(events, &intersectionPoint)
 						}
-
-						break
-					}
-				}
-
-				for tIt.Prev() {
-					r = tIt.Value().(int)
-					if !sameOrAdjacent(r, ti, len(points)) {
-						r1 = &points[r]
-						r2 = &points[(r+1)%len(points)]
-
-						if u1 != nil && (ti == u && r == si) {
-							fmt.Printf("SKEY %+v, TKEY %+v  [%v, %v]\n", &sKey, &tKey, ti, r)
-							panic("SHOULD NOT HAPPEN")
-						}
-
-						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+						//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)
+						intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
 						if intersect {
-							fmt.Printf("Inserting B %v x %v\n", ti, r)
-							events.Push(&bentleyEvent{
-								kind:  cross,
-								i:     ti,
-								i2:    r,
-								left:  &intersectionPoint,
-								right: &intersectionPoint,
-							})
+							fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
+							removeCrossing(events, &intersectionPoint)
 						}
-
-						break
 					}
 				}
-
-				/*if u1 != nil && r1 != nil {
-					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, u1, u2)
-					if intersect {
-						//fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
-						removeCrossing(events, &intersectionPoint)
-					}
-					//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)
-					intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
-					if intersect {
-						//fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
-						removeCrossing(events, &intersectionPoint)
-					}
-				}*/
 			}
 		}
 	}
@@ -1034,7 +1014,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	return intersections
 }
 
-/*func removeCrossing(events *binaryheap.Heap, intersectionPoint *Vec2) {
+func removeCrossing(events *binaryheap.Heap, intersectionPoint *Vec2) {
 	// Remove any crossing points involving the segments r,s or t,u.
 	for it := events.Iterator(); it.Next(); {
 		e := it.Value().(*bentleyEvent)
@@ -1045,4 +1025,3 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		}
 	}
 }
-*/
