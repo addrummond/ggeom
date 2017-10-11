@@ -731,7 +731,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
+	count := 0
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
+		count += 1
+		if count > 10 {
+			break
+		}
+
 		event := e.(*bentleyEvent)
 		if event.deleted {
 			continue
@@ -753,9 +759,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
-				if prevI == event.i {
-					panic("Internal error [100] in 'SegmentLoopIntersections'")
-				}
 
 				if ! sameOrAdjacent(event.i, prevI, len(points)) {
 				    psp1 := &points[prevI]
@@ -779,10 +782,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 			for it2.Next() {
 				nextI := it2.Value().(int)
-				if nextI == event.i {
-					panic("Internal error [200] in 'SegmentLoopIntersections'")
-				}
-
 				if ! sameOrAdjacent(nextI, event.i, len(points)) {
 				    nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
@@ -813,10 +812,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			for it1.Prev() && it2.Next() {
 				si1 := it1.Value().(int)
 				si2 := it2.Value().(int)
-				if si1 == si2 {
-					panic("Internal error [300] in 'SegmentLoopIntersections'")
-				}
-
 				if ! sameOrAdjacent(si1, si2, len(points)) {
 					pa1 := &points[si1]
 					pa2 := &points[(si1+1)%len(points)]
@@ -851,7 +846,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			ti := event.i2
 
 			if si == ti {
-				panic("EQUAL!")
+				panic("Internal error [2] in 'SegementLoopIteration'")
 			}
 
 			if s1.x.Cmp(&s2.x) > 0 {
@@ -869,28 +864,47 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tIt, tItExists := tree.GetIterator(tkey { ti, t1, t2 })
 
 			if ! (sItExists && tItExists) {
-				panic("Internal error [2] in 'SegmentLoopIntersections'")
+				panic("Internal error [3] in 'SegmentLoopIntersections'")
 			}
 
-			tree.SwapAt(sIt, tIt)
+			fmt.Printf("Value of s = %v, value of t = %v\n", si, ti)
 
-			var u, r int = -1, -1
+			vals := tree.Values()
+			keys := tree.Keys()
+			fmt.Printf("The tree before\n")
+			for i := 0; i < len(vals); i++ {
+				k := keys[i].(tkey)
+				v := vals[i].(int)
+				fmt.Printf("    k=(%v,%v,%v) -> %v\n", k.segi, &k.left.y, &k.right.y, v)
+			}
+
+			fmt.Printf("Swapping %v with %v\n", si, ti)
+			tree.SwapAt(sIt, tIt)
+			sIt, tIt = tIt, sIt
+
+			vals = tree.Values()
+			keys = tree.Keys()
+			fmt.Printf("The tree after\n")
+			for i := 0; i < len(vals); i++ {
+				k := keys[i].(tkey)
+				v := vals[i].(int)
+				fmt.Printf("    k=(%v,%v,%v) -> %v\n", k.segi, &k.left.y, &k.right.y, v)
+			}
+
+			var u, r int
 			var u1, u2, r1, r2 *Vec2
 
 			nInserted := 0
 
-			for sIt.Prev() {
+			for sIt.Next() {
 				u = sIt.Value().(int)
-				fmt.Printf("First loop: %v, %v\n", si, u)	
+				fmt.Printf("Segment before %v is %v\n", si, u)	
 				if ! sameOrAdjacent(u, si, len(points)) {
 					u1 = &points[u]
 					u2 = &points[(u+1)%len(points)]
 
 					intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 					if intersect {
-						if si == u {
-							panic("Internal error [500] in 'SegmentLoopIntersections'")
-						}
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: si,
@@ -907,9 +921,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			fmt.Printf("Between loops\n")
 			
-			for tIt.Next() {
+			for tIt.Prev() {
 				r = tIt.Value().(int)
-				fmt.Printf("Second loop: %v, %v\n", ti, r)
+				fmt.Printf("Segment after to %v is %v\n", ti, r)
 				if ! sameOrAdjacent(r, ti, len(points)) {
 					r1 = &points[r]
 					r2 = &points[(r+1)%len(points)]
@@ -917,9 +931,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 					if intersect {
 						fmt.Printf("Insert B for segment %v with %v above it\n", ti, r)
-						if ti == r {
-							panic("Internal error [100] in 'SegmentLoopIntersections'")
-						}
 						events.Push(&bentleyEvent {
 							kind: cross,
 							i: ti,
