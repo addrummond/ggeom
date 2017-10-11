@@ -903,9 +903,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			var u, r int
 			var u1, u2, r1, r2 *Vec2
 
-			for sIt.Next() {
+			for tree.Size() > 2 && sIt.Next() {
 				u = sIt.Value().(int)
-				//fmt.Printf("Segment before %v is %v\n", si, u)	
+				fmt.Printf("Segment after %v is %v\n", si, u)	
 				if ! sameOrAdjacent(u, si, len(points)) {
 					u1 = &points[u]
 					u2 = &points[(u+1)%len(points)]
@@ -928,9 +928,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			//fmt.Printf("Between loops\n")
 			
-			for tIt.Prev() {
+			for tree.Size() > 2 && tIt.Prev() {
 				r = tIt.Value().(int)
-				//fmt.Printf("Segment after to %v is %v\n", ti, r)
+				fmt.Printf("Segment before %v is %v\n", ti, r)
 				if ! sameOrAdjacent(r, ti, len(points)) {
 					r1 = &points[r]
 					r2 = &points[(r+1)%len(points)]
