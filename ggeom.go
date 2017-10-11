@@ -726,6 +726,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		}
 	}
 	tree := redblacktree.NewWith(tcmp)
+	segToKey := make(map[int]tkey)
 
 	intersections := make([]Intersection, 0)
 
@@ -755,7 +756,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		fmt.Printf("\n")
 
 		if event.kind == start {
-			it1 := tree.PutAndGetIterator(tkey { event.i, event.left, event.right }, event.i)
+			tk := tkey { event.i, event.left, event.right }
+			it1 := tree.PutAndGetIterator(tk, event.i)
+			segToKey[event.i] = tk;
 			fmt.Printf("Inserting seg %v\n", event.i)			
 			it2 := it1
 
@@ -805,7 +808,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 		} else if event.kind == end {
-			it1, f := tree.GetIterator(tkey { event.i, event.left, event.right })
+			tk := segToKey[event.i]
+			it1, f := tree.GetIterator(tk)
 			if ! f {
 				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
@@ -854,7 +858,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				panic("Internal error [2] in 'SegementLoopIteration'")
 			}
 
-			if s1.x.Cmp(&s2.x) > 0 {
+			/*if s1.x.Cmp(&s2.x) > 0 {
 				s1, s2 = s2, s1
 			}
 			if t1.x.Cmp(&t2.x) > 0 {
@@ -863,10 +867,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			if s1.y.Cmp(&t1.y) > 0 {
 				s1, s2, t1, t2 = t1, t2, s1, s2
 				si, ti = ti, si
-			}
+			}*/
 
-			sIt, sItExists := tree.GetIterator(tkey { si, s1, s2 })
-			tIt, tItExists := tree.GetIterator(tkey { ti, t1, t2 })
+			sIt, sItExists := tree.GetIterator(segToKey[si])
+			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
 			if ! (sItExists && tItExists) {
 				panic("Internal error [3] in 'SegmentLoopIntersections'")
@@ -884,8 +888,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			//}
 
 			fmt.Printf("Swapping %v with %v\n", si, ti)
-			//tree.SwapAt(sIt, tIt)
-			//sIt, tIt = tIt, sIt
+			tree.SwapAt(sIt, tIt)
+			sIt, tIt = tIt, sIt
+			segToKey[si], segToKey[ti] = segToKey[ti], segToKey[si]
 
 			//vals = tree.Values()
 			//keys = tree.Keys()
@@ -899,7 +904,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			var u, r int
 			var u1, u2, r1, r2 *Vec2
 
-			for sIt.Prev() {
+			for sIt.Next() {
 				u = sIt.Value().(int)
 				//fmt.Printf("Segment before %v is %v\n", si, u)	
 				if ! sameOrAdjacent(u, si, len(points)) {
@@ -924,7 +929,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			//fmt.Printf("Between loops\n")
 			
-			for tIt.Next() {
+			for tIt.Prev() {
 				r = tIt.Value().(int)
 				//fmt.Printf("Segment after to %v is %v\n", ti, r)
 				if ! sameOrAdjacent(r, ti, len(points)) {
