@@ -872,14 +872,43 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			// can be made.
 
 			tree.RemoveAt(it)
+
+			/*it1, f := tree.GetIterator(segToKey[event.i])
+			if !f {
+				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
+			}
+			it2 := it1
+			it3 := it1
+			for it1.Prev() && it2.Next() {
+				si1 := it1.Value().(int)
+				si2 := it2.Value().(int)
+				if !sameOrAdjacent(si1, si2, len(points)) {
+					pa1 := &points[si1]
+					pa2 := &points[(si1+1)%len(points)]
+					pb1 := &points[si2]
+					pb2 := &points[(si2+1)%len(points)]
+					intersect, _, intersectionPoint := SegmentIntersection(pa1, pa2, pb1, pb2)
+					if intersect {
+						fmt.Printf("Insert 3 [%v,%v]\n\n", si1, si2)
+						events.Push(&bentleyEvent{
+							kind:  cross,
+							i:     si1,
+							i2:    si2,
+							left:  &intersectionPoint,
+							right: &intersectionPoint,
+						})
+					}
+
+					break
+				}
+			}
+
+			fmt.Printf("Removing seg %v\n", event.i)
+			tree.RemoveAt(it3)*/
 		} else if event.kind == cross {
 			itn := Intersection{event.i, event.i2, *event.left}
 			intersections = append(intersections, itn)
 
-			s1 := &points[event.i]
-			s2 := &points[(event.i+1)%len(points)]
-			t1 := &points[event.i2]
-			t2 := &points[(event.i2+1)%len(points)]
 			si := event.i
 			ti := event.i2
 
@@ -887,16 +916,16 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				panic("Internal error [2] in 'SegementLoopIteration'")
 			}
 
-			/*if s1.x.Cmp(&s2.x) > 0 {
-				s1, s2 = s2, s1
-			}
-			if t1.x.Cmp(&t2.x) > 0 {
-				t1, t2 = t2, t1
-			}
-			if s1.y.Cmp(&t1.y) > 0 {
-				s1, s2, t1, t2 = t1, t2, s1, s2
+			sKey, tKey := segToKey[si], segToKey[ti]
+			if sKey.y.Cmp(tKey.y) > 0 {
 				si, ti = ti, si
-			}*/
+				sKey, tKey = tKey, sKey
+			}
+
+			s1 := &points[si]
+			s2 := &points[(si+1)%len(points)]
+			t1 := &points[ti]
+			t2 := &points[(ti+1)%len(points)]
 
 			sIt, sItExists := tree.GetIterator(segToKey[si])
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
@@ -910,7 +939,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			if tree.Size() > 2 {
 				tree.SwapAt(sIt, tIt)
 				sIt, tIt = tIt, sIt
-				segToKey[si], segToKey[ti] = segToKey[ti], segToKey[si]
+				segToKey[si], segToKey[ti] = tKey, sKey
 
 				vals := tree.Values()
 				keys := tree.Keys()
