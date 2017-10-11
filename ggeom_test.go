@@ -261,16 +261,18 @@ func TestSegmentIntersection(t *testing.T) {
 	}
 }
 
+const EPSILON = 0.000001
+
 func TestSegmentLoopIntersections(t *testing.T) {
 	tests := SofSofVec2([][][]float64 {
 		{{-3,4}, {-1,-2}, {2,1}, {-3,1}}, // polygon
 		{{-2,1}},                         // intersection points
 		/////
-		//{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
-		//{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
+		{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
+		{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 		/////
-		//{{0,1},{-1.01,1},{-1.02,-1},{1.03,-1},{1.04,0.5},{-2.05,0.5},{-2.06,-2},{-0.57,-2},{-0.58,2}},
-		//{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
+		{{0,1},{-1.01,1},{-1.02,-1},{1.03,-1},{1.04,0.5},{-2.05,0.5},{-2.06,-2},{-0.57,-2},{-0.58,2}},
+		{{-1.0125, 0.5}, {-0.5774999999999999, 1}, {-0.5725, -1}, {-0.5762499999999999, 0.5}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
@@ -311,7 +313,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		for _,i1 := range its1 {
 			found := false
 			for _,i2 := range its2 {
-				if i1.Eq(&i2.p) {
+				if i1.SlowEqEpsilon(&i2.p, EPSILON) {
 					found = true
 					break
 				}
@@ -323,7 +325,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		for _,i1 := range its2 {
 			found := false
 			for _,i2 := range its1 {
-				if i2.Eq(&i1.p) {
+				if i2.SlowEqEpsilon(&i1.p, EPSILON) {
 					found = true
 					break
 				}
