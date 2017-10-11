@@ -273,12 +273,15 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		/////
 		{{0,1},{-1.01,1},{-1.02,-1},{1.03,-1},{1.04,0.5},{-2.05,0.5},{-2.06,-2},{-0.57,-2},{-0.58,2}},
 		{{-1.0125, 0.5}, {-0.5774999999999999, 1}, {-0.5725, -1}, {-0.5762499999999999, 0.5}},
+		/////
+		{{-5,0},{-4,-1},{-2,1},{0,-1},{4,1},{6,-1}},
+		{{-3.1666666666666665, -0.16666666666666666}, {-0.6,-0.4}, {0.9230769230769231, -0.5384615384615384}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
 		ps := tests[i]		
 
-		svgout, err := os.Create("out2.svg")
+		svgout, err := os.Create(fmt.Sprintf("testoutputs/TestSegmentLoopIntersections_figure_%v.svg", i/2))
 		if err != nil {
 			fmt.Errorf("Error opening SVG: %v\n", err)
 		}
@@ -297,7 +300,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 			}
 			xf, _ := it.x.Float64()
 			yf, _ := it.y.Float64()
-			fmt.Printf("%v, %v", xf, yf)
+			fmt.Printf("%v, %v      ", xf, yf)
 		}
 		fmt.Printf("\n  Computed intersections: ")
 		for i,it := range its2 {
@@ -347,7 +350,7 @@ func TestConvolve(t *testing.T) {
 
 	fmt.Printf("P1: %+v\n\nP2: %+v\n\nConv: %+v\n", p1, p2, cs)
 
-	svgout, _ := os.Create("out.svg")
+	svgout, _ := os.Create("testoutputs/TestConvolve_figure.svg")
 	canvas := svg.New(svgout)
 	debugDrawLineStrips(canvas, [][]Vec2{p1.verts, cs}, 20, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 }
