@@ -180,13 +180,13 @@ func TestSegmentsIntersect(t *testing.T) {
 	})
 
 	for _, vs := range trueTests {
-		r,_ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
+		r, _ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
 		if !r {
 			t.Error()
 		}
 	}
 	for _, vs := range falseTests {
-		r,_ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
+		r, _ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
 		if r {
 			t.Error()
 		}
@@ -194,19 +194,19 @@ func TestSegmentsIntersect(t *testing.T) {
 }
 
 func TestNondegenerateSegmentIntersection(t *testing.T) {
-	tests := SofSofVec2([][][]float64 {
-		{{-1,-1}, {1,1}, {-1,1}, {1,-1}, {0,0}},            // A cross centered on zero
-		{{-1,0}, {1,2}, {-1,2}, {1,0}, {0,1}},	            // The case above translated up one unit
-		{{-1,2}, {1,0}, {-1,0}, {1,2}, {0,1}},	            // The case above with points swapped.
-		{{-1,0}, {1,0}, {-0.5,10}, {-0.5,-10}, {-0.5,0}},   // Vertical line intersecting horizontal line
-		{{-1,-1}, {1,-1}, {-0.5,9}, {-0.5,-11}, {-0.5,-1}}, // The case above translated down one unit
-		{{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},    // Horizontal line intersecting with vertical line
+	tests := SofSofVec2([][][]float64{
+		{{-1, -1}, {1, 1}, {-1, 1}, {1, -1}, {0, 0}},            // A cross centered on zero
+		{{-1, 0}, {1, 2}, {-1, 2}, {1, 0}, {0, 1}},              // The case above translated up one unit
+		{{-1, 2}, {1, 0}, {-1, 0}, {1, 2}, {0, 1}},              // The case above with points swapped.
+		{{-1, 0}, {1, 0}, {-0.5, 10}, {-0.5, -10}, {-0.5, 0}},   // Vertical line intersecting horizontal line
+		{{-1, -1}, {1, -1}, {-0.5, 9}, {-0.5, -11}, {-0.5, -1}}, // The case above translated down one unit
+		{{-0.5, -10}, {-0.5, 0}, {-1, 0}, {1, 0}, {-0.5, 0}},    // Horizontal line intersecting with vertical line
 	})
 
-	for _,tst := range tests {
+	for _, tst := range tests {
 		p := NondegenerateSegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
 		//fmt.Printf("INT: %f %f\n", p.ApproxX(), p.ApproxY())
-		if ! p.Eq(&tst[4]) {
+		if !p.Eq(&tst[4]) {
 			t.Error()
 		}
 	}
@@ -224,28 +224,28 @@ func TestSegmentIntersection(t *testing.T) {
 	VNOT_UNIQUE.x.SetFloat64(NOT_UNIQUE)
 	VNOT_UNIQUE.y.SetFloat64(NOT_UNIQUE)
 
-	tests := SofSofVec2([][][]float64 {
-		{{-1,-1}, {1,1}, {-1,1}, {1,-1}, {0,0}},                      // A cross centered on zero
-		{{-1,0}, {1,2}, {-1,2}, {1,0}, {0,1}},	                      // The case above translated up one unit
-		{{-1,2}, {1,0}, {-1,0}, {1,2}, {0,1}},	                      // The case above with points swapped.
-		{{-1,0}, {1,0}, {-0.5,10}, {-0.5,-10}, {-0.5,0}},             // Vertical line intersecting horizontal line
-		{{-1,-1}, {1,-1}, {-0.5,9}, {-0.5,-11}, {-0.5,-1}},           // The case above translated down one unit
-		{{-0.5,-10}, {-0.5,0}, {-1,0}, {1,0}, {-0.5,0}},              // Horizontal line intersecting with vertical line
-		{{-1, 1}, {1,1}, {-0.5,1}, {0.5,1}, {NOT_UNIQUE,NOT_UNIQUE}}, // One horizontal line that completely overlaps another
-		{{1, -1}, {1,1}, {1,-0.5}, {1,0.5}, {NOT_UNIQUE,NOT_UNIQUE}}, // One vertical line that completely overlaps another		
-		{{-1,-2}, {1,2}, {1,2}, {2,4}, {1,2}},                        // Two adjacent diagonal lines
-		{{1,2}, {-1,-2}, {-1,-2}, {-2,-4}, {-1,-2}},                  // Two adjacent diagonal lines
-		{{1,2}, {5,2}, {5,2}, {7,2}, {5,2}},                          // Two adjacent horizontal lines
-		{{2,1}, {2,5}, {2,5}, {2,7}, {2,5}},                          // Two adjacent vertical lines		
-		{{-1,-1}, {2,2}, {-11,-12}, {1,-2}, {NONE, NONE}},            // Non-intersecting non-parallel
-		{{-2,-4}, {2,4}, {-3,-5}, {1,3}, {NONE, NONE}},               // Non-intersecting parallel
+	tests := SofSofVec2([][][]float64{
+		{{-1, -1}, {1, 1}, {-1, 1}, {1, -1}, {0, 0}},                     // A cross centered on zero
+		{{-1, 0}, {1, 2}, {-1, 2}, {1, 0}, {0, 1}},                       // The case above translated up one unit
+		{{-1, 2}, {1, 0}, {-1, 0}, {1, 2}, {0, 1}},                       // The case above with points swapped.
+		{{-1, 0}, {1, 0}, {-0.5, 10}, {-0.5, -10}, {-0.5, 0}},            // Vertical line intersecting horizontal line
+		{{-1, -1}, {1, -1}, {-0.5, 9}, {-0.5, -11}, {-0.5, -1}},          // The case above translated down one unit
+		{{-0.5, -10}, {-0.5, 0}, {-1, 0}, {1, 0}, {-0.5, 0}},             // Horizontal line intersecting with vertical line
+		{{-1, 1}, {1, 1}, {-0.5, 1}, {0.5, 1}, {NOT_UNIQUE, NOT_UNIQUE}}, // One horizontal line that completely overlaps another
+		{{1, -1}, {1, 1}, {1, -0.5}, {1, 0.5}, {NOT_UNIQUE, NOT_UNIQUE}}, // One vertical line that completely overlaps another
+		{{-1, -2}, {1, 2}, {1, 2}, {2, 4}, {1, 2}},                       // Two adjacent diagonal lines
+		{{1, 2}, {-1, -2}, {-1, -2}, {-2, -4}, {-1, -2}},                 // Two adjacent diagonal lines
+		{{1, 2}, {5, 2}, {5, 2}, {7, 2}, {5, 2}},                         // Two adjacent horizontal lines
+		{{2, 1}, {2, 5}, {2, 5}, {2, 7}, {2, 5}},                         // Two adjacent vertical lines
+		{{-1, -1}, {2, 2}, {-11, -12}, {1, -2}, {NONE, NONE}},            // Non-intersecting non-parallel
+		{{-2, -4}, {2, 4}, {-3, -5}, {1, 3}, {NONE, NONE}},               // Non-intersecting parallel
 	})
 
-	for _,tst := range tests {
+	for _, tst := range tests {
 		intersect, unique, p := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
 		if intersect {
 			if unique {
-				if ! p.Eq(&tst[4]) {
+				if !p.Eq(&tst[4]) {
 					t.Error()
 				}
 			} else {
@@ -254,7 +254,7 @@ func TestSegmentIntersection(t *testing.T) {
 				}
 			}
 		} else {
-			if ! tst[4].Eq(&VNONE) {
+			if !tst[4].Eq(&VNONE) {
 				t.Error()
 			}
 		}
@@ -264,22 +264,25 @@ func TestSegmentIntersection(t *testing.T) {
 const EPSILON = 0.000001
 
 func TestSegmentLoopIntersections(t *testing.T) {
-	tests := SofSofVec2([][][]float64 {
-		{{-3,4}, {-1,-2}, {2,1}, {-3,1}}, // polygon
-		{{-2,1}},                         // intersection points
+	tests := SofSofVec2([][][]float64{
+		{{-3, 4}, {-1, -2}, {2, 1}, {-3, 1}}, // polygon
+		{{-2, 1}}, // intersection points
 		/////
-		{{0,1},{-1,1},{-1,-1},{1,-1},{1,0.5},{-2,0.5},{-2,-2},{-0.5,-2},{-0.5,2}},
+		{{0, 1}, {-1, 1}, {-1, -1}, {1, -1}, {1, 0.5}, {-2, 0.5}, {-2, -2}, {-0.5, -2}, {-0.5, 2}},
 		{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 		/////
-		{{0,1},{-1.01,1},{-1.02,-1},{1.03,-1},{1.04,0.5},{-2.05,0.5},{-2.06,-2},{-0.57,-2},{-0.58,2}},
+		{{0, 1}, {-1.01, 1}, {-1.02, -1}, {1.03, -1}, {1.04, 0.5}, {-2.05, 0.5}, {-2.06, -2}, {-0.57, -2}, {-0.58, 2}},
 		{{-1.0125, 0.5}, {-0.5774999999999999, 1}, {-0.5725, -1}, {-0.5762499999999999, 0.5}},
 		/////
-		{{-5,0},{-4,-1},{-2,1},{0,-1},{4,1},{6,-1}},
-		{{-3.1666666666666665, -0.16666666666666666}, {-0.6,-0.4}, {0.9230769230769231, -0.5384615384615384}},
+		{{-5, 0}, {-4, -1}, {-2, 1}, {0, -1}, {4, 1}, {6, -1}},
+		{{-3.1666666666666665, -0.16666666666666666}, {-0.6, -0.4}, {0.9230769230769231, -0.5384615384615384}},
+		/////
+		{{-2, 2}, {2, -2}, {2, 2}, {-2, -2}, {-2, 0}, {3, 0}},
+		{{0, 0}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
-		ps := tests[i]		
+		ps := tests[i]
 
 		svgout, err := os.Create(fmt.Sprintf("testoutputs/TestSegmentLoopIntersections_figure_%v.svg", i/2))
 		if err != nil {
@@ -290,11 +293,11 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		svgout.Close()
 
 		its1 := tests[i+1]
-		its2 := SegmentLoopIntersections(ps);
+		its2 := SegmentLoopIntersections(ps)
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")
-		for i,it := range its1 {
+		for i, it := range its1 {
 			if i != 0 {
 				fmt.Printf(";  ")
 			}
@@ -303,7 +306,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 			fmt.Printf("%v, %v      ", xf, yf)
 		}
 		fmt.Printf("\n  Computed intersections: ")
-		for i,it := range its2 {
+		for i, it := range its2 {
 			if i != 0 {
 				fmt.Printf(";  ")
 			}
@@ -313,27 +316,27 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		}
 		fmt.Printf("\n")
 
-		for _,i1 := range its1 {
+		for _, i1 := range its1 {
 			found := false
-			for _,i2 := range its2 {
+			for _, i2 := range its2 {
 				if i1.SlowEqEpsilon(&i2.p, EPSILON) {
 					found = true
 					break
 				}
 			}
-			if ! found {
+			if !found {
 				t.Error()
 			}
 		}
-		for _,i1 := range its2 {
+		for _, i1 := range its2 {
 			found := false
-			for _,i2 := range its1 {
+			for _, i2 := range its1 {
 				if i2.SlowEqEpsilon(&i1.p, EPSILON) {
 					found = true
 					break
 				}
 			}
-			if ! found {
+			if !found {
 				t.Error()
 			}
 		}
