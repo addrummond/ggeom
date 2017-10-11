@@ -993,36 +993,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							break
 						}
 					}
-
-					if u1 != nil && r1 != nil {
-						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, u1, u2)
-						if intersect {
-							fmt.Printf("Removing at intersection [1] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
-							removeCrossing(events, &intersectionPoint)
-						}
-						//fmt.Printf("Comparing [1] %v %v %v %v\n", s1, s2, r1, r2)
-						intersect, _, intersectionPoint = SegmentIntersection(s1, s2, r1, r2)
-						if intersect {
-							fmt.Printf("Removing at intersection [2] (%v, %v)\n", &intersectionPoint.x, &intersectionPoint.y)
-							removeCrossing(events, &intersectionPoint)
-						}
-					}
 				}
 			}
 		}
 	}
 
 	return intersections
-}
-
-func removeCrossing(events *binaryheap.Heap, intersectionPoint *Vec2) {
-	// Remove any crossing points involving the segments r,s or t,u.
-	for it := events.Iterator(); it.Next(); {
-		e := it.Value().(*bentleyEvent)
-
-		if e.left.Eq(intersectionPoint) {
-			fmt.Printf("Deleting event!\n")
-			e.deleted = true
-		}
-	}
 }
