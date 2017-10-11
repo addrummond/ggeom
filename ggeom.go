@@ -744,20 +744,20 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		//}
 		//fmt.Printf("\n")
 
+		vals := tree.Values()
+		keys := tree.Keys()
+		fmt.Printf("The tree before\n")
+		for i := 0; i < len(vals); i++ {
+			k := keys[i].(tkey)
+			v := vals[i].(int)
+			fmt.Printf("    k=(%v,%v,%v) -> %v\n", k.segi, &k.left.y, &k.right.y, v)
+		}
+		fmt.Printf("\n")
+
 		if event.kind == start {
 			it1 := tree.PutAndGetIterator(tkey { event.i, event.left, event.right }, event.i)
 			fmt.Printf("Inserting seg %v\n", event.i)			
 			it2 := it1
-
-			vals := tree.Values()
-			keys := tree.Keys()
-			fmt.Printf("The tree before\n")
-			for i := 0; i < len(vals); i++ {
-				k := keys[i].(tkey)
-				v := vals[i].(int)
-				fmt.Printf("    k=(%v,%v,%v) -> %v\n", k.segi, &k.left.y, &k.right.y, v)
-			}
-			fmt.Printf("\n")
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
@@ -777,9 +777,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
-					} else {
-						break
 					}
+					
+					break
 				}
 			}
 			for it2.Next() {
@@ -799,9 +799,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
-					} else {
-						break
 					}
+
+					break
 				}
 			}
 		} else if event.kind == end {
@@ -829,9 +829,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
-					} else {
-						break
 					}
+					
+					break
+				} else {
+					break
 				}
 			}
 
@@ -914,9 +916,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
-					} else {
-						break
 					}
+					
+					break
 				}
 			}
 
@@ -939,9 +941,9 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							left: &intersectionPoint,
 							right: &intersectionPoint,
 						})
-					} else {
-						break
 					}
+
+					break
 				}
 			}
 
