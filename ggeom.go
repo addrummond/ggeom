@@ -835,8 +835,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					}
 					
 					break
-				} else {
-					break
 				}
 			}
 
