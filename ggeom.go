@@ -808,8 +808,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 		} else if event.kind == end {
-			tk := segToKey[event.i]
-			it1, f := tree.GetIterator(tk)
+			it1, f := tree.GetIterator(segToKey[event.i])
 			if ! f {
 				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
@@ -857,17 +856,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			if si == ti {
 				panic("Internal error [2] in 'SegementLoopIteration'")
 			}
-
-			/*if s1.x.Cmp(&s2.x) > 0 {
-				s1, s2 = s2, s1
-			}
-			if t1.x.Cmp(&t2.x) > 0 {
-				t1, t2 = t2, t1
-			}
-			if s1.y.Cmp(&t1.y) > 0 {
-				s1, s2, t1, t2 = t1, t2, s1, s2
-				si, ti = ti, si
-			}*/
 
 			sIt, sItExists := tree.GetIterator(segToKey[si])
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
