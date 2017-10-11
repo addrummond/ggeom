@@ -13,6 +13,7 @@ package redblacktree
 
 import (
 	"fmt"
+
 	"github.com/emirpasic/gods/trees"
 	"github.com/emirpasic/gods/utils"
 )
@@ -62,7 +63,7 @@ func NewWithStringComparator() *Tree {
 // Put inserts node into the tree.
 // Key should adhere to the comparator's type assertion, otherwise method panics.
 func (tree *Tree) Put(key interface{}, value interface{}) {
-    var insertedNode *Node
+	var insertedNode *Node
 	if tree.Root == nil {
 		tree.Root = &Node{Key: key, Value: value, color: red}
 		insertedNode = tree.Root
@@ -117,9 +118,9 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator
 				panic("Replacement during insertion")
 				node.Key = key
 				node.Value = value
-				return Iterator {
-					tree: tree,
-					node: node,
+				return Iterator{
+					tree:     tree,
+					node:     node,
 					position: between,
 				}
 			case compare < 0:
@@ -145,7 +146,7 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) Iterator
 	tree.insertCase1(insertedNode)
 	tree.size++
 
-	return Iterator { tree: tree, node: insertedNode, position: between }
+	return Iterator{tree: tree, node: insertedNode, position: between}
 }
 
 // Get searches the node in the tree by key and returns its value or nil if key is not found in tree.
@@ -164,7 +165,7 @@ func (tree *Tree) Get(key interface{}) (value interface{}, found bool) {
 func (tree *Tree) GetIterator(key interface{}) (Iterator, bool) {
 	node := tree.lookup(key)
 	if node != nil {
-		var it Iterator = Iterator { tree: tree, node: node, position: between }
+		var it Iterator = Iterator{tree: tree, node: node, position: between}
 		return it, true
 	}
 	return tree.Iterator(), false

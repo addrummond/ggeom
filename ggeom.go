@@ -780,12 +780,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	intersections := make([]Intersection, 0)
 
-	count := 0
+	//count := 0
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
-		if count > 100 {
+		/*if count > 100 {
 			break
 		}
-		count++
+		count++*/
 
 		event := e.(*bentleyEvent)
 		if event.deleted {
@@ -887,7 +887,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				panic("Internal error [2] in 'SegementLoopIteration'")
 			}
 
-			if s1.x.Cmp(&s2.x) > 0 {
+			/*if s1.x.Cmp(&s2.x) > 0 {
 				s1, s2 = s2, s1
 			}
 			if t1.x.Cmp(&t2.x) > 0 {
@@ -896,7 +896,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			if s1.y.Cmp(&t1.y) > 0 {
 				s1, s2, t1, t2 = t1, t2, s1, s2
 				si, ti = ti, si
-			}
+			}*/
 
 			sIt, sItExists := tree.GetIterator(segToKey[si])
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
@@ -905,15 +905,27 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				panic("Internal error [3] in 'SegmentLoopIntersections'")
 			}
 
+			fmt.Printf("Intersection of %v and %v, y=(%v, %v)\n", si, ti, &s1.y, &t1.y)
+
 			if tree.Size() > 2 {
 				tree.SwapAt(sIt, tIt)
-				//sIt, tIt = tIt, sIt
+				sIt, tIt = tIt, sIt
 				segToKey[si], segToKey[ti] = segToKey[ti], segToKey[si]
+
+				vals := tree.Values()
+				keys := tree.Keys()
+				fmt.Printf("Modified tree\n")
+				for i := 0; i < len(vals); i++ {
+					k := keys[i].(tkey)
+					v := vals[i].(int)
+					fmt.Printf("    k=(%v,%v) -> %v\n", k.segi, k.y, v)
+				}
+				fmt.Printf("\n")
 
 				var u, r int
 				var u1, u2, r1, r2 *Vec2
 
-				for tree.Size() > 2 && sIt.Prev() {
+				for sIt.Next() {
 					u = sIt.Value().(int)
 					if !sameOrAdjacent(u, si, len(points)) {
 						u1 = &points[u]
@@ -935,7 +947,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					}
 				}
 
-				for tree.Size() > 2 && tIt.Next() {
+				for tIt.Prev() {
 					r = tIt.Value().(int)
 					if !sameOrAdjacent(r, ti, len(points)) {
 						r1 = &points[r]
