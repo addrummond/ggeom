@@ -153,15 +153,14 @@ func (p *Polygon2) IndexOfBottommost() int {
 
 // True iff b is reached before c going anticlockwise from a
 func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
-	// See AndyG's answer to https://stackoverflow.com/questions/13640931/how-to-determine-if-a-vector-is-between-two-other-vectors
 	ab := a.Det(b)
 	bc := b.Det(c)
 	ac := a.Det(c)
 
-	if ab.Sign() >= 0 {
+	if ab.Sign() > 0 {
 		return bc.Sign() >= 0 || ac.Sign() < 0
 	} else {
-		return ac.Sign() < 0 && bc.Sign() > 0
+		return ac.Sign() < 0 && bc.Sign() >= 0
 	}
 }
 
@@ -309,12 +308,14 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 
 		var t Vec2
 		if incp {
+			fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 			t = p.verts[ip1].Add(q.verts[j])
 			labs[label{i, i + 1, j}] = true
 			s = t
 			i = ip1
 		}
 		if incq {
+			fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 			t = p.verts[i].Add(q.verts[jp1])
 			s = t
 			j = jp1

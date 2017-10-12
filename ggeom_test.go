@@ -100,16 +100,14 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 		{{-1, 1}, {0, 1}, {1, 1}},
 		{{-1, 0}, {0, 1}, {1, 0}},
 		{{-0.01, 999}, {0.0001, 1023}, {0.01, 1000}},
+		{{1, 0}, {1, 0}, {0, 1}},
 	})
 	trueCases := SofSofVec2([][][]float64{
+		{{1, 0}, {0, 1}, {0, 1}},
 		{{-30, -20}, {-1, -10}, {2, -40}},
 		{{-1000, 0}, {0, -1000}, {1000, 0}},
 		{{-0.01, -999}, {0.0001, -1000}, {0.01, -1000}},
 		{{1, 0}, {0, 0.5}, {1, -1}},
-	})
-	trueIrreversibleCases := SofSofVec2([][][]float64{
-		{{0, 1}, {0, 1}, {0, 1}},
-		{{0, 1}, {0, 2}, {0, 3}},
 	})
 
 	for _, c := range falseCases {
@@ -126,12 +124,6 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 			t.Error()
 		}
 		if IsBetweenAnticlockwise(c[2], c[1], c[0]) {
-			t.Error()
-		}
-	}
-
-	for _, c := range trueIrreversibleCases {
-		if !IsBetweenAnticlockwise(c[0], c[1], c[2]) {
 			t.Error()
 		}
 	}
