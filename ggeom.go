@@ -796,6 +796,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
 		_, replaced := intersectionPoints.PutAndGetIterator(p, true)
+		fmt.Printf("Adding to output: %v x %v,  %v, %v\n", seg1, seg2, &p.x, &p.y)
 		intersections = append(intersections, Intersection{seg1, seg2, *p})
 		if !replaced {
 			events.Push(&bentleyEvent{
@@ -820,7 +821,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			continue
 		}
 
-		fmt.Printf("Event: kind=%v [x=%v], seg1=%v, seg2=%v\n", event.kind, &event.left.x, event.i, event.i2)
+		fmt.Printf("\nEvent: kind=%v [x=%v], seg1=%v, seg2=%v\n", event.kind, &event.left.x, event.i, event.i2)
 
 		vals := tree.Values()
 		keys := tree.Keys()
@@ -835,10 +836,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		if event.kind == start {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
-			y := SegmentYValueAtX(p1, p2, &p1.x)
-			//fmt.Printf("y value of segment (%v,%v) -> (%v,%v) at x=%v is %v\n", &p1.x, &p1.y, &p2.x, &p2.y, &p1.x, &y)
+			y := SegmentYValueAtX(p1, p2, &event.left.x)
+			fmt.Printf("y value of segment %v (%v,%v) -> (%v,%v) at x=%v is %v\n", event.i, &event.left.x, &p1.y, &p2.x, &p2.y, &p1.x, &y)
 
-			tk := tkey{event.i, &p1.x, &y}
+			tk := tkey{event.i, &event.left.x, &y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
 			if replaced {
 				panic("Unexpected replacement")
@@ -858,7 +859,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
-						fmt.Printf("Adding cross [1] %v x %v  at  (%v, %v)\n", prevI, event.i, &intersectionPoint.x, &intersectionPoint.y)
+						fmt.Printf("Inserting P %v x %v\n", prevI, event.i)
 						addCross(prevI, event.i, &intersectionPoint)
 					}
 
@@ -875,7 +876,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
-						fmt.Printf("Adding cross [2] %v x %v  at  (%v, %v)\n", nextI, event.i, &intersectionPoint.x, &intersectionPoint.y)
+						fmt.Printf("Inserting Q %v x %v\n", nextI, event.i)
 						addCross(nextI, event.i, &intersectionPoint)
 					}
 
@@ -922,6 +923,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					panic("Bad comparison before swap")
 				}
 
+				fmt.Printf("Swapping %v and %v\n", si, ti)
 				tree.SwapAt(sIt, tIt)
 				sIt, tIt = tIt, sIt
 				segToKey[si], segToKey[ti] = tKey, sKey
@@ -965,11 +967,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					if !sameOrAdjacent(r, ti, len(points)) {
 						r1 = &points[r]
 						r2 = &points[(r+1)%len(points)]
-
-						if u1 != nil && (ti == u && r == si) || (ti == si && r == u) {
-							fmt.Printf("SKEY %+v, TKEY %+v  [%v, %v]\n", &sKey, &tKey, ti, r)
-							panic("SHOULD NOT HAPPEN")
-						}
 
 						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 						if intersect {
