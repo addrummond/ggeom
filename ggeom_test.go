@@ -319,7 +319,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 			}
 			xf, _ := it.x.Float64()
 			yf, _ := it.y.Float64()
-			fmt.Printf("%v, %v      ", xf, yf)
+			fmt.Printf("%v, %v ", xf, yf)
 		}
 		fmt.Printf("\n  Computed intersections: ")
 		for i, it := range its2 {
