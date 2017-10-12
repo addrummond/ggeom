@@ -156,14 +156,12 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	// See AndyG's answer to https://stackoverflow.com/questions/13640931/how-to-determine-if-a-vector-is-between-two-other-vectors
 	ab := a.Det(b)
 	bc := b.Det(c)
-
-	// positive sign means counterclockwise
+	ac := a.Det(c)
 
 	if ab.Sign() >= 0 {
-		ac := a.Det(c)
 		return bc.Sign() >= 0 || ac.Sign() < 0
 	} else {
-		return bc.Sign() >= 0
+		return ac.Sign() < 0 && bc.Sign() > 0
 	}
 }
 

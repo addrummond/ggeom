@@ -371,7 +371,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 }
 
 func TestConvolve(t *testing.T) {
-	//p1 := Polygon2{verts: []Vec2{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}}
+	//p1 := Polygon2{verts: []Vec2{{r(10), r(10)}, {r(-10), r(10)}, {r(-10), r(-10)}, {r(10), r(-10)}}}
 
 	//p1 := Polygon2{verts: []Vec2{{r(10), r(10)}, {r(-10), r(10)}, {r(-10), r(-10)}, {r(10), r(-10)}, {r(0), r(-5)}}}
 	//p2 := Polygon2{verts: []Vec2{{r(0), r(2)}, {r(-1), r(0)}, {r(1), r(0)}}}
