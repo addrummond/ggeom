@@ -9,7 +9,10 @@ import (
 	svg "github.com/ajstarks/svgo/float"
 )
 
-func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, formats []string) {
+const SvgWidth = 800
+const SvgHeight = 800
+
+func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 	var minx, miny, maxx, maxy float64 = strips[0][0].ApproxX(), float64(strips[0][0].ApproxY()), float64(strips[0][0].ApproxX()), float64(strips[0][0].ApproxY())
 	for _, s := range strips {
 		for _, p := range s {
@@ -31,6 +34,10 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, scale float64, format
 	arrowLen := (width + height) * 0.02
 	width += arrowLen * 2
 	height += arrowLen * 2
+	ws := SvgWidth / width
+	hs := SvgHeight / height
+	scale := math.Min(ws, hs)
+
 	width *= scale
 	height *= scale
 
@@ -305,7 +312,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 			fmt.Errorf("Error opening SVG: %v\n", err)
 		}
 		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, [][]Vec2{ps}, 100, []string{"stroke: black; stroke-width: 4; fill: none"})
+		debugDrawLineStrips(canvas, [][]Vec2{ps}, []string{"stroke: black; stroke-width: 4; fill: none"})
 		svgout.Close()
 
 		its1 := tests[i+1]
@@ -372,24 +379,29 @@ func TestSegmentLoopIntersections(t *testing.T) {
 }
 
 func TestConvolve(t *testing.T) {
-	//p1 := Polygon2{verts: []Vec2{{r(10), r(10)}, {r(-10), r(10)}, {r(-10), r(-10)}, {r(10), r(-10)}}}
+	tests := SofSofVec2([][][]float64{
+		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}, // p
+		{{0, 2}, {-1, 0}, {1, 0}},                    // q
+		/////
+		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}, {0, -5}},
+		{{0, 2}, {-1, 0}, {1, 0}},
+		/////
+		{{3, 4}, {0, 4}, {0, 0}, {4, 0}, {4, 1}, {1, 1}, {1, 2}, {2, 3}, {3, 3}, {4, 2}, {4, 3}},
+		{{0.6, 0.6}, {-0.6, 0.6}, {-0.6, -0.6}, {0.6, -0.6}},
+	})
 
-	//p1 := Polygon2{verts: []Vec2{{r(10), r(10)}, {r(-10), r(10)}, {r(-10), r(-10)}, {r(10), r(-10)}, {r(0), r(-5)}}}
-	//p2 := Polygon2{verts: []Vec2{{r(0), r(2)}, {r(-1), r(0)}, {r(1), r(0)}}}
+	for i := 0; i < len(tests); i += 2 {
+		p := Polygon2{verts: tests[i]}
+		q := Polygon2{verts: tests[i+1]}
 
-	p1 := Polygon2{verts: []Vec2{{r(3), r(4)}, {r(0), r(4)}, {r(0), r(0)}, {r(4), r(0)}, {r(4), r(1)}, {r(1), r(1)}, {r(1), r(2)}, {r(2), r(3)}, {r(3), r(3)}, {r(4), r(2)}, {r(4), r(3)}}}
-	p2 := Polygon2{verts: []Vec2{{r(0.6), r(0.6)}, {r(-0.6), r(0.6)}, {r(-0.6), r(-0.6)}, {r(0.6), r(-0.6)}}}
+		cs := GetConvolutionCycle(&p, &q)
+		fmt.Printf("The convolution cycle computed for test %v:\n", i/2)
+		for _, v := range cs {
+			fmt.Printf("    %v,%v\n", v.ApproxX(), v.ApproxY())
+		}
 
-	cs := GetConvolutionCycle(&p1, &p2)
-
-	fmt.Printf("The convolution cycle:\n")
-	for _, v := range cs {
-		fmt.Printf("    %v,%v\n", v.ApproxX(), v.ApproxY())
+		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/2))
+		canvas := svg.New(svgout)
+		debugDrawLineStrips(canvas, [][]Vec2{p.verts, cs}, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 	}
-
-	//fmt.Printf("P1: %+v\n\nP2: %+v\n\nConv: %+v\n", p1, p2, cs)
-
-	svgout, _ := os.Create("testoutputs/TestConvolve_figure.svg")
-	canvas := svg.New(svgout)
-	debugDrawLineStrips(canvas, [][]Vec2{p1.verts, cs}, 150, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 }
