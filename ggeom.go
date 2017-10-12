@@ -156,7 +156,15 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	// See AndyG's answer to https://stackoverflow.com/questions/13640931/how-to-determine-if-a-vector-is-between-two-other-vectors
 	ab := a.Det(b)
 	bc := b.Det(c)
-	return (&ab).Sign() >= 0 && (&bc).Sign() >= 0
+
+	// positive sign means counterclockwise
+
+	if ab.Sign() >= 0 {
+		ac := a.Det(c)
+		return bc.Sign() >= 0 || ac.Sign() < 0
+	} else {
+		return bc.Sign() >= 0
+	}
 }
 
 // -1 for counterclockwise, 0 for colinear, 1 for clockwise
@@ -234,6 +242,8 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
 	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
+	return cs
+
 	for j := 0; j < len(rq); j++ {
 		var q1i int
 		if j == 0 {
@@ -255,6 +265,9 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
 				pstart = i
 				qstart = rq[j]
+
+				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
+
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
 			}
 		}
@@ -290,9 +303,10 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
 		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
 		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-
+		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 		if !(incp || incq) {
-			break
+			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
 		}
 
 		var t Vec2
@@ -312,6 +326,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		fmt.Printf("Adding point %v, %v\n", t.ApproxX(), t.ApproxY())
 
 		if i == i0 && j == j0 {
+			fmt.Printf("BREAK 2\n")
 			break
 		}
 	}
