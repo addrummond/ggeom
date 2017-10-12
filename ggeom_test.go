@@ -280,8 +280,8 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		{{-2, 2}, {2, -2}, {2, 2}, {-2, -2}},
 		{{0, 0}},
 		/////
-		//{{-2, 2}, {2, -2}, {2, 2}, {-2, -2}, {-2, 0}, {3, 0}},
-		//{{0, 0}},
+		{{-2, 2}, {2, -2}, {2, 2}, {-2, -2}, {-2, 0}, {3, 0}},
+		{{0, 0}, {0, 0}, {0, 0}, {2, 0}, {2, -2}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
@@ -319,11 +319,17 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		}
 		fmt.Printf("\n")
 
+		used := make(map[int]bool)
 		for _, i1 := range its1 {
 			found := false
-			for _, i2 := range its2 {
+			for i, i2 := range its2 {
+				if used[i] {
+					continue
+				}
+
 				if i1.SlowEqEpsilon(&i2.p, EPSILON) {
 					found = true
+					used[i] = true
 					break
 				}
 			}
@@ -331,11 +337,17 @@ func TestSegmentLoopIntersections(t *testing.T) {
 				t.Error()
 			}
 		}
+		used = make(map[int]bool)
 		for _, i1 := range its2 {
 			found := false
-			for _, i2 := range its1 {
+			for i, i2 := range its1 {
+				if used[i] {
+					continue
+				}
+
 				if i2.SlowEqEpsilon(&i1.p, EPSILON) {
 					found = true
+					used[i] = true
 					break
 				}
 			}
