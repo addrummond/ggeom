@@ -737,8 +737,14 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		if c != 0 {
 			return c
 		} else {
-			// 'start' < 'cross' < 'end'
-			return aa.kind - bb.kind
+			y1, y2 := &aa.left.y, &bb.left.y
+			c = y1.Cmp(y2)
+			if c != 0 {
+				return c
+			} else {
+				// 'start' < 'cross' < 'end'
+				return aa.kind - bb.kind
+			}
 		}
 	}
 	events := binaryheap.NewWith(hcmp)
@@ -912,13 +918,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			sIt, sItExists := tree.GetIterator(segToKey[si])
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
-			if !(sItExists && tItExists) {
-				panic("Internal error [3] in 'SegmentLoopIntersections'")
-			}
+			//if !(sItExists && tItExists) {
+			//	panic("Internal error [3] in 'SegmentLoopIntersections'")
+			//}
 
 			fmt.Printf("Intersection of %v and %v\n", si, ti)
 
-			if tree.Size() > 2 {
+			if sItExists && tItExists && tree.Size() > 2 {
 				if tcmp(tKey, sKey) == 0 {
 					panic("Bad comparison before swap")
 				}
