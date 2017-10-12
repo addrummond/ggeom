@@ -689,6 +689,68 @@ type bentleyEvent struct {
 	deleted bool
 }
 
+func bentleyEventCmp(a, b interface{}) int {
+	aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
+
+	x1, x2 := &aa.left.x, &bb.left.x
+	if aa.kind != start {
+		x1 = &aa.right.x
+	}
+	if bb.kind != start {
+		x2 = &bb.right.x
+	}
+
+	c := x1.Cmp(x2)
+	if c != 0 {
+		return c
+	} else if aa.kind == end && bb.kind != end {
+		return 1
+	} else if aa.kind != end && bb.kind == end {
+		return -1
+	} else {
+		y1, y2 := &aa.left.y, &bb.left.y
+		c = y1.Cmp(y2)
+		if c != 0 {
+			return c
+		} else {
+			return aa.kind - bb.kind
+		}
+	}
+}
+
+type bentleyTreeKey struct {
+	segi int
+	x    *Scalar
+	y    *Scalar
+}
+
+func bentleyTreeCmp(a, b interface{}) int {
+	aa, bb := a.(bentleyTreeKey), b.(bentleyTreeKey)
+
+	c := aa.y.Cmp(bb.y)
+	if c == 0 {
+		c = aa.x.Cmp(bb.x)
+		if c != 0 {
+			return c
+		} else {
+			return aa.segi - bb.segi
+		}
+	} else {
+		return c
+	}
+}
+
+func debugPrintBentleyTree(tree redblacktree.Tree, indent string) {
+	vals := tree.Values()
+	keys := tree.Keys()
+	for i := 0; i < len(vals); i++ {
+		k := keys[i].(bentleyTreeKey)
+		v := vals[i].(int)
+		fmt.Printf("%s=(%v,%v) -> %v\n", indent, k.segi, k.y, v)
+	}
+	fmt.Printf("\n")
+}
+
 func bentleyEventPs(i int, points []Vec2) (*Vec2, *Vec2) {
 	p1 := &(points[i])
 	p2 := &(points[(i+1)%len(points)])
@@ -723,35 +785,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
 
-	hcmp := func(a, b interface{}) int {
-		aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
-
-		x1, x2 := &aa.left.x, &bb.left.x
-		if aa.kind != start {
-			x1 = &aa.right.x
-		}
-		if bb.kind != start {
-			x2 = &bb.right.x
-		}
-
-		c := x1.Cmp(x2)
-		if c != 0 {
-			return c
-		} else if aa.kind == end && bb.kind != end {
-			return 1
-		} else if aa.kind != end && bb.kind == end {
-			return -1
-		} else {
-			y1, y2 := &aa.left.y, &bb.left.y
-			c = y1.Cmp(y2)
-			if c != 0 {
-				return c
-			} else {
-				return aa.kind - bb.kind
-			}
-		}
-	}
-	events := binaryheap.NewWith(hcmp)
+	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
 		e1 := bentleyEvent{
@@ -770,28 +804,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		events.Push(&e2)
 	}
 
-	type tkey struct {
-		segi int
-		x    *Scalar
-		y    *Scalar
-	}
-	tcmp := func(a, b interface{}) int {
-		aa, bb := a.(tkey), b.(tkey)
-
-		c := aa.y.Cmp(bb.y)
-		if c == 0 {
-			c = aa.x.Cmp(bb.x)
-			if c != 0 {
-				return c
-			} else {
-				return aa.segi - bb.segi
-			}
-		} else {
-			return c
-		}
-	}
-	tree := redblacktree.NewWith(tcmp)
-	segToKey := make(map[int]tkey)
+	tree := redblacktree.NewWith(bentleyTreeCmp)
+	segToKey := make(map[int]bentleyTreeKey)
 
 	intersections := make([]Intersection, 0)
 	intersectionPoints := redblacktree.NewWith(func(a, b interface{}) int {
@@ -825,23 +839,16 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			continue
 		}
 
-		/*fmt.Printf("\nEvent: kind=%v [x=%v], seg1=%v, seg2=%v\n", event.kind, &event.left.x, event.i, event.i2)
-		vals := tree.Values()
-		keys := tree.Keys()
-		fmt.Printf("The tree before\n")
-		for i := 0; i < len(vals); i++ {
-			k := keys[i].(tkey)
-			v := vals[i].(int)
-			fmt.Printf("    k=(%v,%v) -> %v\n", k.segi, k.y, v)
-		}
-		fmt.Printf("\n")*/
+		//fmt.Printf("\nEvent: kind=%v [x=%v], seg1=%v, seg2=%v\n", event.kind, &event.left.x, event.i, event.i2)
+		//fmt.Printf("The tree before\n")
+		//debugPrintBentleyTree(tree, "    ")
 
 		if event.kind == start {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
 			y := SegmentYValueAtX(p1, p2, &event.left.x)
 
-			tk := tkey{event.i, &event.left.x, &y}
+			tk := bentleyTreeKey{event.i, &event.left.x, &y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
 			if replaced {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
@@ -904,7 +911,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			sKey, tKey := segToKey[si], segToKey[ti]
-			if tcmp(sKey, tKey) > 0 {
+			if bentleyTreeCmp(sKey, tKey) > 0 {
 				si, ti = ti, si
 				sKey, tKey = tKey, sKey
 			}
@@ -917,7 +924,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 
 			if tree.Size() > 2 {
-				if tcmp(tKey, sKey) == 0 {
+				if bentleyTreeCmp(tKey, sKey) == 0 {
 					panic("Internal error [4] in 'SegmentLoopIntersections'")
 				}
 
@@ -930,15 +937,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				t1 := &points[ti]
 				t2 := &points[(ti+1)%len(points)]
 
-				/*vals := tree.Values()
-				keys := tree.Keys()
-				fmt.Printf("Modified tree\n")
-				for i := 0; i < len(vals); i++ {
-					k := keys[i].(tkey)
-					v := vals[i].(int)
-					fmt.Printf("    k=(%v,%v) -> %v\n", k.segi, k.y, v)
-				}
-				fmt.Printf("\n")*/
+				//fmt.Printf("Modified tree\n")
+				//debugPrintBentleyTree(tree, "    ")
 
 				var u, r int
 				var u1, u2, r1, r2 *Vec2
