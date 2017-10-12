@@ -788,20 +788,18 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		e1 := bentleyEvent{
+		events.Push(&bentleyEvent{
 			kind:  start,
 			i:     i,
 			left:  left,
 			right: right,
-		}
-		events.Push(&e1)
-		e2 := bentleyEvent{
+		})
+		events.Push(&bentleyEvent{
 			kind:  end,
 			i:     i,
 			left:  left,
 			right: right,
-		}
-		events.Push(&e2)
+		})
 	}
 
 	tree := redblacktree.NewWith(bentleyTreeCmp)
@@ -856,14 +854,12 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			segToKey[event.i] = tk
 			it2 := it1
 
-			var psp1, psp2, nsp1, nsp2 *Vec2
-			var prevI, nextI int
 			for it1.Prev() {
-				prevI = it1.Value().(int)
+				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					psp1 = &points[prevI]
-					psp2 = &points[(prevI+1)%len(points)]
+					psp1 := &points[prevI]
+					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
@@ -875,11 +871,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 			}
 			for it2.Next() {
-				nextI = it2.Value().(int)
+				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(nextI, event.i, len(points)) {
-					nsp1 = &points[nextI]
-					nsp2 = &points[(nextI+1)%len(points)]
+					nsp1 := &points[nextI]
+					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
@@ -940,14 +936,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				//fmt.Printf("Modified tree\n")
 				//debugPrintBentleyTree(tree, "    ")
 
-				var u, r int
-				var u1, u2, r1, r2 *Vec2
-
 				for sIt.Next() {
-					u = sIt.Value().(int)
+					u := sIt.Value().(int)
 					if !sameOrAdjacent(u, si, len(points)) {
-						u1 = &points[u]
-						u2 = &points[(u+1)%len(points)]
+						u1 := &points[u]
+						u2 := &points[(u+1)%len(points)]
 
 						intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 						if intersect {
@@ -959,10 +952,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 				}
 
 				for tIt.Prev() {
-					r = tIt.Value().(int)
+					r := tIt.Value().(int)
 					if !sameOrAdjacent(r, ti, len(points)) {
-						r1 = &points[r]
-						r2 = &points[(r+1)%len(points)]
+						r1 := &points[r]
+						r2 := &points[(r+1)%len(points)]
 
 						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 						if intersect {
