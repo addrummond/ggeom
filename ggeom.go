@@ -221,6 +221,8 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 	labs := make(map[label]bool)
 
+	fmt.Printf("Bottom indices %v, %v\n", p.IndexOfBottommost(), q.IndexOfBottommost())
+
 	if nrm > mrn {
 		return getConvolutionCycle(labs, p, p.IndexOfBottommost(), q, q.IndexOfBottommost(), rq)
 	} else {
@@ -230,7 +232,7 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
-	appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
+	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
 	for j := 0; j < len(rq); j++ {
 		var q1i int
@@ -307,6 +309,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		}
 
 		points = append(points, t)
+		fmt.Printf("Adding point %v, %v\n", t.ApproxX(), t.ApproxY())
 
 		if i == i0 && j == j0 {
 			break
@@ -774,7 +777,7 @@ type Intersection struct {
 	p    Vec2
 }
 
-// An implementation of the Bentley Ottmann algorithm for the case where
+// SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
 // by segment from last point to first point. This returns all intersections
 // except for the points in the original input (which could all be considered
