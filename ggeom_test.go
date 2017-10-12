@@ -369,7 +369,7 @@ func TestConvolve(t *testing.T) {
 	//p2 := Polygon2{verts: []Vec2{{r(0), r(2)}, {r(-1), r(0)}, {r(1), r(0)}}}
 
 	p1 := Polygon2{verts: []Vec2{{r(3), r(4)}, {r(0), r(4)}, {r(0), r(0)}, {r(4), r(0)}, {r(4), r(1)}, {r(1), r(1)}, {r(1), r(2)}, {r(2), r(3)}, {r(3), r(3)}, {r(4), r(2)}, {r(4), r(3)}}}
-	p2 := Polygon2{verts: []Vec2{{r(0.25), r(0.25)}, {r(-0.25), r(0.25)}, {r(-0.25), r(-0.25)}, {r(0.25), r(-0.25)}}}
+	p2 := Polygon2{verts: []Vec2{{r(0.6), r(0.6)}, {r(-0.6), r(0.6)}, {r(-0.6), r(-0.6)}, {r(0.6), r(-0.6)}}}
 
 	cs := GetConvolutionCycle(&p1, &p2)
 
