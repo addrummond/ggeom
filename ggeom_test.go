@@ -380,27 +380,52 @@ func TestSegmentLoopIntersections(t *testing.T) {
 
 func TestConvolve(t *testing.T) {
 	tests := SofSofVec2([][][]float64{
-		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}}, // p
-		{{0, 2}, {-1, 0}, {1, 0}},                    // q
+		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}},                                  // p
+		{{0, 2}, {-1, 0}, {1, 0}},                                                     // q
+		{{-11, -10}, {11, -10}, {11, 10}, {10, 12}, {-10, 12}, {-11, 10}, {-11, -10}}, // convolution cycle
 		/////
 		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}, {0, -5}},
 		{{0, 2}, {-1, 0}, {1, 0}},
+		{{-11, -10}, {11, -10}, {10, -8}, {0, -3}, {-1, -5}, {1, -5}, {11, 10}, {10, 12}, {-10, 12}, {-11, 10}, {-11, -10}},
 		/////
 		{{3, 4}, {0, 4}, {0, 0}, {4, 0}, {4, 1}, {1, 1}, {1, 2}, {2, 3}, {3, 3}, {4, 2}, {4, 3}},
 		{{0.6, 0.6}, {-0.6, 0.6}, {-0.6, -0.6}, {0.6, -0.6}},
+		{{-0.6, -0.6}, {4.6, -0.6}, {4.6, 1.6}, {0.4, 1.6}, {0.4, 0.4}, {1.6, 0.4}, {1.6, 2.6}, {0.4, 2.6}, {0.4, 1.4}, {1.6, 1.4}, {2.6, 2.4}, {2.6, 3.6}, {1.4, 3.6}, {1.4, 2.4}, {3.6, 2.4}, {3.6, 3.6}, {2.4, 3.6}, {2.4, 2.4}, {3.4, 1.4}, {4.6, 1.4}, {4.6, 3.6}, {3.6, 4.6}, {-0.6, 4.6}, {-0.6, -0.6}},
 	})
 
-	for i := 0; i < len(tests); i += 2 {
+	for i := 0; i < len(tests); i += 3 {
 		p := Polygon2{verts: tests[i]}
 		q := Polygon2{verts: tests[i+1]}
+		expected := tests[i+2]
 
 		cs := GetConvolutionCycle(&p, &q)
-		fmt.Printf("The convolution cycle computed for test %v:\n", i/2)
-		for _, v := range cs {
-			fmt.Printf("    %v,%v\n", v.ApproxX(), v.ApproxY())
+		fmt.Printf("The expected (left) vs. computed conv cycle for test %v:\n", i/3)
+		l := len(cs)
+		if len(expected) > l {
+			l = len(expected)
 		}
 
-		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/2))
+		for i := 0; i < l; i++ {
+			fmt.Printf("    ")
+			if i < len(expected) {
+				fmt.Printf("%+2.2f, %+2.2f\t", expected[i].ApproxX(), expected[i].ApproxY())
+			} else {
+				fmt.Printf("_____\t")
+			}
+			if i < len(cs) {
+				fmt.Printf("%+2.2f, %+2.2f\t", cs[i].ApproxX(), cs[i].ApproxY())
+			} else {
+				fmt.Printf("_____\t")
+			}
+			fmt.Printf("\n")
+
+			if i >= len(cs) || i >= len(expected) || !expected[i].SlowEqEpsilon(&cs[i], EPSILON) {
+				t.Fail()
+			}
+		}
+		fmt.Printf("\n")
+
+		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/3))
 		canvas := svg.New(svgout)
 		debugDrawLineStrips(canvas, [][]Vec2{p.verts, cs}, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 	}

@@ -226,8 +226,6 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 	labs := make(map[label]bool)
 
-	fmt.Printf("Bottom indices %v, %v\n", p.IndexOfBottommost(), q.IndexOfBottommost())
-
 	if nrm > mrn {
 		return getConvolutionCycle(labs, p, p.IndexOfBottommost(), q, q.IndexOfBottommost(), rq)
 	} else {
@@ -300,8 +298,8 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
 		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
 		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+		//fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+		//fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 		if !(incp || incq) {
 			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
 		}
