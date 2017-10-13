@@ -47,12 +47,16 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 	ty := func(y float64) float64 { return height - ((y - miny + arrowLen) * scale) }
 
 	// origin marker
-	canvas.Square(tx(-arrowLen/2), ty(-arrowLen/2), arrowLen*scale*0.5, "fill: green")
+	canvas.Square(tx(-arrowLen/4), ty(arrowLen/4), arrowLen*scale*0.5, "fill: green")
 
 	for si, s := range strips {
 		xs := make([]float64, 0)
 		ys := make([]float64, 0)
-		format := formats[si]
+		fmti := si
+		if fmti >= len(formats) {
+			fmti = len(formats) - 1
+		}
+		format := formats[fmti]
 
 		for i := 0; len(s) > 0 && i <= len(s); i++ {
 			ii := i
@@ -76,15 +80,22 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 			continue
 		}
 
-		format := formats[si]
+		fmti := si
+		if fmti >= len(formats) {
+			fmti = len(formats) - 1
+		}
+		format := formats[fmti]
 
 		sp := s[0]
-		canvas.Square(tx(sp.ApproxX()-(arrowLen/2)), ty(sp.ApproxY()-(arrowLen/4)), arrowLen*scale*0.5, "fill: black")
+		canvas.Square(tx(sp.ApproxX()-(arrowLen/8)), ty(sp.ApproxY()+(arrowLen/8)), arrowLen*scale*0.25, format)
 
 		for i := 1; i < len(s); i++ {
 			p1 := s[i-1]
 			p2 := s[i]
 			d := p2.Sub(p1)
+			if d.x.Sign() == 0 && d.y.Sign() == 0 {
+				continue
+			}
 
 			const sinv = 0.309
 			const cosv = -0.951
@@ -394,8 +405,16 @@ func TestConvolve(t *testing.T) {
 		}
 		fmt.Printf("\n")
 
+		itns := SegmentLoopIntersections(cs)
+		crosses := make([][]Vec2, 0)
+		for _, itn := range itns {
+			crosses = append(crosses, SofVec2([][]float64{{itn.p.ApproxX(), itn.p.ApproxY()}, {itn.p.ApproxX(), itn.p.ApproxY()}}))
+		}
+
 		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/3))
 		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, [][]Vec2{p.verts, cs}, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
+		strips := [][]Vec2{p.verts, cs}
+		strips = append(strips, crosses...)
+		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 1; fill: none", "stroke: green; fill: green; stroke-width: 1"})
 	}
 }

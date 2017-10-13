@@ -882,7 +882,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		} else if event.kind == end {
 			it, f := tree.GetIterator(segToKey[event.i])
 			if !f {
-				panic(fmt.Sprintf("Internal error [1] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
+				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
 
 			// Because we're dealing with a strip of lines segements, we don't need to do
@@ -896,7 +896,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			ti := event.i2
 
 			if si == ti {
-				panic("Internal error [2] in 'SegementLoopIteration'")
+				panic("Internal error [3] in 'SegementLoopIteration'")
 			}
 
 			sKey, tKey := segToKey[si], segToKey[ti]
@@ -909,12 +909,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
 			if !(sItExists && tItExists) {
-				panic(fmt.Sprintf("Internal error [3] in 'SegmentLoopIntersections' can't find %v or %v", si, ti))
+				continue
+				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections' can't find %v or %v", si, ti))
 			}
 
 			if tree.Size() > 2 {
 				if bentleyTreeCmp(tKey, sKey) == 0 {
-					panic("Internal error [4] in 'SegmentLoopIntersections'")
+					panic("Internal error [5] in 'SegmentLoopIntersections'")
 				}
 
 				tree.SwapAt(sIt, tIt)
