@@ -241,40 +241,33 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 	fmt.Printf("RQ: %+v\n", rq)
 
-	rqi := 0
-	for j := 0; rqi < len(rq) && j < len(rq); j++ {
-		var q1i int
-		if j == 0 {
-			q1i = len(rq) - 1
-		} else {
-			q1i = j - 1
+	for j := 0; j < len(rq); j++ {
+		i := rq[j]
+		im1 := i - 1
+		if im1 < 0 {
+			im1 = len(q.verts) - 1
 		}
+		ip1 := (i + 1) % len(q.verts)
 
-		q1 := q.verts[rq[q1i]]
-		q2 := q.verts[rq[j]]
-		q3 := q.verts[rq[(j+1)%len(rq)]]
+		q1 := q.verts[im1]
+		q2 := q.verts[i]
+		q3 := q.verts[ip1]
 
-		if j == rq[rqi] {
-			fmt.Printf("HERE!\n")
-			rqi++
+		qseg1 := q2.Sub(q1)
+		qseg2 := q3.Sub(q2)
 
-			qseg1 := q2.Sub(q1)
-			qseg2 := q3.Sub(q2)
+		for i := 0; i < len(p.verts); i++ {
+			p1 := p.verts[i]
+			p2 := p.verts[(i+1)%len(p.verts)]
+			pseg := p2.Sub(p1)
 
-			for i := 0; i < len(p.verts); i++ {
-				p1 := p.verts[i]
-				p2 := p.verts[(i+1)%len(p.verts)]
-				pseg := p2.Sub(p1)
+			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
+				pstart = i
+				qstart = rq[j]
 
-				if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
-					pstart = i
-					qstart = rq[j]
+				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
 
-					//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
-
-					//panic("FIX CONV")
-					cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
-				}
+				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
 			}
 		}
 	}
