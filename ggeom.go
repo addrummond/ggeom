@@ -291,36 +291,39 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		jp1 := (j + 1) % len(q.verts)
 		jm1 := (len(q.verts) + j - 1) % len(q.verts)
 
-		piTOpiplus1 := p.verts[ip1].Sub(p.verts[i])
-		qjminus1TOqj := q.verts[j].Sub(q.verts[jm1])
-		qjTOqjplus1 := q.verts[jp1].Sub(q.verts[j])
-		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
-		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
-		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-		fmt.Printf("On P=%v, Q=%v\n", i, j)
-		fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-		fmt.Printf("Is between [P%v,Q%v,P%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", im1, j, i, incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-
-		if !incp && !incq {
-			break
-		}
-
-		if incp {
-			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			s := p.verts[ip1].Add(q.verts[j])
-			labs[label{i, ip1, j, -1}] = true
-			i = ip1
-			points = append(points, s)
-		}
-		if incq {
-			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			s := p.verts[i].Add(q.verts[jp1])
-			labs[label{i, -1, j, jp1}] = true
+		if ACIsReflex(q.verts[jm1], q.verts[j], q.verts[jp1]) {
 			j = jp1
+			labs[label{i, ip1, j, -1}] = true
+			s := p.verts[i].Add(q.verts[jp1])
 			points = append(points, s)
+		} else {
+			piTOpiplus1 := p.verts[ip1].Sub(p.verts[i])
+			qjminus1TOqj := q.verts[j].Sub(q.verts[jm1])
+			qjTOqjplus1 := q.verts[jp1].Sub(q.verts[j])
+			piminus1TOpi := p.verts[i].Sub(p.verts[im1])
+			incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
+			incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
+			fmt.Printf("On P=%v, Q=%v\n", i, j)
+			fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+			fmt.Printf("Is between [P%v,Q%v,P%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", im1, j, i, incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+
+			if incp {
+				//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+				s := p.verts[ip1].Add(q.verts[j])
+				labs[label{i, ip1, j, -1}] = true
+				i = ip1
+				points = append(points, s)
+			}
+			if incq {
+				//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+				s := p.verts[i].Add(q.verts[jp1])
+				labs[label{i, -1, j, jp1}] = true
+				j = jp1
+				points = append(points, s)
+			}
 		}
 
-		if i == i0 && j == j0 || labs[label{i, ip1, j, -1}] || labs[label{i, -1, j, jp1}] {
+		if i == i0 && j == j0 /*|| labs[label{i, ip1, j, -1}] || labs[label{i, -1, j, jp1}]*/ {
 			break
 		}
 	}
