@@ -226,9 +226,10 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 	labs := make(map[label]bool)
 
-	if nrm > mrn {
+	if nrm < mrn {
 		return getConvolutionCycle(labs, p, p.indexOfBottommost(), q, q.indexOfBottommost(), rq)
 	} else {
+		fmt.Printf("SWITCHED!\n")
 		return getConvolutionCycle(labs, q, q.indexOfBottommost(), p, p.indexOfBottommost(), rp)
 	}
 }
@@ -237,33 +238,41 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
 	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
-	return cs
+	fmt.Printf("RQ: %+v\n", rq)
 
-	for j := 0; j < len(rq); j++ {
+	rqi := 0
+	for j := 0; rqi < len(rq) && j < len(rq); j++ {
 		var q1i int
 		if j == 0 {
 			q1i = len(rq) - 1
 		} else {
 			q1i = j - 1
 		}
+
 		q1 := q.verts[rq[q1i]]
 		q2 := q.verts[rq[j]]
 		q3 := q.verts[rq[(j+1)%len(rq)]]
-		qseg1 := q2.Sub(q1)
-		qseg2 := q3.Sub(q2)
 
-		for i := 0; i < len(p.verts); i++ {
-			p1 := p.verts[i]
-			p2 := p.verts[(i+1)%len(p.verts)]
-			pseg := p2.Sub(p1)
+		if j == rq[rqi] {
+			fmt.Printf("HERE!\n")
+			rqi++
 
-			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
-				pstart = i
-				qstart = rq[j]
+			qseg1 := q2.Sub(q1)
+			qseg2 := q3.Sub(q2)
 
-				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
+			for i := 0; i < len(p.verts); i++ {
+				p1 := p.verts[i]
+				p2 := p.verts[(i+1)%len(p.verts)]
+				pseg := p2.Sub(p1)
 
-				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
+				if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
+					pstart = i
+					qstart = rq[j]
+
+					//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
+
+					cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
+				}
 			}
 		}
 	}
@@ -298,28 +307,28 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
 		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
 		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-		//fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-		//fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+		fmt.Printf("Is between [i=%v,j=%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 		if !(incp || incq) {
+			break
 			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
 		}
 
-		var t Vec2
 		if incp {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			t = p.verts[ip1].Add(q.verts[j])
-			labs[label{i, i + 1, j}] = true
+			t := p.verts[ip1].Add(q.verts[j])
+			labs[label{i, ip1, j}] = true
 			s = t
 			i = ip1
+			points = append(points, t)
 		}
 		if incq {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			t = p.verts[i].Add(q.verts[jp1])
+			t := p.verts[i].Add(q.verts[jp1])
 			s = t
 			j = jp1
+			points = append(points, t)
 		}
-
-		points = append(points, t)
 
 		if i == i0 && j == j0 {
 			break
@@ -419,10 +428,10 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	// and http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 
 	// Find the four orientations needed for general and special case
-	o1 := orientation(p1, q1, q2)
-	o2 := orientation(p2, q1, q2)
-	o3 := orientation(p1, p2, q1)
-	o4 := orientation(p1, p2, q2)
+	o1 := Orientation(p1, q1, q2)
+	o2 := Orientation(p2, q1, q2)
+	o3 := Orientation(p1, p2, q1)
+	o4 := Orientation(p1, p2, q2)
 
 	if o1 != o2 && o3 != o4 {
 		return true, nil // the segments intersect; not degenerate
@@ -564,7 +573,7 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 	return false
 }
 
-// NondegenerateSegmentIntersection returns the intersection point of 
+// NondegenerateSegmentIntersection returns the intersection point of
 // two segements on the assumption that the segments intersect at a
 // single point and are not parallel.
 func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {

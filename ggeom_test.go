@@ -170,49 +170,6 @@ func TestFastSegmentsDontIntersect(t *testing.T) {
 	}
 }
 
-func TestSegmentsIntersect(t *testing.T) {
-	falseTests := SofSofVec2([][][]float64{
-		// Two parallel non-colinear vertical lines
-		{{-1, 1}, {-1, 0}, {1, 1}, {1, 0}},
-		// Two parallel non-colinear vertical lines with big coords
-		{{-1, math.MaxFloat64}, {-1, 0}, {1, math.MaxFloat64}, {1, 0}},
-		// Two parallel non-colinear diagonal lines with overlapping bounding rects
-		{{-1, -2}, {1, 2}, {-1.1, -2}, {0.9, 2}},
-	})
-
-	trueTests := SofSofVec2([][][]float64{
-		// A cross.
-		{{-10, -10}, {10, 10}, {-10, 10}, {10, -10}},
-		// As above but with segments pointing the other way.
-		{{10, 10}, {-10, -10}, {10, -10}, {-10, 10}},
-		// Only barely intersect.
-		{{-5, 0}, {5, math.SmallestNonzeroFloat64}, {-5, math.SmallestNonzeroFloat64}, {5, 0}},
-		// A T
-		{{-100, 5}, {100, 5}, {1, 5}, {1, -0.001}},
-		// Colinear with overlap
-		{{-100, 5}, {100, 5}, {90, 5}, {101, 5}},
-		// Colinear with overlap
-		{{5, -100}, {5, 100}, {5, 90}, {5, 101}},
-		// Colinear with overlap
-		{{-1, -1}, {1, 1}, {0.5, 0.5}, {2, 2}},
-		// Colinear joned at tip.
-		{{-100, 5}, {100, 5}, {100, 5}, {101, 5}},
-	})
-
-	for _, vs := range trueTests {
-		r, _ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
-		if !r {
-			t.Error()
-		}
-	}
-	for _, vs := range falseTests {
-		r, _ := SegmentsIntersect(&vs[0], &vs[1], &vs[2], &vs[3])
-		if r {
-			t.Error()
-		}
-	}
-}
-
 func TestNondegenerateSegmentIntersection(t *testing.T) {
 	tests := SofSofVec2([][][]float64{
 		{{-1, -1}, {1, 1}, {-1, 1}, {1, -1}, {0, 0}},            // A cross centered on zero
@@ -391,6 +348,10 @@ func TestConvolve(t *testing.T) {
 		{{3, 4}, {0, 4}, {0, 0}, {4, 0}, {4, 1}, {1, 1}, {1, 2}, {2, 3}, {3, 3}, {4, 2}, {4, 3}},
 		{{0.6, 0.6}, {-0.6, 0.6}, {-0.6, -0.6}, {0.6, -0.6}},
 		{{-0.6, -0.6}, {4.6, -0.6}, {4.6, 1.6}, {0.4, 1.6}, {0.4, 0.4}, {1.6, 0.4}, {1.6, 2.6}, {0.4, 2.6}, {0.4, 1.4}, {1.6, 1.4}, {2.6, 2.4}, {2.6, 3.6}, {1.4, 3.6}, {1.4, 2.4}, {3.6, 2.4}, {3.6, 3.6}, {2.4, 3.6}, {2.4, 2.4}, {3.4, 1.4}, {4.6, 1.4}, {4.6, 3.6}, {3.6, 4.6}, {-0.6, 4.6}, {-0.6, -0.6}},
+		/////
+		//{{3, 4}, {0, 4}, {0, 0}, {4, 0}, {4, 1}, {1, 1}, {1, 2}, {2, 3}, {3, 3}, {4, 2}, {4, 3}},
+		//{{0.3, 0.3}, {0, 0.2}, {-0.3, 0.3}, {-0.3, -0.3}, {0.3, -0.3}},
+		//{{-0.6, -0.6}, {4.6, -0.6}, {4.6, 1.6}, {0.4, 1.6}, {0.4, 0.4}, {1.6, 0.4}, {1.6, 2.6}, {0.4, 2.6}, {0.4, 1.4}, {1.6, 1.4}, {2.6, 2.4}, {2.6, 3.6}, {1.4, 3.6}, {1.4, 2.4}, {3.6, 2.4}, {3.6, 3.6}, {2.4, 3.6}, {2.4, 2.4}, {3.4, 1.4}, {4.6, 1.4}, {4.6, 3.6}, {3.6, 4.6}, {-0.6, 4.6}, {-0.6, -0.6}},
 	})
 
 	for i := 0; i < len(tests); i += 3 {
