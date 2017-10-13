@@ -272,6 +272,7 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 					//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
 
+					//panic("FIX CONV")
 					cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
 				}
 			}
@@ -315,24 +316,30 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
 		}
 
+		var t1, t2 Vec2
 		if incp {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			t := p.verts[ip1].Add(q.verts[j])
+			t1 = p.verts[ip1].Add(q.verts[j])
 			labs[label{i, ip1, j}] = true
-			s = t
+			s = t1
 			i = ip1
-			points = append(points, t)
 		}
 		if incq {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			t := p.verts[i].Add(q.verts[jp1])
-			s = t
+			t2 = p.verts[i].Add(q.verts[jp1])
+			s = t2
 			j = jp1
-			points = append(points, t)
 		}
 
 		if i == i0 && j == j0 {
 			break
+		} else {
+			if incp {
+				points = append(points, t1)
+			}
+			if incq {
+				points = append(points, t2)
+			}
 		}
 	}
 
