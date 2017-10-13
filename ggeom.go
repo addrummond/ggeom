@@ -431,6 +431,10 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	}
 }
 
+func segmentsSharePoint(p1, p2, q1, q2 *Vec2) bool {
+	return p1.Eq(q1) || p1.Eq(q2) || p2.Eq(q1) || p2.Eq(q2)
+}
+
 // Returns true and the intersection point if two segments
 // share a point and do not otherwise overlap.
 func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
@@ -528,8 +532,7 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	var v Vec2
 
-	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
-	if adj {
+	if segmentsSharePoint(p1, p2, q1, q2) {
 		return false, v
 	}
 
