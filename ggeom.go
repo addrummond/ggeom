@@ -148,11 +148,14 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	bc := b.Det(c)
 	ac := a.Det(c)
 
-	if ab.Sign() > 0 {
+	return (ab.Sign() >= 0 && bc.Sign() >= 0 && ac.Sign() != 0) ||
+		(ab.Sign() < 0 && bc.Sign() > 0)
+
+	/*if ab.Sign() > 0 {
 		return bc.Sign() >= 0 || ac.Sign() < 0
 	} else {
 		return ac.Sign() < 0 && bc.Sign() >= 0
-	}
+	}*/
 }
 
 // ACIsReflex returns true if the vertex p2 in a polygon,
