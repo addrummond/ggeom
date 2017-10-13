@@ -396,6 +396,6 @@ func TestConvolve(t *testing.T) {
 
 		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/3))
 		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, [][]Vec2{p.verts, cs[:len(cs)]}, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
+		debugDrawLineStrips(canvas, [][]Vec2{p.verts, cs}, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; stroke-width: 1; fill: none"})
 	}
 }
