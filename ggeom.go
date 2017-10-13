@@ -257,15 +257,13 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 		qseg2 := q3.Sub(q2)
 
 		for i := 0; i < len(p.verts); i++ {
+			ip1 := (i + 1) % len(p.verts)
 			p1 := p.verts[i]
-			p2 := p.verts[(i+1)%len(p.verts)]
+			p2 := p.verts[ip1]
 			pseg := p2.Sub(p1)
 
-			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j, -1}] {
-				pstart = i
-				qstart = j
-
-				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
+			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, ip1, j, -1}] {
+				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
 
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
 				//break outer
