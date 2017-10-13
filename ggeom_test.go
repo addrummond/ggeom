@@ -230,10 +230,10 @@ func TestSegmentIntersection(t *testing.T) {
 	})
 
 	for _, tst := range tests {
-		intersect, unique, p := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
-		if intersect {
-			if unique {
-				if !p.Eq(&tst[4]) {
+		info := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		if info.intersect {
+			if info.unique {
+				if !info.p.Eq(&tst[4]) {
 					t.Error()
 				}
 			} else {

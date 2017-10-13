@@ -469,27 +469,69 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	}
 }
 
-// Returns a boolean indicating whether the segments intersect,
-// a boolean indicating whether there is a unique intersection point,
-// and the intersection point itself (set to (0,0) if
-// the segments don't intersect, or a point arbitrarily chosen
-// from the subset of {p1,p2,q1,q2} that lies along the intersection.
-func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, bool, Vec2) {
+type SegmentIntersectionInfo struct {
+	// true iff the segments intersect, incuding all weird/degenerate intersection cases
+	intersect bool
+	// true iff the segments intersect and there is a unique intersection point
+	unique bool
+	// true iff the segments intersect and are adjacent (no overlaping section, intersect at a vertex shared by the two)
+	adjacent bool
+	// the intersection point if any; set to an arbitrarily chosen point if there is no unique intersection point; set to (0,0) if there is no intersection point.
+	p Vec2
+}
+
+// SegmentIntersection returns a SegmentIntersectionInfo
+// structure, which contains all the information you would typically
+// want about the intersection of two segments (if any).
+func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
-		return true, true, pt
+		return SegmentIntersectionInfo{
+			intersect: true,
+			unique:    true,
+			adjacent:  true,
+			p:         pt,
+		}
 	}
 
 	var v Vec2
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
-			return true, false, *degeneratePt
+			return SegmentIntersectionInfo{
+				intersect: true,
+				unique:    false,
+				adjacent:  false,
+				p:         *degeneratePt,
+			}
 		} else {
-			return true, true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
+			return SegmentIntersectionInfo{
+				intersect: true,
+				unique:    true,
+				adjacent:  false,
+				p:         NondegenerateSegmentIntersection(p1, p2, q1, q2),
+			}
 		}
 	} else {
-		return false, false, v
+		return SegmentIntersectionInfo{
+			intersect: false,
+			unique:    false,
+			adjacent:  false,
+			p:         v,
+		}
+	}
+}
+
+// NonFunkySegment intersection returns a boolean indicating whether or
+// not the two segments have a non-funky intersection, and a point
+// which is the intersection point if they do, or (0,0) otherwise.
+func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+	info := SegmentIntersection(p1, p2, q1, q2)
+	if info.intersect && info.unique && !info.adjacent {
+		return true, info.p
+	} else {
+		var v Vec2
+		return false, v
 	}
 }
 
@@ -855,7 +897,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
-					intersect, _, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
+					intersect, intersectionPoint := NonFunkySegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
 						addCross(prevI, event.i, &intersectionPoint)
 					}
@@ -871,7 +913,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
-					intersect, _, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
+					intersect, intersectionPoint := NonFunkySegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
 						addCross(nextI, event.i, &intersectionPoint)
 					}
@@ -909,7 +951,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
 			if !(sItExists && tItExists) {
-				continue
 				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections' can't find %v or %v", si, ti))
 			}
 
@@ -936,7 +977,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						u1 := &points[u]
 						u2 := &points[(u+1)%len(points)]
 
-						intersect, _, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+						intersect, intersectionPoint := NonFunkySegmentIntersection(s1, s2, u1, u2)
 						if intersect {
 							addCross(si, u, &intersectionPoint)
 						}
@@ -951,7 +992,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 						r1 := &points[r]
 						r2 := &points[(r+1)%len(points)]
 
-						intersect, _, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+						intersect, intersectionPoint := NonFunkySegmentIntersection(t1, t2, r1, r2)
 						if intersect {
 							addCross(ti, r, &intersectionPoint)
 						}
