@@ -238,18 +238,20 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
+
 	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
 	fmt.Printf("RQ: %+v\n", rq)
 
-	for j := 0; j < len(rq); j++ {
-		i := rq[j]
-		im1 := (len(q.verts) + i - 1) % len(q.verts)
-		ip1 := (i + 1) % len(q.verts)
+	//outer:
+	for rqi := 0; rqi < len(rq); rqi++ {
+		j := rq[rqi]
+		jm1 := (len(q.verts) + j - 1) % len(q.verts)
+		jp1 := (j + 1) % len(q.verts)
 
-		q1 := q.verts[im1]
-		q2 := q.verts[i]
-		q3 := q.verts[ip1]
+		q1 := q.verts[jm1]
+		q2 := q.verts[j]
+		q3 := q.verts[jp1]
 
 		qseg1 := q2.Sub(q1)
 		qseg2 := q3.Sub(q2)
@@ -261,11 +263,12 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j, -1}] {
 				pstart = i
-				qstart = rq[j]
+				qstart = j
 
 				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
 
-				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
+				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
+				//break outer
 			}
 		}
 	}
