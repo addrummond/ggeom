@@ -526,13 +526,19 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 // not the two segments have a non-funky intersection, and a point
 // which is the intersection point if they do, or (0,0) otherwise.
 func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
-	info := SegmentIntersection(p1, p2, q1, q2)
-	if info.intersect && info.unique && !info.adjacent {
-		return true, info.p
-	} else {
-		var v Vec2
+	var v Vec2
+
+	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
+	if adj {
 		return false, v
 	}
+
+	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	if intersect && degeneratePt == nil {
+		return true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
+	}
+
+	return false, v
 }
 
 var pinf = math.Inf(1)
