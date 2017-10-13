@@ -236,7 +236,6 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
-
 	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
 	for rqi := 0; rqi < len(rq); rqi++ {
@@ -259,7 +258,6 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, ip1, j, -1}] {
 				//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
-
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
 			}
 		}
