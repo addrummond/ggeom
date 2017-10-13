@@ -241,12 +241,11 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 	fmt.Printf("RQ: %+v\n", rq)
 
+	return cs
+
 	for j := 0; j < len(rq); j++ {
 		i := rq[j]
-		im1 := i - 1
-		if im1 < 0 {
-			im1 = len(q.verts) - 1
-		}
+		im1 := (len(q.verts) + i - 1) % len(q.verts)
 		ip1 := (i + 1) % len(q.verts)
 
 		q1 := q.verts[im1]
@@ -286,15 +285,9 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 
 	for {
 		ip1 := (i + 1) % len(p.verts)
-		im1 := (i - 1)
-		if im1 < 0 {
-			im1 += len(p.verts)
-		}
+		im1 := (len(p.verts) + i - 1) % len(p.verts)
 		jp1 := (j + 1) % len(q.verts)
-		jm1 := (j - 1)
-		if jm1 < 0 {
-			jm1 += len(q.verts)
-		}
+		jm1 := (len(q.verts) + j - 1) % len(q.verts)
 
 		piTOpiplus1 := p.verts[ip1].Sub(p.verts[i])
 		qjminus1TOqj := q.verts[j].Sub(q.verts[jm1])
@@ -302,37 +295,33 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
 		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
 		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-		fmt.Printf("Is between [i=%v,j=%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-		fmt.Printf("Is between cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+		fmt.Printf("On P=%v, Q=%v\n", i, j)
+		fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
+		fmt.Printf("Is between [P%v,Q%v,P%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", im1, j, i, incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+
 		if !(incp || incq) {
 			break
 			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
 		}
 
-		var t1, t2 Vec2
+		var s Vec2
+
 		if incp {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			t1 = p.verts[ip1].Add(q.verts[j])
+			s = p.verts[ip1].Add(q.verts[j])
 			labs[label{i, ip1, j}] = true
-			s = t1
 			i = ip1
+			points = append(points, s)
 		}
 		if incq {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			t2 = p.verts[i].Add(q.verts[jp1])
-			s = t2
+			s = p.verts[i].Add(q.verts[jp1])
 			j = jp1
+			points = append(points, s)
 		}
 
 		if i == i0 && j == j0 {
 			break
-		} else {
-			if incp {
-				points = append(points, t1)
-			}
-			if incq {
-				points = append(points, t2)
-			}
 		}
 	}
 
