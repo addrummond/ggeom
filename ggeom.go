@@ -242,8 +242,6 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 	fmt.Printf("RQ: %+v\n", rq)
 
-	return cs
-
 	for j := 0; j < len(rq); j++ {
 		i := rq[j]
 		im1 := (len(q.verts) + i - 1) % len(q.verts)
@@ -268,7 +266,6 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
 
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
-				//break outer
 			}
 		}
 	}
