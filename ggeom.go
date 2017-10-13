@@ -74,7 +74,10 @@ func (a *Vec2) Eq(b *Vec2) bool {
 	return a.x.Cmp(&b.x) == 0 && a.y.Cmp(&b.y) == 0
 }
 
-// Use for testing purposes only.
+// SlowEqEpsilon tests whether two vectors are equal within
+// the margin specified by epsilon (inclusive, checked indepently
+// for x and y coordinates). This function is not very efficient
+// and should be used for testing only.
 func (a *Vec2) SlowEqEpsilon(b *Vec2, epsilon float64) bool {
 	var e Scalar
 	e.SetFloat64(epsilon)
@@ -95,6 +98,7 @@ func (a Vec2) Add(b Vec2) Vec2 {
 	newy.Add(&a.y, &b.y)
 	return Vec2{x: newx, y: newy}
 }
+
 func (a Vec2) Sub(b Vec2) Vec2 {
 	var newx, newy Scalar
 	newx.Sub(&a.x, &b.x)
@@ -110,6 +114,7 @@ func (a Vec2) Dot(b Vec2) Scalar {
 	return v1
 }
 
+// Det computes the z value of the 3d cross product with z=0 for the input vectors.
 func (a Vec2) Det(b Vec2) Scalar {
 	var v1, v2 Scalar
 	v1.Mul(&a.x, &b.y)
@@ -118,12 +123,15 @@ func (a Vec2) Det(b Vec2) Scalar {
 	return v1
 }
 
+// ApproxLength performs an approximate calculation of the length of the vector
+// using float64 arithmetic.
 func (a Vec2) ApproxLength() float64 {
 	x, _ := a.x.Float64()
 	y, _ := a.y.Float64()
 	return math.Sqrt(x + y*y)
 }
 
+// ApproxScale approximately scales the vector using float64 arithmetic.
 func (a Vec2) ApproxScale(v float64) Vec2 {
 	x, _ := a.x.Float64()
 	y, _ := a.y.Float64()
@@ -134,24 +142,7 @@ func (a Vec2) ApproxScale(v float64) Vec2 {
 	return Vec2{nx, ny}
 }
 
-// Uses y,x ordering
-func (p *Polygon2) IndexOfBottommost() int {
-	var minx, miny Scalar = p.verts[0].x, p.verts[0].y
-	var mini int
-	for i, vert := range p.verts[1:] {
-		if vert.y.Cmp(&miny) < 0 {
-			mini = i + 1
-			miny = vert.y
-			minx = vert.x
-		} else if vert.y.Cmp(&miny) == 0 && vert.x.Cmp(&minx) < 0 {
-			mini = i + 1
-			minx = vert.x
-		}
-	}
-	return mini
-}
-
-// True iff b is reached before c going anticlockwise from a
+// IsBetweenAnticlockwise returns true iff b is reached before c going anticlockwise from a.
 func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	ab := a.Det(b)
 	bc := b.Det(c)
@@ -164,26 +155,15 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 	}
 }
 
-// -1 for counterclockwise, 0 for colinear, 1 for clockwise
-func ClockOrientation(p1 Vec2, p2 Vec2, p3 Vec2) int {
-	// http://www.geeksforgeeks.org/orientation-3-ordered-points/
-	var v1, v2, v3 Scalar
-	v1.Sub(&p2.y, &p1.y)
-	v2.Sub(&p3.x, &p2.x)
-	v1.Mul(&v1, &v2)
-	v2.Sub(&p2.x, &p1.x)
-	v3.Sub(&p3.y, &p2.y)
-	v2.Mul(&v2, &v3)
-	v2.Sub(&v1, &v2)
-
-	return v2.Sign()
-}
-
+// ACIsReflex returns true if the vertex p2 in a polygon,
+// preceded by p1 and followed by p3 (anticlockwise order)
+// is a reflex vertex.
 func ACIsReflex(p1, p2, p3 Vec2) bool {
 	v := p1.Sub(p2).Det(p3.Sub(p2))
 	return (&v).Sign() > 0
 }
 
+// NReflexVerts returns the number of reflex vertices that the given polygon has.
 func NReflexVerts(p *Polygon2) int {
 	rp := 0
 	for i := 0; i < len(p.verts)-1; i++ {
@@ -197,6 +177,7 @@ func NReflexVerts(p *Polygon2) int {
 	return rp
 }
 
+// GetReflexVertIndices returns the indices of a polygon's reflex vertices.
 func GetReflexVertIndices(p *Polygon2) []int {
 	vs := make([]int, 0, len(p.verts)/2)
 	for i := 0; i < len(p.verts)-1; i++ {
@@ -214,9 +195,28 @@ type label struct {
 	a, b, c int
 }
 
-// Follows the algorithm described in
-//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
+func (p *Polygon2) indexOfBottommost() int {
+	var minx, miny Scalar = p.verts[0].x, p.verts[0].y
+	var mini int
+	for i, vert := range p.verts[1:] {
+		if vert.y.Cmp(&miny) < 0 {
+			mini = i + 1
+			miny = vert.y
+			minx = vert.x
+		} else if vert.y.Cmp(&miny) == 0 && vert.x.Cmp(&minx) < 0 {
+			mini = i + 1
+			minx = vert.x
+		}
+	}
+	return mini
+}
+
+// GetConvolutionCycle returns the sequence of vertices that forms
+// the convolution cycle for the polyons p and q.
 func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
+	// Follows the algorithm described in
+	//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
+
 	// Get the number of reflex vertices for each polygon.
 	rp := GetReflexVertIndices(p)
 	rq := GetReflexVertIndices(q)
@@ -227,9 +227,9 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	labs := make(map[label]bool)
 
 	if nrm > mrn {
-		return getConvolutionCycle(labs, p, p.IndexOfBottommost(), q, q.IndexOfBottommost(), rq)
+		return getConvolutionCycle(labs, p, p.indexOfBottommost(), q, q.indexOfBottommost(), rq)
 	} else {
-		return getConvolutionCycle(labs, q, q.IndexOfBottommost(), p, p.IndexOfBottommost(), rp)
+		return getConvolutionCycle(labs, q, q.indexOfBottommost(), p, p.indexOfBottommost(), rp)
 	}
 }
 
@@ -344,9 +344,9 @@ func inRange(v *Scalar) bool {
 	return abs.Cmp(maxv) <= 0
 }
 
-// Given three colinear points p, q, r, the function checks if
-// point q lies on line segment 'pr
-func onSegment(p, q, r *Vec2) bool {
+// OnSegment takes three colinear points p, q, r and returns true
+// iff the point q lies on line segment 'pr
+func OnSegment(p, q, r *Vec2) bool {
 	var maxpxrx, minpxrx, maxpyry, minpyry *Scalar
 	if p.x.Cmp(&r.x) >= 0 {
 		maxpxrx = &p.x
@@ -371,12 +371,12 @@ func onSegment(p, q, r *Vec2) bool {
 	return false
 }
 
-// To find orientation of ordered triplet (p, q, r).
-// The function returns following values
-// 0 --> p, q and r are colinear
-// 1 --> Clockwise
-// 2 --> Counterclockwise
-func orientation(p, q, r *Vec2) int {
+// Orientation finds the  orientation of an ordered triplet (p, q, r).
+// It returns
+// 0 if p, q and r are colinear
+// 1 if they are clockwise
+// 2 if they are counterclockwise
+func Orientation(p, q, r *Vec2) int {
 	var qySubPy Scalar
 	qySubPy.Sub(&q.y, &p.y)
 	var rxSubQx Scalar
@@ -426,13 +426,13 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 
 	if o1 != o2 && o3 != o4 {
 		return true, nil // the segments intersect; not degenerate
-	} else if o1 == 0 && onSegment(q1, p1, q2) {
+	} else if o1 == 0 && OnSegment(q1, p1, q2) {
 		return true, p1
-	} else if o2 == 0 && onSegment(q1, p2, q2) {
+	} else if o2 == 0 && OnSegment(q1, p2, q2) {
 		return true, q2
-	} else if o3 == 0 && onSegment(p1, q1, p2) {
+	} else if o3 == 0 && OnSegment(p1, q1, p2) {
 		return true, p1
-	} else if o4 == 0 && onSegment(p1, q2, p2) {
+	} else if o4 == 0 && OnSegment(p1, q2, p2) {
 		return true, q2
 	} else {
 		return false, nil
@@ -445,28 +445,28 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	var r Vec2
 
 	if p1.Eq(q1) {
-		if !onSegment(p1, q2, p2) && !onSegment(q1, p2, q2) {
+		if !OnSegment(p1, q2, p2) && !OnSegment(q1, p2, q2) {
 			r = *p1
 			return true, r
 		} else {
 			return false, r
 		}
 	} else if p1.Eq(q2) {
-		if !onSegment(q2, p2, q1) && !onSegment(p1, q1, p2) {
+		if !OnSegment(q2, p2, q1) && !OnSegment(p1, q1, p2) {
 			r = *p1
 			return true, r
 		} else {
 			return false, r
 		}
 	} else if p2.Eq(q1) {
-		if !onSegment(p2, q2, p1) && !onSegment(q1, p1, q2) {
+		if !OnSegment(p2, q2, p1) && !OnSegment(q1, p1, q2) {
 			r = *p2
 			return true, r
 		} else {
 			return false, r
 		}
 	} else if p2.Eq(q2) {
-		if !onSegment(p2, q1, p1) && !onSegment(q2, p1, q1) {
+		if !OnSegment(p2, q1, p1) && !OnSegment(q2, p1, q1) {
 			r = *p2
 			return true, r
 		} else {
@@ -475,20 +475,6 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	} else {
 		return false, r
 	}
-}
-
-// Returns (intersects or not, point on overlap iff degenerate intersection). Degenerate
-// intersections are those where no single intersection point is defined.
-func SegmentsIntersect(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
-	// Instances where one segment joins the end of another are likely to be quite
-	// common when dealing with polygons, so we should be able to save a fair
-	// bit of big.Rat arithmetic by checking for this case.
-	adj, _ := segmentsAdjacent(p1, p2, q1, q2)
-	if adj {
-		return true, nil // the segments intersect; not degenerate
-	}
-
-	return segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 }
 
 // Returns a boolean indicating whether the segments intersect,
@@ -578,7 +564,9 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 	return false
 }
 
-// Assumes that segments intersect at a single point and are not parallel.
+// NondegenerateSegmentIntersection returns the intersection point of 
+// two segements on the assumption that the segments intersect at a
+// single point and are not parallel.
 func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	var tmp, w Scalar
 	var x, y Scalar
@@ -652,8 +640,8 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	return Vec2{x, y}
 }
 
-// Returns min(s1.y, s2.y) if line is vertical. Assumes
-// that the line has a value for the given x coordinate.
+// SegmentYValueAtX returns min(sa.y, sb.y) if line is vertical.
+// It assumes that the line has a value for the given x coordinate.
 func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) Scalar {
 	var tmp, w Scalar
 
@@ -789,7 +777,7 @@ type Intersection struct {
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
-// by segment from last point to first point. This returns all intersections
+// by segment from last point to first point. The function returns all intersections
 // except for the points in the original input (which could all be considered
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output.
