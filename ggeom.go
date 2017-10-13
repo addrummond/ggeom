@@ -144,18 +144,16 @@ func (a Vec2) ApproxScale(v float64) Vec2 {
 
 // IsBetweenAnticlockwise returns true iff b is reached before c going anticlockwise from a.
 func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
-	ab := a.Det(b)
-	bc := b.Det(c)
+	ba := b.Det(a)
 	ac := a.Det(c)
+	cb := c.Det(b)
+	sba, sac, scb := ba.Sign(), ac.Sign(), cb.Sign()
 
-	return (ab.Sign() >= 0 && bc.Sign() >= 0 && ac.Sign() != 0) ||
-		(ab.Sign() < 0 && bc.Sign() > 0)
-
-	/*if ab.Sign() > 0 {
-		return bc.Sign() >= 0 || ac.Sign() < 0
+	if sba >= 0 {
+		return sac < 0 && scb <= 0
 	} else {
-		return ac.Sign() < 0 && bc.Sign() >= 0
-	}*/
+		return sac < 0 || scb <= 0
+	}
 }
 
 // ACIsReflex returns true if the vertex p2 in a polygon,
