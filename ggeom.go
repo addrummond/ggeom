@@ -193,7 +193,7 @@ func GetReflexVertIndices(p *Polygon2) []int {
 }
 
 type label struct {
-	a, b, c int
+	a, b, c, d int
 }
 
 func (p *Polygon2) indexOfBottommost() int {
@@ -238,12 +238,11 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygon2, qstart int, rq []int) []Vec2 {
 	cs := make([]Vec2, 0, len(p.verts)+len(q.verts))
-	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
+	//cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
 	fmt.Printf("RQ: %+v\n", rq)
 
-	return cs
-
+outer:
 	for j := 0; j < len(rq); j++ {
 		i := rq[j]
 		im1 := (len(q.verts) + i - 1) % len(q.verts)
@@ -261,13 +260,14 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 			p2 := p.verts[(i+1)%len(p.verts)]
 			pseg := p2.Sub(p1)
 
-			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j}] {
+			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, i + 1, j, -1}] {
 				pstart = i
 				qstart = rq[j]
 
 				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[pstart].ApproxX(), p.verts[pstart].ApproxY())
 
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, rq[j])
+				break outer
 			}
 		}
 	}
@@ -300,30 +300,31 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 		fmt.Printf("Is between [P%v,Q%v,P%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", im1, j, i, incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 
-		if !(incp || incq) {
-			break
-			panic("Internal error [1] in 'appendSingleConvolutionCycle'")
-		}
-
-		var s Vec2
-
 		if incp {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			s = p.verts[ip1].Add(q.verts[j])
-			labs[label{i, ip1, j}] = true
+			s := p.verts[ip1].Add(q.verts[j])
+			labs[label{i, ip1, j, -1}] = true
 			i = ip1
 			points = append(points, s)
 		}
 		if incq {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			s = p.verts[i].Add(q.verts[jp1])
+			s := p.verts[i].Add(q.verts[jp1])
+			labs[label{i, -1, j, jp1}] = true
 			j = jp1
 			points = append(points, s)
 		}
+		if !incp && !incq {
+			j = jp1
+		}
 
-		if i == i0 && j == j0 {
+		if (i == i0 && j == j0) || labs[label{i, ip1, j, -1}] || labs[label{i, -1, j, jp1}] {
 			break
 		}
+
+		/*if i == i0 && j == j0 {
+			break
+		}*/
 	}
 
 	return points
