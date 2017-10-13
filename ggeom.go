@@ -215,7 +215,7 @@ func (p *Polygon2) indexOfBottommost() int {
 // GetConvolutionCycle returns the sequence of vertices that forms
 // the convolution cycle for the polyons p and q.
 func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
-	// Follows the algorithm described in
+	// Roughly follows the algorithm described in
 	//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
 
 	// Get the number of reflex vertices for each polygon.
@@ -227,11 +227,9 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 
 	labs := make(map[label]bool)
 
-	fmt.Printf("Vals %v,%v\n", nrm, mrn)
 	if nrm < mrn {
 		return getConvolutionCycle(labs, p, p.indexOfBottommost(), q, q.indexOfBottommost(), rq)
 	} else {
-		fmt.Printf("SWITCHED!\n")
 		return getConvolutionCycle(labs, q, q.indexOfBottommost(), p, p.indexOfBottommost(), rp)
 	}
 }
@@ -241,9 +239,6 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 
 	cs = appendSingleConvolutionCycle(labs, cs, p, pstart, q, qstart)
 
-	fmt.Printf("RQ: %+v\n", rq)
-
-	//outer:
 	for rqi := 0; rqi < len(rq); rqi++ {
 		j := rq[rqi]
 		jm1 := (len(q.verts) + j - 1) % len(q.verts)
@@ -263,10 +258,9 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 			pseg := p2.Sub(p1)
 
 			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, ip1, j, -1}] {
-				fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
+				//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
 
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
-				//break outer
 			}
 		}
 	}
@@ -285,32 +279,32 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 
 	for {
 		ip1 := (i + 1) % len(p.verts)
-		im1 := (len(p.verts) + i - 1) % len(p.verts)
 		jp1 := (j + 1) % len(q.verts)
 		jm1 := (len(q.verts) + j - 1) % len(q.verts)
 
 		piTOpiplus1 := p.verts[ip1].Sub(p.verts[i])
 		qjminus1TOqj := q.verts[j].Sub(q.verts[jm1])
 		qjTOqjplus1 := q.verts[jp1].Sub(q.verts[j])
-		piminus1TOpi := p.verts[i].Sub(p.verts[im1])
 		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
-		incq := IsBetweenAnticlockwise(piminus1TOpi, qjTOqjplus1, piTOpiplus1)
-		fmt.Printf("On P=%v, Q=%v\n", i, j)
-		fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-		fmt.Printf("Is between [P%v,Q%v,P%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", im1, j, i, incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
+		//fmt.Printf("On P=%v, Q=%v\n", i, j)
+		//fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 
-		if !incp && !incq {
-			break
-		}
+		// Modified from the Wein paper according to the similar but
+		// slightly different pseudocode listing on p.29 of
+		// https://pdfs.semanticscholar.org/a2d2/186d8b6481be81eed75857d831b32a2ad940.pdf
+		//
+		// This appears to be a direct modification of Wein's original, since 'incq'
+		// is still defined even though its value is never used.
+		//
+		// Unlike Wein's original pseudocode, the modified psuedocode seems to work!
 
-		if incp {
+		if incp && !labs[label{i, ip1, j, -1}] {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 			s := p.verts[ip1].Add(q.verts[j])
 			labs[label{i, ip1, j, -1}] = true
 			i = ip1
 			points = append(points, s)
-		}
-		if incq {
+		} else {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 			s := p.verts[i].Add(q.verts[jp1])
 			labs[label{i, -1, j, jp1}] = true
@@ -318,7 +312,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 			points = append(points, s)
 		}
 
-		if i == i0 && j == j0 /*|| labs[label{i, ip1, j, -1}] || labs[label{i, -1, j, jp1}]*/ {
+		if i == i0 && j == j0 {
 			break
 		}
 	}
