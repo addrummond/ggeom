@@ -109,21 +109,21 @@ func (a *Vec2) Sub(b *Vec2, c *Vec2) {
 	a.y.Sub(&b.y, &c.y)
 }
 
-func (a *Vec2) Dot(b *Vec2) Scalar {
+func (a *Vec2) Dot(b *Vec2) *Scalar {
 	var v1, v2 Scalar
 	v1.Mul(&a.x, &b.x)
 	v2.Mul(&a.y, &b.y)
 	v1.Add(&v1, &v2)
-	return v1
+	return &v1
 }
 
 // Det computes the z value of the 3d cross product with z=0 for the input vectors.
-func (a *Vec2) Det(b *Vec2) Scalar {
+func (a *Vec2) Det(b *Vec2) *Scalar {
 	var v1, v2 Scalar
 	v1.Mul(&a.x, &b.y)
 	v2.Mul(&a.y, &b.x)
 	v1.Sub(&v1, &v2)
-	return v1
+	return &v1
 }
 
 // ApproxLength performs an approximate calculation of the length of the vector
@@ -759,25 +759,29 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	return &Vec2{x, y}
 }
 
+func f(v *Scalar) float64 {
+	r, _ := v.Float64()
+	return r
+}
+
 // SegmentYValueAtX returns min(sa.y, sb.y) if line is vertical.
 // It assumes that the line has a value for the given x coordinate.
-func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) Scalar {
-	var tmp, w Scalar
+func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
+	var tmp, w, m Scalar
 
-	var m Scalar
 	w.Sub(&sb.x, &sa.x)
 	if w.Sign() == 0 {
 		// The line is vertical. Return the smallest y value.
 		if sa.y.Cmp(&sb.y) <= 0 {
-			return sa.y
+			return &sa.y
 		} else {
-			return sb.y
+			return &sb.y
 		}
 	} else {
 		tmp.Sub(&sb.y, &sa.y)
 		if tmp.Sign() == 0 {
 			// The line is horizontal.
-			return sa.y
+			return &sa.y
 		} else {
 			m.Mul(&tmp, w.Inv(&w))
 		}
@@ -791,7 +795,9 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) Scalar {
 	y.Mul(&m, x)
 	y.Add(&y, &c)
 
-	return y
+	fmt.Printf("The value [4] %v\n", y)
+
+	return &y
 }
 
 const (
@@ -873,8 +879,8 @@ func debugPrintBentleyTree(tree *redblacktree.Tree, indent string) {
 }
 
 func bentleyEventPs(i int, points []Vec2) (*Vec2, *Vec2) {
-	p1 := &(points[i])
-	p2 := &(points[(i+1)%len(points)])
+	p1 := &points[i]
+	p2 := &points[(i+1)%len(points)]
 
 	if p1.x.Cmp(&p2.x) <= 0 {
 		return p1, p2
@@ -938,6 +944,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		intersectionSegments[segint{seg1, seg2}] = true
 		if !exists {
 			fmt.Printf("APPENDING %v, %v\n", p.ApproxX(), p.ApproxY())
+			fmt.Printf("%+v\n\n", p)
 			intersections = append(intersections, Intersection{seg1, seg2, p})
 		}
 		events.Push(&bentleyEvent{
@@ -960,8 +967,10 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
 			y := SegmentYValueAtX(p1, p2, &event.left.x)
+			fmt.Printf("The value %v\n", y)
+			fmt.Printf("Attempting to printf %v\n", f(y))
 
-			tk := bentleyTreeKey{event.i, &event.left.x, &y}
+			tk := bentleyTreeKey{event.i, &event.left.x, y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
 
 			if replaced {
