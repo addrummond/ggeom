@@ -688,16 +688,16 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 		y.Add(&y, &d)
 
 		return &Vec2{x, y}
+	}
+
+	var tmp2 Scalar
+	tmp2.Sub(&s1b.y, &s1a.y)
+	if tmp2.Sign() == 0 {
+		// The line is horizontal.
+		y = s1b.y
+		// m is initialized as 0
 	} else {
-		var tmp2 Scalar
-		tmp2.Sub(&s1b.y, &s1a.y)
-		if tmp2.Sign() == 0 {
-			// The line is horizontal.
-			y = s1b.y
-			// m is initialized as 0
-		} else {
-			m.Mul(&tmp2, tmp.Inv(&tmp))
-		}
+		m.Mul(&tmp2, tmp.Inv(&tmp))
 	}
 
 	tmp.Sub(&s2b.x, &s2a.x)
@@ -713,16 +713,15 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 		y.Add(&y, &c)
 
 		return &Vec2{x, y}
+	}
+
+	tmp2.Sub(&s2b.y, &s2a.y)
+	if tmp2.Sign() == 0 {
+		// The line is horizontal.
+		y = s2b.y
+		// n is initialized as 0
 	} else {
-		var tmp2 Scalar
-		tmp2.Sub(&s2b.y, &s2a.y)
-		if tmp2.Sign() == 0 {
-			// The line is horizontal.
-			y = s2b.y
-			// n is initialized as 0
-		} else {
-			n.Mul(&tmp2, tmp.Inv(&tmp))
-		}
+		n.Mul(&tmp2, tmp.Inv(&tmp))
 	}
 
 	//xxx, _ := x.Float64()
@@ -774,18 +773,18 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 		// The line is vertical. Return the smallest y value.
 		if sa.y.Cmp(&sb.y) <= 0 {
 			return &sa.y
-		} else {
-			return &sb.y
 		}
-	} else {
-		tmp.Sub(&sb.y, &sa.y)
-		if tmp.Sign() == 0 {
-			// The line is horizontal.
-			return &sa.y
-		} else {
-			m.Mul(&tmp, w.Inv(&w))
-		}
+		return &sb.y
 	}
+
+	tmp.Sub(&sb.y, &sa.y)
+	if tmp.Sign() == 0 {
+		// The line is horizontal.
+		return &sa.y
+	}
+
+	fmt.Printf("\n\n%v  *** %v\n\n", f(&tmp), f(&w))
+	m.Mul(&tmp, w.Inv(&w))
 
 	var c Scalar
 	tmp.Mul(&m, &sa.x)
