@@ -477,7 +477,6 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 		}
 	} else if p2.Eq(q2) {
 		if !OnSegment(p2, q1, p1) && !OnSegment(q2, p1, q1) {
-			r = *p2
 			return true, p2
 		} else {
 			return false, &r
@@ -893,7 +892,7 @@ func sameOrAdjacent(s1, s2, l int) bool {
 type Intersection struct {
 	seg1 int
 	seg2 int
-	p    Vec2
+	p    *Vec2
 }
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
@@ -938,7 +937,8 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		exists := intersectionSegments[segint{seg1, seg2}]
 		intersectionSegments[segint{seg1, seg2}] = true
 		if !exists {
-			intersections = append(intersections, Intersection{seg1, seg2, *p})
+			fmt.Printf("APPENDING %v, %v\n", p.ApproxX(), p.ApproxY())
+			intersections = append(intersections, Intersection{seg1, seg2, p})
 		}
 		events.Push(&bentleyEvent{
 			kind:     cross,
