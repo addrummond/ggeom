@@ -90,9 +90,10 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 		canvas.Square(tx(sp.ApproxX()-(arrowLen/8)), ty(sp.ApproxY()+(arrowLen/8)), arrowLen*scale*0.25, format)
 
 		for i := 1; i <= len(s); i++ {
-			p1 := s[i-1]
-			p2 := s[i%len(s)]
-			d := p2.Sub(p1)
+			p1 := &s[i-1]
+			p2 := &s[i%len(s)]
+			var d Vec2
+			d.Sub(p2, p1)
 			if d.x.Sign() == 0 && d.y.Sign() == 0 {
 				continue
 			}
@@ -103,8 +104,9 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 			dy := d.ApproxY()
 			d1 := ApproxVec2(dx*cosv-dy*sinv, dx*sinv+dy*cosv).ApproxScale(arrowLen)
 			d2 := ApproxVec2(dx*cosv+dy*sinv, dx*-sinv+dy*cosv).ApproxScale(arrowLen)
-			h1 := p2.Add(d1)
-			h2 := p2.Add(d2)
+			var h1, h2 Vec2
+			h1.Add(p2, &d1)
+			h2.Add(p2, &d2)
 			canvas.Line(tx(p2.ApproxX()), ty(p2.ApproxY()), tx(h1.ApproxX()), ty(h1.ApproxY()), format)
 			canvas.Line(tx(p2.ApproxX()), ty(p2.ApproxY()), tx(h2.ApproxX()), ty(h2.ApproxY()), format)
 		}
@@ -138,19 +140,19 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 	})
 
 	for _, c := range falseCases {
-		if IsBetweenAnticlockwise(c[0], c[1], c[2]) {
+		if IsBetweenAnticlockwise(&c[0], &c[1], &c[2]) {
 			t.Error()
 		}
-		if !IsBetweenAnticlockwise(c[2], c[1], c[0]) {
+		if !IsBetweenAnticlockwise(&c[2], &c[1], &c[0]) {
 			t.Error()
 		}
 	}
 
 	for _, c := range trueCases {
-		if !IsBetweenAnticlockwise(c[0], c[1], c[2]) {
+		if !IsBetweenAnticlockwise(&c[0], &c[1], &c[2]) {
 			t.Error()
 		}
-		if IsBetweenAnticlockwise(c[2], c[1], c[0]) {
+		if IsBetweenAnticlockwise(&c[2], &c[1], &c[0]) {
 			t.Error()
 		}
 	}

@@ -92,21 +92,24 @@ func (a *Vec2) SlowEqEpsilon(b *Vec2, epsilon float64) bool {
 	return v.Cmp(&e) <= 0
 }
 
-func (a Vec2) Add(b Vec2) Vec2 {
-	var newx, newy Scalar
-	newx.Add(&a.x, &b.x)
-	newy.Add(&a.y, &b.y)
-	return Vec2{x: newx, y: newy}
+func (a *Vec2) Copy() Vec2 {
+	var x, y Scalar
+	x.Set(&a.x)
+	y.Set(&a.y)
+	return Vec2{x, y}
 }
 
-func (a Vec2) Sub(b Vec2) Vec2 {
-	var newx, newy Scalar
-	newx.Sub(&a.x, &b.x)
-	newy.Sub(&a.y, &b.y)
-	return Vec2{x: newx, y: newy}
+func (a *Vec2) Add(b *Vec2, c *Vec2) {
+	a.x.Add(&b.x, &c.x)
+	a.y.Add(&b.y, &c.y)
 }
 
-func (a Vec2) Dot(b Vec2) Scalar {
+func (a *Vec2) Sub(b *Vec2, c *Vec2) {
+	a.x.Sub(&b.x, &c.x)
+	a.y.Sub(&b.y, &c.y)
+}
+
+func (a *Vec2) Dot(b *Vec2) Scalar {
 	var v1, v2 Scalar
 	v1.Mul(&a.x, &b.x)
 	v2.Mul(&a.y, &b.y)
@@ -115,7 +118,7 @@ func (a Vec2) Dot(b Vec2) Scalar {
 }
 
 // Det computes the z value of the 3d cross product with z=0 for the input vectors.
-func (a Vec2) Det(b Vec2) Scalar {
+func (a *Vec2) Det(b *Vec2) Scalar {
 	var v1, v2 Scalar
 	v1.Mul(&a.x, &b.y)
 	v2.Mul(&a.y, &b.x)
@@ -125,7 +128,7 @@ func (a Vec2) Det(b Vec2) Scalar {
 
 // ApproxLength performs an approximate calculation of the length of the vector
 // using float64 arithmetic.
-func (a Vec2) ApproxLength() float64 {
+func (a *Vec2) ApproxLength() float64 {
 	x, _ := a.x.Float64()
 	y, _ := a.y.Float64()
 	return math.Sqrt(x + y*y)
@@ -143,7 +146,7 @@ func (a Vec2) ApproxScale(v float64) Vec2 {
 }
 
 // IsBetweenAnticlockwise returns true iff b is reached before c going anticlockwise from a.
-func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
+func IsBetweenAnticlockwise(a *Vec2, b *Vec2, c *Vec2) bool {
 	ba := b.Det(a)
 	ac := a.Det(c)
 	cb := c.Det(b)
@@ -159,18 +162,21 @@ func IsBetweenAnticlockwise(a Vec2, b Vec2, c Vec2) bool {
 // ACIsReflex returns true if the vertex p2 in a polygon,
 // preceded by p1 and followed by p3 (anticlockwise order)
 // is a reflex vertex.
-func ACIsReflex(p1, p2, p3 Vec2) bool {
-	v := p1.Sub(p2).Det(p3.Sub(p2))
-	return (&v).Sign() > 0
+func ACIsReflex(p1, p2, p3 *Vec2) bool {
+	var s1, s2 Vec2
+	s1.Sub(p1, p2)
+	s2.Sub(p3, p2)
+	v := s1.Det(&s2)
+	return v.Sign() > 0
 }
 
 // NReflexVerts returns the number of reflex vertices that the given polygon has.
 func NReflexVerts(p *Polygon2) int {
 	rp := 0
 	for i := 0; i < len(p.verts)-1; i++ {
-		p1 := p.verts[i]
-		p2 := p.verts[i+1]
-		p3 := p.verts[(i+2)%len(p.verts)]
+		p1 := &p.verts[i]
+		p2 := &p.verts[i+1]
+		p3 := &p.verts[(i+2)%len(p.verts)]
 		if ACIsReflex(p1, p2, p3) {
 			rp++
 		}
@@ -182,9 +188,9 @@ func NReflexVerts(p *Polygon2) int {
 func GetReflexVertIndices(p *Polygon2) []int {
 	vs := make([]int, 0, len(p.verts)/2)
 	for i := 0; i < len(p.verts)-1; i++ {
-		p1 := p.verts[i]
-		p2 := p.verts[i+1]
-		p3 := p.verts[(i+2)%len(p.verts)]
+		p1 := &p.verts[i]
+		p2 := &p.verts[i+1]
+		p3 := &p.verts[(i+2)%len(p.verts)]
 		if ACIsReflex(p1, p2, p3) {
 			vs = append(vs, i+1)
 		}
@@ -243,20 +249,22 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 		jm1 := (len(q.verts) + j - 1) % len(q.verts)
 		jp1 := (j + 1) % len(q.verts)
 
-		q1 := q.verts[jm1]
-		q2 := q.verts[j]
-		q3 := q.verts[jp1]
+		q1 := &q.verts[jm1]
+		q2 := &q.verts[j]
+		q3 := &q.verts[jp1]
 
-		qseg1 := q2.Sub(q1)
-		qseg2 := q3.Sub(q2)
+		var qseg1, qseg2 Vec2
+		qseg1.Sub(q2, q1)
+		qseg2.Sub(q3, q2)
 
 		for i := 0; i < len(p.verts); i++ {
 			ip1 := (i + 1) % len(p.verts)
-			p1 := p.verts[i]
-			p2 := p.verts[ip1]
-			pseg := p2.Sub(p1)
+			p1 := &p.verts[i]
+			p2 := &p.verts[ip1]
+			var pseg Vec2
+			pseg.Sub(p2, p1)
 
-			if IsBetweenAnticlockwise(qseg1, pseg, qseg2) && !labs[label{i, ip1, j, -1}] {
+			if IsBetweenAnticlockwise(&qseg1, &pseg, &qseg2) && !labs[label{i, ip1, j, -1}] {
 				//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
 			}
@@ -269,7 +277,8 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon2, i0 int, q *Polygon2, j0 int) []Vec2 {
 	i := i0
 	j := j0
-	s := p.verts[i].Add(q.verts[j])
+	var s Vec2
+	s.Add(&p.verts[i], &q.verts[j])
 
 	if len(points) == 0 || !(&s).Eq(&points[len(points)-1]) {
 		points = append(points, s)
@@ -280,10 +289,11 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		jp1 := (j + 1) % len(q.verts)
 		jm1 := (len(q.verts) + j - 1) % len(q.verts)
 
-		piTOpiplus1 := p.verts[ip1].Sub(p.verts[i])
-		qjminus1TOqj := q.verts[j].Sub(q.verts[jm1])
-		qjTOqjplus1 := q.verts[jp1].Sub(q.verts[j])
-		incp := IsBetweenAnticlockwise(qjminus1TOqj, piTOpiplus1, qjTOqjplus1)
+		var piTOpiplus1, qjminus1TOqj, qjTOqjplus1 Vec2
+		piTOpiplus1.Sub(&p.verts[ip1], &p.verts[i])
+		qjminus1TOqj.Sub(&q.verts[j], &q.verts[jm1])
+		qjTOqjplus1.Sub(&q.verts[jp1], &q.verts[j])
+		incp := IsBetweenAnticlockwise(&qjminus1TOqj, &piTOpiplus1, &qjTOqjplus1)
 		//fmt.Printf("On P=%v, Q=%v\n", i, j)
 		//fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 
@@ -299,15 +309,16 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		// I'm still using Wein's algorithm for computing the additional convolution
 		// cycles required when both of the polygon's are non-convex.
 
+		var s Vec2
 		if incp && !labs[label{i, ip1, j, -1}] {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
-			s := p.verts[ip1].Add(q.verts[j])
+			s.Add(&p.verts[ip1], &q.verts[j])
 			labs[label{i, ip1, j, -1}] = true
 			i = ip1
 			points = append(points, s)
 		} else {
 			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
-			s := p.verts[i].Add(q.verts[jp1])
+			s.Add(&p.verts[i], &q.verts[jp1])
 			labs[label{i, -1, j, jp1}] = true
 			j = jp1
 			points = append(points, s)
