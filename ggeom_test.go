@@ -346,7 +346,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 	}
 }
 
-/*func TestConvolve(t *testing.T) {
+func TestConvolve(t *testing.T) {
 	tests := SofSofVec2([][][]float64{
 		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}},                                  // p
 		{{0, 2}, {-1, 0}, {1, 0}},                                                     // q
@@ -423,4 +423,4 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		strips = append(strips, crosses...)
 		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 1; fill: none", "stroke: green; fill: green; stroke-width: 1"})
 	}
-}*/
+}
