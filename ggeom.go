@@ -930,7 +930,11 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		exists := intersectionSegments[segint{seg1, seg2}]
 		intersectionSegments[segint{seg1, seg2}] = true
 		if !exists {
-			intersections = append(intersections, Intersection{seg1, seg2, p})
+			s1a, s1b := &points[seg1], &points[(seg1+1)%len(points)]
+			s2a, s2b := &points[seg2], &points[(seg2+1)%len(points)]
+			if !(s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p)) {
+				intersections = append(intersections, Intersection{seg1, seg2, p})
+			}
 		}
 		events.Push(&bentleyEvent{
 			kind:     cross,
