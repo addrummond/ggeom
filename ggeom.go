@@ -498,6 +498,7 @@ type SegmentIntersectionInfo struct {
 func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
+		fmt.Printf("Ret case 1\n")
 		return SegmentIntersectionInfo{
 			intersect: true,
 			unique:    true,
@@ -511,6 +512,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
+			fmt.Printf("Ret case 2\n")
 			return SegmentIntersectionInfo{
 				intersect: true,
 				unique:    false,
@@ -519,6 +521,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 				p:         *degeneratePt,
 			}
 		} else {
+			fmt.Printf("Ret case 3\n")
 			pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 			return SegmentIntersectionInfo{
 				intersect: true,
@@ -529,6 +532,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 			}
 		}
 	} else {
+		fmt.Printf("Ret case 4\n")
 		return SegmentIntersectionInfo{
 			intersect: false,
 			unique:    false,
@@ -653,45 +657,74 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 // two segements on the assumption that the segments intersect at a
 // single point and are not parallel.
 func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
-	var tmp, w Scalar
-	var x, y Scalar
-	var xset, yset bool
+	var x, y, m, n, tmp Scalar
 
-	var m Scalar
-	w.Sub(&s1b.x, &s1a.x)
-	if w.Sign() == 0 {
-		// The line is vertical. Thus we know that the x value
+	fmt.Printf("CALL (%v,%v) -> (%v,%v),     (%v,%v) -> (%v,%v)\n", s1a.ApproxX(), s1a.ApproxY(), s1b.ApproxX(), s1b.ApproxY(), s2a.ApproxX(), s2a.ApproxY(), s2b.ApproxX(), s2b.ApproxY())
+
+	tmp.Sub(&s1b.x, &s1a.x)
+	if tmp.Sign() == 0 {
+		// The first line is vertical. Thus we know that the x value
 		// of the intersection point will be the x value of the
 		// points on the line.
 		x = s1a.x
-		xset = true
+
+		// Second line cannot be vertical as we are handling non-degenerate cases only.
+		fmt.Printf("CASE1\n")
+		y.Sub(&s2b.y, &s2a.y)
+		n.Sub(&s2b.x, &s2a.x)
+		n.Inv(&n)
+		n.Mul(&n, &y) // n is now the slope of the second line
+
+		var d Scalar
+		d.Mul(&n, &s2a.x)
+		d.Sub(&s2a.y, &d)
+		y.Mul(&n, &x)
+		y.Add(&y, &d)
+
+		return Vec2{x, y}
 	} else {
-		tmp.Sub(&s1b.y, &s1a.y)
-		if tmp.Sign() == 0 {
+		fmt.Printf("CASE2\n")
+		var tmp2 Scalar
+		tmp2.Sub(&s1b.y, &s1a.y)
+		if tmp2.Sign() == 0 {
 			// The line is horizontal.
 			y = s1b.y
-			yset = true
+			// m is initialized as 0
 		} else {
-			m.Mul(&tmp, w.Inv(&w))
+			m.Mul(&tmp2, tmp.Inv(&tmp))
 		}
 	}
 
-	var n Scalar
-	w.Sub(&s2b.x, &s2a.x)
-	if w.Sign() == 0 {
+	tmp.Sub(&s2b.x, &s2a.x)
+	if tmp.Sign() == 0 {
 		// The line is vertical.
 		x = s2a.x
-		xset = true
+
+		// First line cannot be vertical as we are handling non-degenerate cases only.
+		var c Scalar
+		c.Mul(&m, &s1a.x)
+		c.Sub(&s1a.y, &c)
+		y.Mul(&m, &x)
+		y.Add(&y, &c)
+
+		return Vec2{x, y}
 	} else {
-		tmp.Sub(&s2b.y, &s2a.y)
-		if tmp.Sign() == 0 {
+		var tmp2 Scalar
+		tmp2.Sub(&s2b.y, &s2a.y)
+		if tmp2.Sign() == 0 {
 			// The line is horizontal.
 			y = s2b.y
-			yset = true
+			// n is initialized as 0
 		} else {
-			n.Mul(&tmp, w.Inv(&w))
+			n.Mul(&tmp2, tmp.Inv(&tmp))
 		}
 	}
+
+	//xxx, _ := x.Float64()
+	//fmt.Printf("HAVE X VAL OF %v\n", xxx)
+
+	// If we get here, neither of the lines is vertical, and the general
+	// solution will work.
 
 	var c Scalar
 	tmp.Mul(&m, &s1a.x)
@@ -701,25 +734,29 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 	tmp.Mul(&n, &s2a.x)
 	d.Sub(&s2a.y, &tmp)
 
+	mm, _ := m.Float64()
+	nn, _ := n.Float64()
+	cc, _ := c.Float64()
+	dd, _ := d.Float64()
+	fmt.Printf("Slopes are %v, %v, constants %v,%v\n", mm, nn, cc, dd)
+
 	// We know that m - n is nonzero because the lines aren't parallel.
-	if !xset {
-		x.Sub(&d, &c)
-		if x.Sign() != 0 { // save some unnecessary arithmetic
-			tmp.Sub(&m, &n)
-			tmp.Inv(&tmp)
-			x.Mul(&x, &tmp)
-		}
+	x.Sub(&d, &c)
+	if x.Sign() != 0 { // save some unnecessary arithmetic
+		tmp.Sub(&m, &n)
+		tmp.Inv(&tmp)
+		x.Mul(&x, &tmp)
 	}
 
-	if !yset {
-		tmp.Mul(&m, &d)
-		y.Mul(&n, &c)
-		y.Sub(&y, &tmp)
-		if y.Sign() != 0 { // save some unnecessary arithmetic
-			tmp.Sub(&n, &m)
-			tmp.Inv(&tmp)
-			y.Mul(&y, &tmp)
-		}
+	tmp.Mul(&m, &d)
+	y.Mul(&n, &c)
+	y.Sub(&y, &tmp)
+	if y.Sign() != 0 { // save some unnecessary arithmetic
+		tmp.Sub(&n, &m)
+		tmp.Inv(&tmp)
+		y.Mul(&y, &tmp)
+		yyy, _ := y.Float64()
+		fmt.Printf("Y SET HERE to %v\n", yyy)
 	}
 
 	return Vec2{x, y}

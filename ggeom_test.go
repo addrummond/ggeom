@@ -189,12 +189,13 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 		{{-1, 0}, {1, 0}, {-0.5, 10}, {-0.5, -10}, {-0.5, 0}},   // Vertical line intersecting horizontal line
 		{{-1, -1}, {1, -1}, {-0.5, 9}, {-0.5, -11}, {-0.5, -1}}, // The case above translated down one unit
 		{{-0.5, -10}, {-0.5, 0}, {-1, 0}, {1, 0}, {-0.5, 0}},    // Horizontal line intersecting with vertical line
+		{{3, 0}, {-2, 2}, {2, -2}, {2, 2}, {2, 0.4}},            // A particular case that was being computed incorrectly
 	})
 
 	for _, tst := range tests {
 		p := NondegenerateSegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
 		//fmt.Printf("INT: %f %f\n", p.ApproxX(), p.ApproxY())
-		if !p.Eq(&tst[4]) {
+		if !p.SlowEqEpsilon(&tst[4], EPSILON) {
 			t.Error()
 		}
 	}
@@ -227,14 +228,14 @@ func TestGetSegmentIntersectionInfo(t *testing.T) {
 		{{2, 1}, {2, 5}, {2, 5}, {2, 7}, {2, 5}},                         // Two adjacent vertical lines
 		{{-1, -1}, {2, 2}, {-11, -12}, {1, -2}, {NONE, NONE}},            // Non-intersecting non-parallel
 		{{-2, -4}, {2, 4}, {-3, -5}, {1, 3}, {NONE, NONE}},               // Non-intersecting parallel
-		{{3, 0}, {-2, 2}, {2, -2}, {2, 2}, {2, -2}},                      // A random case of interest
+		{{3, 0}, {-2, 2}, {2, -2}, {2, 2}, {2, 0.4}},                     // A particular case that was being computed incorrectly
 	})
 
 	for i, tst := range tests {
 		info := GetSegmentIntersectionInfo(&tst[0], &tst[1], &tst[2], &tst[3])
 		if info.intersect {
 			if info.unique {
-				if !info.p.Eq(&tst[4]) {
+				if !info.p.SlowEqEpsilon(&tst[4], EPSILON) {
 					t.Error()
 				}
 			} else {
@@ -271,7 +272,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		{{0, 0}},
 		/////
 		{{-2, 2}, {2, -2}, {2, 2}, {-2, -2}, {-2, 0}, {3, 0}},
-		{{0, 0}, {0, 0}, {0, 0}, {2, 0}, {2, -2}},
+		{{0, 0}, {0, 0}, {0, 0}, {2, 0}, {2, 0.4}},
 	})
 
 	for i := 0; i < len(tests); i += 2 {
