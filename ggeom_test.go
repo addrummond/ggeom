@@ -200,7 +200,7 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 	}
 }
 
-func TestSegmentIntersection(t *testing.T) {
+func TestGetSegmentIntersection(t *testing.T) {
 	const NONE = -999
 	const NOT_UNIQUE = -9999
 
@@ -230,7 +230,7 @@ func TestSegmentIntersection(t *testing.T) {
 	})
 
 	for _, tst := range tests {
-		info := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		info := GetSegmentIntersectionInfo(&tst[0], &tst[1], &tst[2], &tst[3])
 		if info.intersect {
 			if info.unique {
 				if !info.p.Eq(&tst[4]) {
@@ -346,7 +346,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 	}
 }
 
-func TestConvolve(t *testing.T) {
+/*func TestConvolve(t *testing.T) {
 	tests := SofSofVec2([][][]float64{
 		{{10, 10}, {-10, 10}, {-10, -10}, {10, -10}},                                  // p
 		{{0, 2}, {-1, 0}, {1, 0}},                                                     // q
@@ -423,4 +423,4 @@ func TestConvolve(t *testing.T) {
 		strips = append(strips, crosses...)
 		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 1; fill: none", "stroke: green; fill: green; stroke-width: 1"})
 	}
-}
+}*/
