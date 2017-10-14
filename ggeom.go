@@ -480,7 +480,9 @@ type SegmentIntersectionInfo struct {
 	unique bool
 	// true iff the segments intersect and are adjacent (no overlaping section, intersect at a vertex shared by the two)
 	adjacent bool
-	// the intersection point if any; set to an arbitrarily chosen point if there is no unique intersection point; set to (0,0) if there is no intersection point.
+	// true iff the segments intersect and the intersection point is one of the segment vertices.
+	atVertex bool
+	// the intersection point if any; set to an arbitrarily chosen point on the intersection if there is no unique intersection point; set to (0,0) if there is no intersection point.
 	p Vec2
 }
 
@@ -494,6 +496,7 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 			intersect: true,
 			unique:    true,
 			adjacent:  true,
+			atVertex:  true,
 			p:         pt,
 		}
 	}
@@ -506,14 +509,17 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 				intersect: true,
 				unique:    false,
 				adjacent:  false,
+				atVertex:  degeneratePt.Eq(p1) || degeneratePt.Eq(p2) || degeneratePt.Eq(q1) || degeneratePt.Eq(q2),
 				p:         *degeneratePt,
 			}
 		} else {
+			pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 			return SegmentIntersectionInfo{
 				intersect: true,
 				unique:    true,
 				adjacent:  false,
-				p:         NondegenerateSegmentIntersection(p1, p2, q1, q2),
+				atVertex:  pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2),
+				p:         pt,
 			}
 		}
 	} else {
@@ -529,6 +535,12 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 // NonFunkySegment intersection returns a boolean indicating whether or
 // not the two segments have a non-funky intersection, and a point
 // which is the intersection point if they do, or (0,0) otherwise.
+//
+// An intersection is non-funky iff:
+//
+//     (i)   There is a unique intersection point,
+//     (ii)  the segments are not parallel, and
+//     (iii) the intersection point is not one of the segments' vertices
 func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	var v Vec2
 
@@ -538,7 +550,11 @@ func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect && degeneratePt == nil {
-		return true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
+		pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
+		if pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2) {
+			return false, v
+		}
+		return true, pt
 	}
 
 	return false, v

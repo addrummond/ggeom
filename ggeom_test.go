@@ -89,9 +89,9 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 		sp := s[0]
 		canvas.Square(tx(sp.ApproxX()-(arrowLen/8)), ty(sp.ApproxY()+(arrowLen/8)), arrowLen*scale*0.25, format)
 
-		for i := 1; i < len(s); i++ {
+		for i := 1; i <= len(s); i++ {
 			p1 := s[i-1]
-			p2 := s[i]
+			p2 := s[i%len(s)]
 			d := p2.Sub(p1)
 			if d.x.Sign() == 0 && d.y.Sign() == 0 {
 				continue
@@ -385,6 +385,8 @@ func TestConvolve(t *testing.T) {
 			l = len(expected)
 		}
 
+		itns := SegmentLoopIntersections(cs)
+
 		for i := 0; i < l; i++ {
 			fmt.Printf("    ")
 			if i < len(expected) {
@@ -405,7 +407,11 @@ func TestConvolve(t *testing.T) {
 		}
 		fmt.Printf("\n")
 
-		itns := SegmentLoopIntersections(cs)
+		fmt.Printf("Intersections\n")
+		for _, itn := range itns {
+			fmt.Printf("    (%v,%v) -> (%v,%v)  with  (%v,%v) -> (%v,%v)  at (%v,%v)\n", cs[itn.seg1].ApproxX(), cs[itn.seg1].ApproxY(), cs[(itn.seg1+1)%len(cs)].ApproxX(), cs[(itn.seg1+1)%len(cs)].ApproxY(), cs[itn.seg2].ApproxX(), cs[itn.seg2].ApproxY(), cs[(itn.seg2+1)%len(cs)].ApproxX(), cs[(itn.seg2+1)%len(cs)].ApproxY(), itn.p.ApproxX(), itn.p.ApproxY())
+		}
+
 		crosses := make([][]Vec2, 0)
 		for _, itn := range itns {
 			crosses = append(crosses, SofVec2([][]float64{{itn.p.ApproxX(), itn.p.ApproxY()}, {itn.p.ApproxX(), itn.p.ApproxY()}}))
