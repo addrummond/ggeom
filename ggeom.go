@@ -271,6 +271,11 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 		}
 	}
 
+	if len(cs) == 0 {
+		panic("Internal error in 'getConvolutionCycle'")
+	}
+	cs = cs[:len(cs)-1]
+
 	return cs
 }
 
@@ -293,7 +298,6 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piTOpiplus1.Sub(&p.verts[ip1], &p.verts[i])
 		qjminus1TOqj.Sub(&q.verts[j], &q.verts[jm1])
 		qjTOqjplus1.Sub(&q.verts[jp1], &q.verts[j])
-		incp := IsBetweenAnticlockwise(&qjminus1TOqj, &piTOpiplus1, &qjTOqjplus1)
 		//fmt.Printf("On P=%v, Q=%v\n", i, j)
 		//fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 
@@ -309,8 +313,10 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		// I'm still using Wein's algorithm for computing the additional convolution
 		// cycles required when both of the polygon's are non-convex.
 
+		incp := IsBetweenAnticlockwise(&qjminus1TOqj, &piTOpiplus1, &qjTOqjplus1) && !labs[label{i, ip1, j, -1}]
+
 		var s Vec2
-		if incp && !labs[label{i, ip1, j, -1}] {
+		if incp {
 			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 			s.Add(&p.verts[ip1], &q.verts[j])
 			labs[label{i, ip1, j, -1}] = true
