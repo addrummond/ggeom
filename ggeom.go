@@ -920,27 +920,25 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	segToKey := make(map[int]bentleyTreeKey)
 
 	intersections := make([]Intersection, 0)
-	intersectionPoints := redblacktree.NewWith(func(a, b interface{}) int {
-		aa, bb := a.(*Vec2), b.(*Vec2)
-		c := aa.y.Cmp(&bb.y)
-		if c != 0 {
-			return c
-		} else {
-			return aa.x.Cmp(&bb.x)
-		}
-	})
+	type segint struct{ seg1, seg2 int }
+	intersectionSegments := make(map[segint]bool)
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
-		_, replaced := intersectionPoints.PutAndGetIterator(p, true)
-		intersections = append(intersections, Intersection{seg1, seg2, *p})
-		fmt.Printf("Adding cross at %v x %v (%v,%v)\n", seg1, seg2, p.ApproxX(), p.ApproxY())
+		if seg1 > seg2 {
+			seg1, seg2 = seg2, seg1
+		}
+		exists := intersectionSegments[segint{seg1, seg2}]
+		intersectionSegments[segint{seg1, seg2}] = true
+		if !exists {
+			intersections = append(intersections, Intersection{seg1, seg2, *p})
+		}
 		events.Push(&bentleyEvent{
 			kind:     cross,
 			i:        seg1,
 			i2:       seg2,
 			left:     p,
 			right:    p,
-			swapOnly: replaced,
+			swapOnly: exists,
 		})
 	}
 
@@ -950,10 +948,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			continue
 		}
 
-		fmt.Printf("\nEvent: kind=%v [x=%v], seg1=%v, seg2=%v\n", event.kind, &event.left.x, event.i, event.i2)
-		fmt.Printf("The tree before\n")
-		debugPrintBentleyTree(tree, "    ")
-
 		if event.kind == start {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
@@ -961,9 +955,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 			tk := bentleyTreeKey{event.i, &event.left.x, &y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
-
-			fmt.Printf("The tree after [A]\n")
-			debugPrintBentleyTree(tree, "    ")
 
 			if replaced {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
@@ -980,7 +971,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
-					fmt.Printf("Testing [1] %v x %v = %v\n", prevI, event.i, intersect)
 					if intersect {
 						addCross(prevI, event.i, &intersectionPoint)
 					}
@@ -997,7 +987,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
-					fmt.Printf("Testing [2] %v x %v = %v\n", nextI, event.i, intersect)
 					if intersect {
 						addCross(nextI, event.i, &intersectionPoint)
 					}
@@ -1053,9 +1042,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					t1 := &points[ti]
 					t2 := &points[(ti+1)%len(points)]
 
-					fmt.Printf("Modified tree\n")
-					debugPrintBentleyTree(tree, "    ")
-
 					for sIt.Next() {
 						u := sIt.Value().(int)
 						if !sameOrAdjacent(u, si, len(points)) {
@@ -1063,7 +1049,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							u2 := &points[(u+1)%len(points)]
 
 							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
-							fmt.Printf("Testing [3] %v x %v = %v\n", u, si, intersect)
 							if intersect {
 								addCross(si, u, &intersectionPoint)
 							}
@@ -1079,7 +1064,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 							r2 := &points[(r+1)%len(points)]
 
 							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
-							fmt.Printf("Testing [4] %v x %v = %v\n", r, ti, intersect)
 							if intersect {
 								addCross(ti, r, &intersectionPoint)
 							}
