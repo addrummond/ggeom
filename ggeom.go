@@ -421,9 +421,9 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	} else if o1 == 0 && OnSegment(q1, p1, q2) {
 		return true, p1
 	} else if o2 == 0 && OnSegment(q1, p2, q2) {
-		return true, q2
+		return true, p2
 	} else if o3 == 0 && OnSegment(p1, q1, p2) {
-		return true, p1
+		return true, q1
 	} else if o4 == 0 && OnSegment(p1, q2, p2) {
 		return true, q2
 	} else {
