@@ -200,7 +200,7 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 	}
 }
 
-func TestGetSegmentIntersection(t *testing.T) {
+func TestGetSegmentIntersectionInfo(t *testing.T) {
 	const NONE = -999
 	const NOT_UNIQUE = -9999
 
@@ -227,9 +227,10 @@ func TestGetSegmentIntersection(t *testing.T) {
 		{{2, 1}, {2, 5}, {2, 5}, {2, 7}, {2, 5}},                         // Two adjacent vertical lines
 		{{-1, -1}, {2, 2}, {-11, -12}, {1, -2}, {NONE, NONE}},            // Non-intersecting non-parallel
 		{{-2, -4}, {2, 4}, {-3, -5}, {1, 3}, {NONE, NONE}},               // Non-intersecting parallel
+		{{3, 0}, {-2, 2}, {2, -2}, {2, 2}, {2, -2}},                      // A random case of interest
 	})
 
-	for _, tst := range tests {
+	for i, tst := range tests {
 		info := GetSegmentIntersectionInfo(&tst[0], &tst[1], &tst[2], &tst[3])
 		if info.intersect {
 			if info.unique {
@@ -241,6 +242,7 @@ func TestGetSegmentIntersection(t *testing.T) {
 					t.Error()
 				}
 			}
+			fmt.Printf("Intersection point computed for test %v: (%v,%v)\n", i, info.p.ApproxX(), info.p.ApproxY())
 		} else {
 			if !tst[4].Eq(&VNONE) {
 				t.Error()

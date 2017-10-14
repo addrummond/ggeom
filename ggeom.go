@@ -872,7 +872,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
 
 	events := binaryheap.NewWith(bentleyEventCmp)
-	for i := 0; i < len(points); i++ {
+	for i := 0; i <= len(points); i++ {
 		left, right := bentleyEventPs(i, points)
 		events.Push(&bentleyEvent{
 			kind:  start,
