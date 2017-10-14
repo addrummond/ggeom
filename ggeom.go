@@ -505,7 +505,6 @@ type SegmentIntersectionInfo struct {
 func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
-		fmt.Printf("Ret case 1\n")
 		return SegmentIntersectionInfo{
 			intersect: true,
 			unique:    true,
@@ -519,7 +518,6 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
-			fmt.Printf("Ret case 2\n")
 			return SegmentIntersectionInfo{
 				intersect: true,
 				unique:    false,
@@ -528,7 +526,6 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 				p:         degeneratePt,
 			}
 		} else {
-			fmt.Printf("Ret case 3\n")
 			pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 			return SegmentIntersectionInfo{
 				intersect: true,
@@ -539,7 +536,6 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 			}
 		}
 	} else {
-		fmt.Printf("Ret case 4\n")
 		return SegmentIntersectionInfo{
 			intersect: false,
 			unique:    false,
@@ -666,8 +662,6 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	var x, y, m, n, tmp Scalar
 
-	//fmt.Printf("CALL (%v,%v) -> (%v,%v),     (%v,%v) -> (%v,%v)\n", s1a.ApproxX(), s1a.ApproxY(), s1b.ApproxX(), s1b.ApproxY(), s2a.ApproxX(), s2a.ApproxY(), s2b.ApproxX(), s2b.ApproxY())
-
 	tmp.Sub(&s1b.x, &s1a.x)
 	if tmp.Sign() == 0 {
 		// The first line is vertical. Thus we know that the x value
@@ -723,9 +717,6 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	} else {
 		n.Mul(&tmp2, tmp.Inv(&tmp))
 	}
-
-	//xxx, _ := x.Float64()
-	//fmt.Printf("HAVE X VAL OF %v\n", xxx)
 
 	// If we get here, neither of the lines is vertical, and the general
 	// solution will work.
@@ -783,7 +774,6 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 		return &sa.y
 	}
 
-	fmt.Printf("\n\n%v  *** %v\n\n", f(&tmp), f(&w))
 	m.Mul(&tmp, w.Inv(&w))
 
 	var c Scalar
@@ -793,8 +783,6 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 	var y Scalar
 	y.Mul(&m, x)
 	y.Add(&y, &c)
-
-	fmt.Printf("The value [4] %v\n", y)
 
 	return &y
 }
@@ -900,25 +888,6 @@ type Intersection struct {
 	p    *Vec2
 }
 
-func debugCheckForBadRat(points []Vec2) {
-	for _, p := range points {
-		fmt.Sprintf("%v, %v", f(&p.x), f(&p.y))
-		/*if p.x.Denom().Sign() == 0 {
-			panic(fmt.Sprintf("PANIC 1 %v", i))
-		}
-		if p.y.Denom().Sign() == 0 {
-			panic(fmt.Sprintf("PANIC 2 %v", i))
-		}
-		fmt.Printf("(((\n")
-		fmt.Printf("VAL RAWx %+v\n", p.x)
-		fmt.Printf("VAL RAWY %+v\n", p.y)
-		fmt.Printf("VAL DENOM SIGNS %v, %v\n", p.x.Denom().Sign(), p.y.Denom().Sign())
-		fmt.Printf("VAL DENOMS %v, %v\n", p.x.Denom(), p.y.Denom())
-		fmt.Printf("VAL: %v, %v\n", p.ApproxX(), p.ApproxY())
-		fmt.Printf(")))\n")*/
-	}
-}
-
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
 // by segment from last point to first point. The function returns all intersections
@@ -973,12 +942,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 		})
 	}
 
-	i := -1
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
-		i++
-		fmt.Printf("Checking at %v\n", i)
-		debugCheckForBadRat(points)
-
 		event := e.(*bentleyEvent)
 		if event.deleted {
 			continue
@@ -988,7 +952,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			p1 := &points[event.i]
 			p2 := &points[(event.i+1)%len(points)]
 			y := SegmentYValueAtX(p1, p2, &event.left.x)
-			debugCheckForBadRat(points)
 
 			tk := bentleyTreeKey{event.i, &event.left.x, y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
@@ -999,7 +962,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			segToKey[event.i] = tk
 			it2 := it1
 
-			debugCheckForBadRat(points)
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
@@ -1016,7 +978,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					break
 				}
 			}
-			debugCheckForBadRat(points)
 			for it2.Next() {
 				nextI := it2.Value().(int)
 
@@ -1028,15 +989,13 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					// BUG HERE!
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					_, _ = intersect, intersectionPoint
-					/*if intersect {
+					if intersect {
 						addCross(nextI, event.i, intersectionPoint)
-					}*/
+					}
 
 					break
 				}
 			}
-
-			debugCheckForBadRat(points)
 		} else if event.kind == end {
 			it, f := tree.GetIterator(segToKey[event.i])
 			if !f {
@@ -1118,9 +1077,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 			}
 		}
 	}
-
-	fmt.Printf("Checking at end\n")
-	debugCheckForBadRat(points)
 
 	return intersections
 }
