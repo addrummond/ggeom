@@ -54,11 +54,11 @@ type Polygon2 struct {
 	verts []Vec2
 }
 
-func (a Vec2) ApproxX() float64 {
+func (a *Vec2) ApproxX() float64 {
 	v, _ := a.x.Float64()
 	return v
 }
-func (a Vec2) ApproxY() float64 {
+func (a *Vec2) ApproxY() float64 {
 	v, _ := a.y.Float64()
 	return v
 }
@@ -92,11 +92,11 @@ func (a *Vec2) SlowEqEpsilon(b *Vec2, epsilon float64) bool {
 	return v.Cmp(&e) <= 0
 }
 
-func (a *Vec2) Copy() Vec2 {
+func (a *Vec2) Copy() *Vec2 {
 	var x, y Scalar
 	x.Set(&a.x)
 	y.Set(&a.y)
-	return Vec2{x, y}
+	return &Vec2{x, y}
 }
 
 func (a *Vec2) Add(b *Vec2, c *Vec2) {
@@ -454,39 +454,36 @@ func segmentsSharePoint(p1, p2, q1, q2 *Vec2) *Vec2 {
 
 // Returns true and the intersection point if two segments
 // share a point and do not otherwise overlap.
-func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	var r Vec2
 
 	if p1.Eq(q1) {
 		if !OnSegment(p1, q2, p2) && !OnSegment(q1, p2, q2) {
-			r = *p1
-			return true, r
+			return true, p1
 		} else {
-			return false, r
+			return false, &r
 		}
 	} else if p1.Eq(q2) {
 		if !OnSegment(q2, p2, q1) && !OnSegment(p1, q1, p2) {
-			r = *p1
-			return true, r
+			return true, p1
 		} else {
-			return false, r
+			return false, &r
 		}
 	} else if p2.Eq(q1) {
 		if !OnSegment(p2, q2, p1) && !OnSegment(q1, p1, q2) {
-			r = *p2
-			return true, r
+			return true, p2
 		} else {
-			return false, r
+			return false, &r
 		}
 	} else if p2.Eq(q2) {
 		if !OnSegment(p2, q1, p1) && !OnSegment(q2, p1, q1) {
 			r = *p2
-			return true, r
+			return true, p2
 		} else {
-			return false, r
+			return false, &r
 		}
 	} else {
-		return false, r
+		return false, &r
 	}
 }
 
@@ -500,7 +497,7 @@ type SegmentIntersectionInfo struct {
 	// true iff the segments intersect and the intersection point is one of the segment vertices.
 	atVertex bool
 	// the intersection point if any; set to an arbitrarily chosen point on the intersection if there is no unique intersection point; set to (0,0) if there is no intersection point.
-	p Vec2
+	p *Vec2
 }
 
 // SegmentIntersection returns a SegmentIntersectionInfo
@@ -529,7 +526,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 				unique:    false,
 				adjacent:  false,
 				atVertex:  degeneratePt.Eq(p1) || degeneratePt.Eq(p2) || degeneratePt.Eq(q1) || degeneratePt.Eq(q2),
-				p:         *degeneratePt,
+				p:         degeneratePt,
 			}
 		} else {
 			fmt.Printf("Ret case 3\n")
@@ -548,7 +545,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 			intersect: false,
 			unique:    false,
 			adjacent:  false,
-			p:         v,
+			p:         &v,
 		}
 	}
 }
@@ -562,27 +559,27 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 //     (i)   There is a unique intersection point,
 //     (ii)  the segments are not parallel, and
 //     (iii) the intersection point is not one of the segments' vertices
-func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	var v Vec2
 
 	shared := segmentsSharePoint(p1, p2, q1, q2)
 	if shared != nil {
-		return false, v
+		return false, &v
 	}
 
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect && degeneratePt == nil {
 		pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 		if pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2) {
-			return false, v
+			return false, &v
 		}
 		return true, pt
 	}
 
-	return false, v
+	return false, &v
 }
 
-func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
+func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
 		return true, pt
@@ -591,14 +588,14 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, Vec2) {
 	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
-			return false, *degeneratePt
+			return false, degeneratePt
 		}
 
 		return true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
 	}
 
 	var v Vec2
-	return false, v
+	return false, &v
 }
 
 var pinf = math.Inf(1)
@@ -667,7 +664,7 @@ func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
 // NondegenerateSegmentIntersection returns the intersection point of
 // two segements on the assumption that the segments intersect at a
 // single point and are not parallel.
-func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
+func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	var x, y, m, n, tmp Scalar
 
 	//fmt.Printf("CALL (%v,%v) -> (%v,%v),     (%v,%v) -> (%v,%v)\n", s1a.ApproxX(), s1a.ApproxY(), s1b.ApproxX(), s1b.ApproxY(), s2a.ApproxX(), s2a.ApproxY(), s2b.ApproxX(), s2b.ApproxY())
@@ -691,7 +688,7 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 		y.Mul(&n, &x)
 		y.Add(&y, &d)
 
-		return Vec2{x, y}
+		return &Vec2{x, y}
 	} else {
 		var tmp2 Scalar
 		tmp2.Sub(&s1b.y, &s1a.y)
@@ -716,7 +713,7 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 		y.Mul(&m, &x)
 		y.Add(&y, &c)
 
-		return Vec2{x, y}
+		return &Vec2{x, y}
 	} else {
 		var tmp2 Scalar
 		tmp2.Sub(&s2b.y, &s2a.y)
@@ -760,7 +757,7 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) Vec2 {
 		y.Mul(&y, &tmp)
 	}
 
-	return Vec2{x, y}
+	return &Vec2{x, y}
 }
 
 // SegmentYValueAtX returns min(sa.y, sb.y) if line is vertical.
@@ -983,7 +980,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					if intersect {
-						addCross(prevI, event.i, &intersectionPoint)
+						addCross(prevI, event.i, intersectionPoint)
 					}
 
 					break
@@ -999,7 +996,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
-						addCross(nextI, event.i, &intersectionPoint)
+						addCross(nextI, event.i, intersectionPoint)
 					}
 
 					break
@@ -1061,7 +1058,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 							if intersect {
-								addCross(si, u, &intersectionPoint)
+								addCross(si, u, intersectionPoint)
 							}
 
 							break
@@ -1076,7 +1073,7 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 
 							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 							if intersect {
-								addCross(ti, r, &intersectionPoint)
+								addCross(ti, r, intersectionPoint)
 							}
 
 							break
