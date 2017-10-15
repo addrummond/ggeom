@@ -1000,7 +1000,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			for it1.Prev() {
 				ky := it1.Key().(bentleyTreeKey).y
 				if lastY != nil && ky.Cmp(lastY) != 0 {
-					//break
+					break
 				}
 
 				prevI := it1.Value().(int)
@@ -1022,7 +1022,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			for it2.Next() {
 				ky := it2.Key().(bentleyTreeKey).y
 				if lastY != nil && ky.Cmp(lastY) != 0 {
-					//break
+					break
 				}
 
 				nextI := it2.Value().(int)
