@@ -795,8 +795,8 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 
 const (
 	start    = 0
-	cross    = 1
-	vertical = 2
+	vertical = 1
+	cross    = 2
 	end      = 3
 )
 
@@ -828,6 +828,12 @@ func bentleyEventCmp(a, b interface{}) int {
 		return aa.kind - bb.kind
 	} else {
 		y1, y2 := &aa.left.y, &bb.left.y
+		if aa.kind != start {
+			y1 = &aa.right.y
+		}
+		if bb.kind != start {
+			y2 = &bb.right.y
+		}
 		return y1.Cmp(y2)
 	}
 
@@ -923,7 +929,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		if left.y.Cmp(&right.y) == 0 {
+		if left.x.Cmp(&right.x) == 0 {
 			events.Push(&bentleyEvent{
 				kind:  vertical,
 				i:     i,
@@ -989,7 +995,6 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 			tk := bentleyTreeKey{event.i, &event.left.x, y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
-
 			if replaced {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
 			}
@@ -1041,17 +1046,20 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				}
 			}
 		} else if event.kind == vertical {
-			for it := tree.Iterator(); it.Next(); {
-				segi := it.Value().(int)
+			p1a := &points[event.i]
+			p1b := &points[(event.i+1)%len(points)]
 
-				p1a := &points[event.i]
-				p1b := &points[(event.i+1)%len(points)]
+			it := tree.Iterator()
+			for it.Next() {
+				segi := it.Value().(int)
 				p2a := &points[segi]
 				p2b := &points[(segi+1)%len(points)]
 
-				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
 				if intersect {
-					addCross(segi, event.i, intersectionPoint)
+					if !ip.Eq(p1a) && !ip.Eq(p1b) && !ip.Eq(p2a) && !ip.Eq(p2b) {
+						intersections[intersection(segi, event.i)] = ip
+					}
 				}
 			}
 		} else if event.kind == end {
@@ -1059,7 +1067,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			if !f {
 				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
-			/*it1 := it
+			it1 := it
 			it2 := it1
 
 			var ri, ti int = -1, -1
@@ -1092,7 +1100,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				if intersect {
 					addCross(ri, ti, intersectionPoint)
 				}
-			}*/
+			}
 
 			tree.RemoveAt(it)
 		} else if event.kind == cross {
