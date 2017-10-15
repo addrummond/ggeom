@@ -1065,35 +1065,51 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			it1 := it
 			it2 := it1
 
-			var ri, ti int = -1, -1
+			ris, tis := make([]int, 0), make([]int, 0)
 
+			var lastY *Scalar
 			for it1.Prev() {
+				ky := it1.Key().(bentleyTreeKey).y
+				if lastY != nil && ky.Cmp(lastY) != 0 {
+					break
+				}
+				lastY = ky
+
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					ri = prevI
-					break
+					ris = append(ris, prevI)
 				}
 			}
-
+			lastY = nil
 			for it2.Next() {
+				ky := it2.Key().(bentleyTreeKey).y
+				if lastY != nil && ky.Cmp(lastY) != 0 {
+					break
+				}
+				lastY = ky
+
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
-					ti = nextI
-					break
+					tis = append(tis, nextI)
 				}
 			}
 
-			if ri != -1 && ti != -1 {
-				p1a := &points[ri]
-				p1b := &points[(ri+1)%len(points)]
-				p2a := &points[ti]
-				p2b := &points[(ti+1)%len(points)]
+			for i := 0; i < len(ris); i++ {
+				for j := 0; j < len(tis); j++ {
+					ri := ris[i]
+					ti := tis[j]
 
-				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
-				if intersect {
-					addCross(ri, ti, intersectionPoint)
+					p1a := &points[ri]
+					p1b := &points[(ri+1)%len(points)]
+					p2a := &points[ti]
+					p2b := &points[(ti+1)%len(points)]
+
+					intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+					if intersect {
+						addCross(ri, ti, intersectionPoint)
+					}
 				}
 			}
 
