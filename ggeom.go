@@ -1107,7 +1107,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
 			if !(sItExists && tItExists) {
-				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections' can't find %v or %v", si, ti))
+				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections': can't find %v or %v", si, ti))
 			}
 
 			if tree.Size() > 2 {
