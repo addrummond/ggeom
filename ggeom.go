@@ -813,12 +813,14 @@ type bentleyEvent struct {
 func bentleyEventCmp(a, b interface{}) int {
 	aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
 
-	x1, x2 := &aa.left.x, &bb.left.x
+	x1, x2, y1, y2 := &aa.left.x, &bb.left.x, &aa.left.y, &bb.left.y
 	if aa.kind != start {
 		x1 = &aa.right.x
+		y1 = &aa.right.y
 	}
 	if bb.kind != start {
 		x2 = &bb.right.x
+		y2 = &bb.right.y
 	}
 
 	c := x1.Cmp(x2)
@@ -827,13 +829,6 @@ func bentleyEventCmp(a, b interface{}) int {
 	} else if aa.kind != bb.kind {
 		return aa.kind - bb.kind
 	} else {
-		y1, y2 := &aa.left.y, &bb.left.y
-		if aa.kind != start {
-			y1 = &aa.right.y
-		}
-		if bb.kind != start {
-			y2 = &bb.right.y
-		}
 		return y1.Cmp(y2)
 	}
 
@@ -1005,7 +1000,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			for it1.Prev() {
 				ky := it1.Key().(bentleyTreeKey).y
 				if lastY != nil && ky.Cmp(lastY) != 0 {
-					break
+					//break
 				}
 
 				prevI := it1.Value().(int)
@@ -1027,7 +1022,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			for it2.Next() {
 				ky := it2.Key().(bentleyTreeKey).y
 				if lastY != nil && ky.Cmp(lastY) != 0 {
-					break
+					//break
 				}
 
 				nextI := it2.Value().(int)
