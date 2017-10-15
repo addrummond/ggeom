@@ -888,11 +888,7 @@ func sameOrAdjacent(s1, s2, l int) bool {
 	return dd <= 1 || d == l-1 || d == -(l-1)
 }
 
-type Intersection struct {
-	seg1 int
-	seg2 int
-	p    *Vec2
-}
+type Intersection struct{ seg1, seg2 int }
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
@@ -900,7 +896,7 @@ type Intersection struct {
 // except for the points in the original input (which could all be considered
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output.
-func SegmentLoopIntersections(points []Vec2) []Intersection {
+func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
@@ -925,21 +921,24 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 	tree := redblacktree.NewWith(bentleyTreeCmp)
 	segToKey := make(map[int]bentleyTreeKey)
 
-	intersections := make([]Intersection, 0)
-	type segint struct{ seg1, seg2 int }
-	intersectionSegments := make(map[segint]bool)
+	intersections := make(map[Intersection]*Vec2)
+	// Holds intersections which we need to keep track of, but which we
+	// don't want to eventually report, because they lie at a segement vertex.
+	vertIntersections := make(map[Intersection]bool)
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
 		if seg1 > seg2 {
 			seg1, seg2 = seg2, seg1
 		}
-		exists := intersectionSegments[segint{seg1, seg2}]
-		intersectionSegments[segint{seg1, seg2}] = true
+		theint := Intersection{seg1, seg2}
+		exists := intersections[theint] != nil || vertIntersections[theint]
 		if !exists {
 			s1a, s1b := &points[seg1], &points[(seg1+1)%len(points)]
 			s2a, s2b := &points[seg2], &points[(seg2+1)%len(points)]
-			if !(s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p)) {
-				intersections = append(intersections, Intersection{seg1, seg2, p})
+			if s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p) {
+				vertIntersections[theint] = true
+			} else {
+				intersections[theint] = p
 			}
 		}
 		events.Push(&bentleyEvent{
@@ -996,7 +995,6 @@ func SegmentLoopIntersections(points []Vec2) []Intersection {
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
-					// BUG HERE!
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					_, _ = intersect, intersectionPoint
 					if intersect {

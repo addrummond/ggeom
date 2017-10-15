@@ -265,7 +265,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		{{-1, 0.5}, {-0.5, -1}, {-0.5, 0.5}, {-0.5, 1}},
 		/////
 		{{0, 1}, {-1.01, 1}, {-1.02, -1}, {1.03, -1}, {1.04, 0.5}, {-2.05, 0.5}, {-2.06, -2}, {-0.57, -2}, {-0.58, 2}},
-		{{-1.0125, 0.5}, {-0.5774999999999999, 1}, {-0.5725, -1}, {-0.5775082831806196, 1.0033132722478857}},
+		{{-1.0125, 0.5}, {-0.5774999999999999, 1}, {-0.5725, -1}, {-0.5762499999999999, 0.5}},
 		/////
 		{{-5, 0}, {-4, -1}, {-2, 1}, {0, -1}, {4, 1}, {6, -1}},
 		{{-3.1666666666666665, -0.16666666666666666}, {-0.6, -0.4}, {0.9230769230769231, -0.5384615384615384}},
@@ -302,47 +302,29 @@ func TestSegmentLoopIntersections(t *testing.T) {
 			fmt.Printf("%v, %v ", xf, yf)
 		}
 		fmt.Printf("\n  Computed intersections:")
-		for _, it := range its2 {
-			xf, _ := it.p.x.Float64()
-			yf, _ := it.p.y.Float64()
-			fmt.Printf("\n  %v, %v [%v,%v] of (%v,%v) -> (%v,%v)  with  (%v,%v) -> (%v,%v)\n", xf, yf, it.seg1, it.seg2, ps[it.seg1].ApproxX(), ps[it.seg1].ApproxY(), ps[(it.seg1+1)%len(ps)].ApproxX(), ps[(it.seg1+1)%len(ps)].ApproxY(), ps[it.seg2].ApproxX(), ps[it.seg2].ApproxY(), ps[(it.seg2+1)%len(ps)].ApproxX(), ps[(it.seg2+1)%len(ps)].ApproxY())
+		for segs, p := range its2 {
+			xf, _ := p.x.Float64()
+			yf, _ := p.y.Float64()
+			fmt.Printf("\n  %v, %v [%v,%v] of (%v,%v) -> (%v,%v)  with  (%v,%v) -> (%v,%v)\n", xf, yf, segs.seg1, segs.seg2, ps[segs.seg1].ApproxX(), ps[segs.seg1].ApproxY(), ps[(segs.seg1+1)%len(ps)].ApproxX(), ps[(segs.seg1+1)%len(ps)].ApproxY(), ps[segs.seg2].ApproxX(), ps[segs.seg2].ApproxY(), ps[(segs.seg2+1)%len(ps)].ApproxX(), ps[(segs.seg2+1)%len(ps)].ApproxY())
 		}
 		fmt.Printf("\n")
 
-		used := make(map[int]bool)
-		for _, i1 := range its1 {
-			found := false
-			for i, i2 := range its2 {
-				if used[i] {
-					continue
-				}
-
-				if i1.SlowEqEpsilon(i2.p, EPSILON) {
-					found = true
-					used[i] = true
-					break
-				}
-			}
-			if !found {
-				t.Error()
-			}
+		if len(its1) != len(its2) {
+			t.Fail()
 		}
-		used = make(map[int]bool)
-		for _, i1 := range its2 {
-			found := false
-			for i, i2 := range its1 {
-				if used[i] {
-					continue
-				}
 
-				if i2.SlowEqEpsilon(i1.p, EPSILON) {
+		used := make(map[int]bool)
+		for _, p1 := range its2 {
+			found := false
+			for i, p2 := range its1 {
+				if !used[i] && p1.SlowEqEpsilon(&p2, EPSILON) {
 					found = true
 					used[i] = true
 					break
 				}
 			}
 			if !found {
-				t.Error()
+				t.Fail()
 			}
 		}
 	}
@@ -421,8 +403,8 @@ func TestConvolve(t *testing.T) {
 		fmt.Printf("\n")
 
 		crosses := make([][]Vec2, 0)
-		for _, itn := range itns {
-			crosses = append(crosses, SofVec2([][]float64{{itn.p.ApproxX(), itn.p.ApproxY()}, {itn.p.ApproxX(), itn.p.ApproxY()}}))
+		for _, p := range itns {
+			crosses = append(crosses, SofVec2([][]float64{{p.ApproxX(), p.ApproxY()}, {p.ApproxX(), p.ApproxY()}}))
 		}
 
 		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestConvolve_figure_%v.svg", i/3))
