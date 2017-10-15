@@ -913,30 +913,6 @@ func intersection(seg1, seg2 int) Intersection {
 	}
 }
 
-func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) map[Intersection]*Vec2 {
-	intersections := make(map[Intersection]*Vec2)
-
-	for si := 0; si < len(points); si++ {
-		p := &points[si]
-		for sj := si + 1; sj < len(points); sj++ {
-			if sameOrAdjacent(si, sj, len(points)) {
-				continue
-			}
-
-			q := &points[sj]
-
-			pb := &points[(si+1)%len(points)]
-			qb := &points[(sj+1)%len(points)]
-			intersect, ip := SegmentIntersection(p, pb, q, qb)
-			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
-				intersections[intersection(si, sj)] = ip
-			}
-		}
-	}
-
-	return intersections
-}
-
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
 // by segment from last point to first point. The function returns all intersections
@@ -1015,10 +991,18 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			segToKey[event.i] = tk
 			it2 := it1
 
+			var lastY *Scalar
 			for it1.Prev() {
+				ky := it1.Key().(bentleyTreeKey).y
+				if lastY != nil && ky.Cmp(lastY) != 0 {
+					break
+				}
+
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
+					lastY = ky
+
 					psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1027,25 +1011,28 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					if intersect {
 						addCross(prevI, event.i, intersectionPoint)
 					}
-
-					break
 				}
 			}
+			lastY = nil
 			for it2.Next() {
+				ky := it2.Key().(bentleyTreeKey).y
+				if lastY != nil && ky.Cmp(lastY) != 0 {
+					break
+				}
+
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(nextI, event.i, len(points)) {
+					lastY = ky
+
 					nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
-					_, _ = intersect, intersectionPoint
 					if intersect {
 						addCross(nextI, event.i, intersectionPoint)
 					}
-
-					break
 				}
 			}
 		} else if event.kind == end {
@@ -1053,7 +1040,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			if !f {
 				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
-			it1 := it
+			/*it1 := it
 			it2 := it1
 
 			var ri, ti int = -1, -1
@@ -1086,7 +1073,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				if intersect {
 					addCross(ri, ti, intersectionPoint)
 				}
-			}
+			}*/
 
 			tree.RemoveAt(it)
 		} else if event.kind == cross {
@@ -1107,7 +1094,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			tIt, tItExists := tree.GetIterator(segToKey[ti])
 
 			if !(sItExists && tItExists) {
-				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections': can't find %v or %v", si, ti))
+				panic(fmt.Sprintf("Internal error [4] in 'SegmentLoopIntersections' can't find %v or %v", si, ti))
 			}
 
 			if tree.Size() > 2 {
@@ -1125,9 +1112,17 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					t1 := &points[ti]
 					t2 := &points[(ti+1)%len(points)]
 
+					var lastY *Scalar
 					for sIt.Next() {
+						ky := sIt.Key().(bentleyTreeKey).y
+						if lastY != nil && ky.Cmp(lastY) != 0 {
+							break
+						}
+
 						u := sIt.Value().(int)
 						if !sameOrAdjacent(u, si, len(points)) {
+							lastY = ky
+
 							u1 := &points[u]
 							u2 := &points[(u+1)%len(points)]
 
@@ -1135,14 +1130,19 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							if intersect {
 								addCross(si, u, intersectionPoint)
 							}
-
-							break
 						}
 					}
-
+					lastY = nil
 					for tIt.Prev() {
+						ky := tIt.Key().(bentleyTreeKey).y
+						if lastY != nil && ky.Cmp(lastY) != 0 {
+							break
+						}
+
 						r := tIt.Value().(int)
 						if !sameOrAdjacent(r, ti, len(points)) {
+							lastY = ky
+
 							r1 := &points[r]
 							r2 := &points[(r+1)%len(points)]
 
@@ -1150,11 +1150,33 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							if intersect {
 								addCross(ti, r, intersectionPoint)
 							}
-
-							break
 						}
 					}
 				}
+			}
+		}
+	}
+
+	return intersections
+}
+
+func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) map[Intersection]*Vec2 {
+	intersections := make(map[Intersection]*Vec2)
+
+	for si := 0; si < len(points); si++ {
+		p := &points[si]
+		for sj := si + 1; sj < len(points); sj++ {
+			if sameOrAdjacent(si, sj, len(points)) {
+				continue
+			}
+
+			q := &points[sj]
+
+			pb := &points[(si+1)%len(points)]
+			qb := &points[(sj+1)%len(points)]
+			intersect, ip := SegmentIntersection(p, pb, q, qb)
+			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
+				intersections[intersection(si, sj)] = ip
 			}
 		}
 	}
