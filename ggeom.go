@@ -1063,7 +1063,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
 			it1 := it
-			it2 := it1
+			it2 := it
 
 			ris, tis := make([]int, 0), make([]int, 0)
 
@@ -1073,11 +1073,11 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				if lastY != nil && ky.Cmp(lastY) != 0 {
 					break
 				}
-				lastY = ky
 
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
+					lastY = ky
 					ris = append(ris, prevI)
 				}
 			}
@@ -1087,11 +1087,11 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				if lastY != nil && ky.Cmp(lastY) != 0 {
 					break
 				}
-				lastY = ky
 
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
+					lastY = ky
 					tis = append(tis, nextI)
 				}
 			}
