@@ -1088,3 +1088,31 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 	return intersections
 }
+
+/*type DCEL struct {
+	//HalfEdges []DCELHalfEdge
+	//Vertices  []Vec2
+	Faces []DCELFace
+}
+
+type DCELHalfEdge struct {
+	target *Vec2
+	twin   *DCELHalfEdge
+	next   *DCELHalfEdge
+	prev   *DCELHalfEdge
+}
+
+type DCELFace struct {
+	Vertices []*Vec2
+}
+
+func DCELFromSegmentLoop(points []Vec2) DCEL {
+	faces := make([]DCELFace, 1)
+	faces[0] = DCELFace{[]*Vec2{&points[0]}}
+
+	for len(faces) > 0 {
+		face, faces := faces[0], faces[1:]
+
+
+	}
+}*/
