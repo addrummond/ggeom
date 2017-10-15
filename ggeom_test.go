@@ -379,6 +379,7 @@ func TestConvolve(t *testing.T) {
 		fmt.Printf("}\n\n")
 
 		itns := SegmentLoopIntersections(cs)
+		//itns := SegmentLoopIntersectionsUsingNaiveAlgo(cs)
 
 		fmt.Printf("Expected vs actual values:\n")
 		for i := 0; i < l; i++ {

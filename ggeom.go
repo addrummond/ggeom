@@ -823,6 +823,21 @@ func bentleyEventCmp(a, b interface{}) int {
 	c := x1.Cmp(x2)
 	if c != 0 {
 		return c
+	} else if aa.kind != bb.kind {
+		return aa.kind - bb.kind
+	} else {
+		y1, y2 := &aa.left.y, &bb.left.y
+		c = y1.Cmp(y2)
+		if c != 0 {
+			return c
+		} else {
+			return aa.kind - bb.kind
+		}
+	}
+
+	/*c := x1.Cmp(x2)
+	if c != 0 {
+		return c
 	} else if aa.kind == end && bb.kind != end {
 		return 1
 	} else if aa.kind != end && bb.kind == end {
@@ -835,7 +850,7 @@ func bentleyEventCmp(a, b interface{}) int {
 		} else {
 			return aa.kind - bb.kind
 		}
-	}
+	}*/
 }
 
 type bentleyTreeKey struct {
@@ -896,6 +911,30 @@ func intersection(seg1, seg2 int) Intersection {
 	} else {
 		return Intersection{seg2, seg1}
 	}
+}
+
+func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) map[Intersection]*Vec2 {
+	intersections := make(map[Intersection]*Vec2)
+
+	for si := 0; si < len(points); si++ {
+		p := &points[si]
+		for sj := si + 1; sj < len(points); sj++ {
+			if sameOrAdjacent(si, sj, len(points)) {
+				continue
+			}
+
+			q := &points[sj]
+
+			pb := &points[(si+1)%len(points)]
+			qb := &points[(sj+1)%len(points)]
+			intersect, ip := SegmentIntersection(p, pb, q, qb)
+			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
+				intersections[intersection(si, sj)] = ip
+			}
+		}
+	}
+
+	return intersections
 }
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
@@ -1014,11 +1053,40 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			if !f {
 				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
+			it1 := it
+			it2 := it1
 
-			// Because we're dealing with a strip of lines segements, we don't need to do
-			// anything at an end point except remove the relevant entry from the tree,
-			// as there'll be another corresponding start point where intersection checks
-			// can be made.
+			var ri, ti int = -1, -1
+
+			for it1.Prev() {
+				prevI := it1.Value().(int)
+
+				if !sameOrAdjacent(event.i, prevI, len(points)) {
+					ri = prevI
+					break
+				}
+			}
+
+			for it2.Next() {
+				nextI := it2.Value().(int)
+
+				if !sameOrAdjacent(event.i, nextI, len(points)) {
+					ti = nextI
+					break
+				}
+			}
+
+			if ri != -1 && ti != -1 {
+				p1a := &points[ri]
+				p1b := &points[(ri+1)%len(points)]
+				p2a := &points[ti]
+				p2b := &points[(ti+1)%len(points)]
+
+				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+				if intersect {
+					addCross(ri, ti, intersectionPoint)
+				}
+			}
 
 			tree.RemoveAt(it)
 		} else if event.kind == cross {
