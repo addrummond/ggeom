@@ -890,6 +890,14 @@ func sameOrAdjacent(s1, s2, l int) bool {
 
 type Intersection struct{ seg1, seg2 int }
 
+func intersection(seg1, seg2 int) Intersection {
+	if seg1 < seg2 {
+		return Intersection{seg1, seg2}
+	} else {
+		return Intersection{seg2, seg1}
+	}
+}
+
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
 // by segment from last point to first point. The function returns all intersections
@@ -927,10 +935,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	vertIntersections := make(map[Intersection]bool)
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
-		if seg1 > seg2 {
-			seg1, seg2 = seg2, seg1
-		}
-		theint := Intersection{seg1, seg2}
+		theint := intersection(seg1, seg2)
 		exists := intersections[theint] != nil || vertIntersections[theint]
 		if !exists {
 			s1a, s1b := &points[seg1], &points[(seg1+1)%len(points)]
@@ -1089,30 +1094,79 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	return intersections
 }
 
-/*type DCEL struct {
-	//HalfEdges []DCELHalfEdge
-	//Vertices  []Vec2
+// DCEL represents a doubly-connected edge list.
+// See pp. 31-32 of Mark de Berg, Marc van Kreveld, Mark Overmars, Otfried Schwarzkopf. 1998. Computational Geometry: Algorithms and Applications. Second, Revised Edition. Springer.
+type DCEL struct {
 	Faces []DCELFace
 }
 
+// DCELHalfEdge represents a half-edge within a doubly-connected edge list.
 type DCELHalfEdge struct {
-	target *Vec2
-	twin   *DCELHalfEdge
-	next   *DCELHalfEdge
-	prev   *DCELHalfEdge
+	Origin       *DCELVertex
+	Twin         *DCELHalfEdge
+	IncidentFace *DCELFace
 }
 
+// DCELVertex represents a vertex within a doubly-connected edge list.
+type DCELVertex struct {
+	P            *Vec2
+	IncidentEdge *DCELHalfEdge
+}
+
+// DCELFace represents a face within a doubly connected edge list.
 type DCELFace struct {
-	Vertices []*Vec2
+	OuterComponent  *DCELHalfEdge
+	InnerComponents []*DCELHalfEdge
 }
 
-func DCELFromSegmentLoop(points []Vec2) DCEL {
-	faces := make([]DCELFace, 1)
-	faces[0] = DCELFace{[]*Vec2{&points[0]}}
+/*func DCELFromSegmentLoop(points []Vec2) DCEL {
+	itns := SegmentLoopIntersections(points)
 
-	for len(faces) > 0 {
-		face, faces := faces[0], faces[1:]
+	itnWith := make(map[int][]int)
+	for k := range itns {
+		if itnWith[k.seg1] == nil {
+			itnWith[k.seg1] = []int{k.seg2}
+		} else {
+			itnWith[k.seg1] = append(itnWith[k.seg1], k.seg2)
+		}
+		if itnWith[k.seg2] == nil {
+			itnWith[k.seg2] = []int{k.seg1}
+		} else {
+			itnWith[k.seg2] = append(itnWith[k.seg2], k.seg1)
+		}
+	}
 
+	faces := make([]DCELFace, 0)
 
+	type trace struct {
+		startSeg int
+		face     *DCELFace
+	}
+
+	traces := make([]trace, 0)
+	startFace := DCELFace{make([]*Vec2, 0)}
+	currentTrace := trace{0, &startFace}
+
+	for {
+		first := true
+		for i := currentTrace.startSeg; i < len(points) && (!first || i != currentTrace.startSeg); i, first = (i+1)%len(points), false {
+			ss := itnWith[i]
+			if ss == nil {
+				currentTrace.face.Vertices = append(currentTrace.face.Vertices, &points[i])
+			} else {
+				for _, s := range ss {
+					newVerts := []*Vec2{itns[intersection(s, i)]}
+					newFace := DCELFace{newVerts}
+					traces = append(traces, trace{(s + 1) % len(points), &newFace})
+				}
+			}
+		}
+
+		if
+
+		if len(traces) == 0 {
+			break
+		}
+		currentTrace, traces = traces[0], traces[1:]
 	}
 }*/
