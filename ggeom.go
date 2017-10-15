@@ -794,9 +794,10 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 }
 
 const (
-	start = 0
-	cross = 1
-	end   = 2
+	start    = 0
+	cross    = 1
+	vertical = 2
+	end      = 3
 )
 
 type bentleyEvent struct {
@@ -827,12 +828,7 @@ func bentleyEventCmp(a, b interface{}) int {
 		return aa.kind - bb.kind
 	} else {
 		y1, y2 := &aa.left.y, &bb.left.y
-		c = y1.Cmp(y2)
-		if c != 0 {
-			return c
-		} else {
-			return aa.kind - bb.kind
-		}
+		return y1.Cmp(y2)
 	}
 
 	/*c := x1.Cmp(x2)
@@ -927,18 +923,27 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		events.Push(&bentleyEvent{
-			kind:  start,
-			i:     i,
-			left:  left,
-			right: right,
-		})
-		events.Push(&bentleyEvent{
-			kind:  end,
-			i:     i,
-			left:  left,
-			right: right,
-		})
+		if left.y.Cmp(&right.y) == 0 {
+			events.Push(&bentleyEvent{
+				kind:  vertical,
+				i:     i,
+				left:  left,
+				right: right,
+			})
+		} else {
+			events.Push(&bentleyEvent{
+				kind:  start,
+				i:     i,
+				left:  left,
+				right: right,
+			})
+			events.Push(&bentleyEvent{
+				kind:  end,
+				i:     i,
+				left:  left,
+				right: right,
+			})
+		}
 	}
 
 	tree := redblacktree.NewWith(bentleyTreeCmp)
@@ -1022,7 +1027,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				nextI := it2.Value().(int)
 
-				if !sameOrAdjacent(nextI, event.i, len(points)) {
+				if !sameOrAdjacent(event.i, nextI, len(points)) {
 					lastY = ky
 
 					nsp1 := &points[nextI]
@@ -1033,6 +1038,20 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					if intersect {
 						addCross(nextI, event.i, intersectionPoint)
 					}
+				}
+			}
+		} else if event.kind == vertical {
+			for it := tree.Iterator(); it.Next(); {
+				segi := it.Value().(int)
+
+				p1a := &points[event.i]
+				p1b := &points[(event.i+1)%len(points)]
+				p2a := &points[segi]
+				p2b := &points[(segi+1)%len(points)]
+
+				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+				if intersect {
+					addCross(segi, event.i, intersectionPoint)
 				}
 			}
 		} else if event.kind == end {
