@@ -955,10 +955,21 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	// don't want to eventually report, because they lie at a segement vertex.
 	vertIntersections := make(map[Intersection]bool)
 
+	addIntersection := func(theint Intersection, p *Vec2) {
+		s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
+		s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
+		if s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p) {
+			vertIntersections[theint] = true
+		} else {
+			intersections[theint] = p
+		}
+	}
+
 	addCross := func(seg1, seg2 int, p *Vec2) {
 		theint := intersection(seg1, seg2)
 		exists := intersections[theint] != nil || vertIntersections[theint]
 		if !exists {
+			addIntersection(theint, p)
 			s1a, s1b := &points[seg1], &points[(seg1+1)%len(points)]
 			s2a, s2b := &points[seg2], &points[(seg2+1)%len(points)]
 			if s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p) {
@@ -996,6 +1007,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			segToKey[event.i] = tk
 			it2 := it1
 
+			futureS1s := make([]int, 0)
+			futureS2s := make([]int, 0)
+
 			var lastY *Scalar
 			for it1.Prev() {
 				ky := it1.Key().(bentleyTreeKey).y
@@ -1007,6 +1021,8 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
 					lastY = ky
+
+					futureS1s = append(futureS1s, prevI)
 
 					psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
@@ -1030,6 +1046,8 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
 					lastY = ky
 
+					futureS2s = append(futureS2s, nextI)
+
 					nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1037,6 +1055,20 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
 					if intersect {
 						addCross(nextI, event.i, intersectionPoint)
+					}
+				}
+			}
+
+			for s1, _ := range futureS1s {
+				for s2, _ := range futureS2s {
+					p1a := &points[s1]
+					p1b := &points[(s1+1)%len(points)]
+					p2a := &points[s2]
+					p2b := &points[(s2+1)%len(points)]
+					intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+					_ = intersectionPoint
+					if intersect {
+						addIntersection(intersection(s1, s2), intersectionPoint)
 					}
 				}
 			}
@@ -1052,8 +1084,11 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
 				if intersect {
+					itn := intersection(segi, event.i)
 					if !ip.Eq(p1a) && !ip.Eq(p1b) && !ip.Eq(p2a) && !ip.Eq(p2b) {
-						intersections[intersection(segi, event.i)] = ip
+						intersections[itn] = ip
+					} else {
+						vertIntersections[itn] = true
 					}
 				}
 			}
