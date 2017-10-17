@@ -1000,18 +1000,10 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			segToKey[event.i] = tk
 			it2 := it1
 
-			var lastY *Scalar
 			for it1.Prev() {
-				ky := it1.Key().(bentleyTreeKey).y
-				if lastY != nil && ky.Cmp(lastY) != 0 {
-					//break
-				}
-
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					lastY = ky
-
 					psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1021,21 +1013,13 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 						addCross(prevI, event.i, intersectionPoint)
 					}
 
-					//break
+					break
 				}
 			}
-			lastY = nil
 			for it2.Next() {
-				ky := it2.Key().(bentleyTreeKey).y
-				if lastY != nil && ky.Cmp(lastY) != 0 {
-					//break
-				}
-
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
-					lastY = ky
-
 					nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1078,32 +1062,22 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 			ris, tis := make([]int, 0), make([]int, 0)
 
-			var lastY *Scalar
 			for it1.Prev() {
-				ky := it1.Key().(bentleyTreeKey).y
-				if lastY != nil && ky.Cmp(lastY) != 0 {
-					break
-				}
-
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					lastY = ky
 					ris = append(ris, prevI)
-				}
-			}
-			lastY = nil
-			for it2.Next() {
-				ky := it2.Key().(bentleyTreeKey).y
-				if lastY != nil && ky.Cmp(lastY) != 0 {
+				} else {
 					break
 				}
-
+			}
+			for it2.Next() {
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
-					lastY = ky
 					tis = append(tis, nextI)
+				} else {
+					break
 				}
 			}
 
@@ -1161,17 +1135,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					t1 := &points[ti]
 					t2 := &points[(ti+1)%len(points)]
 
-					var lastY *Scalar
 					for sIt.Next() {
-						ky := sIt.Key().(bentleyTreeKey).y
-						if lastY != nil && ky.Cmp(lastY) != 0 {
-							break
-						}
-
 						u := sIt.Value().(int)
 						if !sameOrAdjacent(u, si, len(points)) {
-							lastY = ky
-
 							u1 := &points[u]
 							u2 := &points[(u+1)%len(points)]
 
@@ -1179,19 +1145,13 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							if intersect {
 								addCross(si, u, intersectionPoint)
 							}
-						}
-					}
-					lastY = nil
-					for tIt.Prev() {
-						ky := tIt.Key().(bentleyTreeKey).y
-						if lastY != nil && ky.Cmp(lastY) != 0 {
+
 							break
 						}
-
+					}
+					for tIt.Prev() {
 						r := tIt.Value().(int)
 						if !sameOrAdjacent(r, ti, len(points)) {
-							lastY = ky
-
 							r1 := &points[r]
 							r2 := &points[(r+1)%len(points)]
 
@@ -1199,6 +1159,8 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							if intersect {
 								addCross(ti, r, intersectionPoint)
 							}
+
+							break
 						}
 					}
 				}
