@@ -1067,7 +1067,6 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
 					ris = append(ris, prevI)
-				} else {
 					break
 				}
 			}
@@ -1076,7 +1075,6 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
 					tis = append(tis, nextI)
-				} else {
 					break
 				}
 			}
@@ -1144,9 +1142,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 							if intersect {
 								addCross(si, u, intersectionPoint)
+							} else {
+								break
 							}
-
-							break
 						}
 					}
 					for tIt.Prev() {
@@ -1158,9 +1156,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 							if intersect {
 								addCross(ti, r, intersectionPoint)
+							} else {
+								break
 							}
-
-							break
 						}
 					}
 				}
