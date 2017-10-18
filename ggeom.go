@@ -812,26 +812,15 @@ type bentleyEvent struct {
 func bentleyEventCmp(a, b interface{}) int {
 	aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
 
-	x1, x2, y1, y2 := &aa.left.x, &bb.left.x, &aa.left.y, &bb.left.y
+	x1, x2 := &aa.left.x, &bb.left.x
 	if aa.kind != start {
 		x1 = &aa.right.x
-		y1 = &aa.right.y
 	}
 	if bb.kind != start {
 		x2 = &bb.right.x
-		y2 = &bb.right.y
 	}
 
 	c := x1.Cmp(x2)
-	if c != 0 {
-		return c
-	} else if aa.kind != bb.kind {
-		return aa.kind - bb.kind
-	} else {
-		return y1.Cmp(y2)
-	}
-
-	/*c := x1.Cmp(x2)
 	if c != 0 {
 		return c
 	} else if aa.kind == end && bb.kind != end {
@@ -846,7 +835,7 @@ func bentleyEventCmp(a, b interface{}) int {
 		} else {
 			return aa.kind - bb.kind
 		}
-	}*/
+	}
 }
 
 type bentleyTreeKey struct {
@@ -1038,6 +1027,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
 				if intersect {
+					//addCross(segi, event.i, ip)
 					addIntersection(intersection(segi, event.i), ip)
 				}
 			}
