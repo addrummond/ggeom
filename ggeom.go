@@ -1060,13 +1060,13 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			it1 := it
 			it2 := it
 
-			ris, tis := make([]int, 0), make([]int, 0)
+			var ri, ti int = -1, -1
 
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
 				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					ris = append(ris, prevI)
+					ri = prevI
 					break
 				}
 			}
@@ -1074,25 +1074,20 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				nextI := it2.Value().(int)
 
 				if !sameOrAdjacent(event.i, nextI, len(points)) {
-					tis = append(tis, nextI)
+					ti = nextI
 					break
 				}
 			}
 
-			for i := 0; i < len(ris); i++ {
-				for j := 0; j < len(tis); j++ {
-					ri := ris[i]
-					ti := tis[j]
+			if ri != -1 && ti != -1 {
+				p1a := &points[ri]
+				p1b := &points[(ri+1)%len(points)]
+				p2a := &points[ti]
+				p2b := &points[(ti+1)%len(points)]
 
-					p1a := &points[ri]
-					p1b := &points[(ri+1)%len(points)]
-					p2a := &points[ti]
-					p2b := &points[(ti+1)%len(points)]
-
-					intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
-					if intersect {
-						addCross(ri, ti, intersectionPoint)
-					}
+				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+				if intersect {
+					addCross(ri, ti, intersectionPoint)
 				}
 			}
 
@@ -1142,9 +1137,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 							if intersect {
 								addCross(si, u, intersectionPoint)
-							} else {
-								break
 							}
+
+							break
 						}
 					}
 					for tIt.Prev() {
@@ -1156,9 +1151,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 							if intersect {
 								addCross(ti, r, intersectionPoint)
-							} else {
-								break
 							}
+
+							break
 						}
 					}
 				}
