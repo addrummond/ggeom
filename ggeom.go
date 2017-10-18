@@ -806,7 +806,6 @@ type bentleyEvent struct {
 	i2       int
 	left     *Vec2
 	right    *Vec2
-	deleted  bool
 	swapOnly bool
 }
 
@@ -981,9 +980,6 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
 		event := e.(*bentleyEvent)
-		if event.deleted {
-			continue
-		}
 
 		if event.kind == start {
 			p1 := &points[event.i]
@@ -1042,12 +1038,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
 				if intersect {
-					itn := intersection(segi, event.i)
-					if !ip.Eq(p1a) && !ip.Eq(p1b) && !ip.Eq(p2a) && !ip.Eq(p2b) {
-						intersections[itn] = ip
-					} else {
-						vertIntersections[itn] = true
-					}
+					addIntersection(intersection(segi, event.i), ip)
 				}
 			}
 		} else if event.kind == end {
@@ -1120,39 +1111,45 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				sIt, tIt = tIt, sIt
 				segToKey[si], segToKey[ti] = tKey, sKey
 
-				if !event.swapOnly {
-					s1 := &points[si]
-					s2 := &points[(si+1)%len(points)]
-					t1 := &points[ti]
-					t2 := &points[(ti+1)%len(points)]
+				s1 := &points[si]
+				s2 := &points[(si+1)%len(points)]
+				t1 := &points[ti]
+				t2 := &points[(ti+1)%len(points)]
 
-					for sIt.Next() {
-						u := sIt.Value().(int)
-						if !sameOrAdjacent(u, si, len(points)) {
-							u1 := &points[u]
-							u2 := &points[(u+1)%len(points)]
+				for sIt.Next() {
+					u := sIt.Value().(int)
+					if !sameOrAdjacent(u, si, len(points)) {
+						u1 := &points[u]
+						u2 := &points[(u+1)%len(points)]
 
-							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
-							if intersect {
+						intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+						if intersect {
+							if event.swapOnly {
+								addIntersection(intersection(si, u), intersectionPoint)
+							} else {
 								addCross(si, u, intersectionPoint)
 							}
-
-							break
 						}
-					}
-					for tIt.Prev() {
-						r := tIt.Value().(int)
-						if !sameOrAdjacent(r, ti, len(points)) {
-							r1 := &points[r]
-							r2 := &points[(r+1)%len(points)]
 
-							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
-							if intersect {
+						break
+					}
+				}
+				for tIt.Prev() {
+					r := tIt.Value().(int)
+					if !sameOrAdjacent(r, ti, len(points)) {
+						r1 := &points[r]
+						r2 := &points[(r+1)%len(points)]
+
+						intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+						if intersect {
+							if event.swapOnly {
+								addIntersection(intersection(ti, r), intersectionPoint)
+							} else {
 								addCross(ti, r, intersectionPoint)
 							}
-
-							break
 						}
+
+						break
 					}
 				}
 			}
