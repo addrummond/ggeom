@@ -968,9 +968,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	addCross := func(seg1, seg2 int, p *Vec2) {
 		theint := intersection(seg1, seg2)
 		exists := intersections[theint] != nil || vertIntersections[theint]
-		if !exists {
-			addIntersection(theint, p)
-		}
+		addIntersection(theint, p)
 		events.Push(&bentleyEvent{
 			kind:     cross,
 			i:        seg1,
