@@ -1033,40 +1033,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 			if !f {
 				panic(fmt.Sprintf("Internal error [2] in 'SegmentLoopIntersections': could not find key with seg index %v\n", event.i))
 			}
-			it1 := it
-			it2 := it
-
-			var ri, ti int = -1, -1
-
-			for it1.Prev() {
-				prevI := it1.Value().(int)
-
-				if !sameOrAdjacent(event.i, prevI, len(points)) {
-					ri = prevI
-					break
-				}
-			}
-			for it2.Next() {
-				nextI := it2.Value().(int)
-
-				if !sameOrAdjacent(event.i, nextI, len(points)) {
-					ti = nextI
-					break
-				}
-			}
-
-			if ri != -1 && ti != -1 {
-				p1a := &points[ri]
-				p1b := &points[(ri+1)%len(points)]
-				p2a := &points[ti]
-				p2b := &points[(ti+1)%len(points)]
-
-				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
-				checks++
-				if intersect {
-					addCross(ri, ti, intersectionPoint)
-				}
-			}
 
 			tree.RemoveAt(it)
 		} else if event.kind == cross {
