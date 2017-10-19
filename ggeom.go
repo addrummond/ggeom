@@ -559,7 +559,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 //
 //     (i)   There is a unique intersection point,
 //     (ii)  the segments are not parallel, and
-//     (iii) the intersection point is not one of the segments' vertices
+//     (iii) the intersection point is not one of the segments' vertices.
 func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	var v Vec2
 
