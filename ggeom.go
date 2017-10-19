@@ -945,11 +945,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	addIntersection := func(theint Intersection, p *Vec2) {
 		s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
 		s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
-		if s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p) {
-			//vertIntersections[theint] = true
-		} else {
-			intersections[theint] = p
-		}
+		intersections[theint] = p
 	}
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
