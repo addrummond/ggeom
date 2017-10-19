@@ -830,12 +830,7 @@ func bentleyEventCmp(a, b interface{}) int {
 		}
 
 		y1, y2 := &aa.left.y, &bb.left.y
-		c = y1.Cmp(y2)
-		if c != 0 {
-			return c
-		} else {
-			return 0
-		}
+		return y1.Cmp(y2)
 	}
 }
 
@@ -905,10 +900,12 @@ func intersection(seg1, seg2 int) Intersection {
 // except for the points in the original input (which could all be considered
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output.
-func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
+func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
+
+	checks := 0
 
 	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
@@ -976,6 +973,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			segToKey[event.i] = tk
 			it2 := it1
 
+			fmt.Printf("START!\n")
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
@@ -985,13 +983,18 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
+					checks++
+					fmt.Printf("CMP!\n")
 					if intersect {
 						addCross(prevI, event.i, intersectionPoint)
 					}
 
-					break
+					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
+						break
+					}
 				}
 			}
+			fmt.Printf("END!\n")
 			for it2.Next() {
 				nextI := it2.Value().(int)
 
@@ -1001,6 +1004,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
+					checks++
 					if intersect {
 						addCross(nextI, event.i, intersectionPoint)
 					}
@@ -1019,6 +1023,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				p2b := &points[(segi+1)%len(points)]
 
 				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
+				checks++
 				if intersect {
 					// /addCross(segi, event.i, ip)
 					addIntersection(intersection(segi, event.i), ip)
@@ -1058,6 +1063,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 				p2b := &points[(ti+1)%len(points)]
 
 				intersect, intersectionPoint := SegmentIntersection(p1a, p1b, p2a, p2b)
+				checks++
 				if intersect {
 					addCross(ri, ti, intersectionPoint)
 				}
@@ -1106,9 +1112,9 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 						u2 := &points[(u+1)%len(points)]
 
 						intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+						checks++
 						if intersect {
 							if event.swapOnly {
-								//addCross(si, u, intersectionPoint)
 								addIntersection(intersection(si, u), intersectionPoint)
 							} else {
 								addCross(si, u, intersectionPoint)
@@ -1125,10 +1131,10 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 						r2 := &points[(r+1)%len(points)]
 
 						intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+						checks++
 						if intersect {
 							if event.swapOnly {
 								addIntersection(intersection(ti, r), intersectionPoint)
-								// /addCross(ti, r, intersectionPoint)
 							} else {
 								addCross(ti, r, intersectionPoint)
 							}
@@ -1141,12 +1147,15 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 		}
 	}
 
-	return intersections
+	fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (len(points)*len(points))/2)
+
+	return intersections, checks
 }
 
-func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) map[Intersection]*Vec2 {
+func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Vec2, int) {
 	intersections := make(map[Intersection]*Vec2)
 
+	checks := 0
 	for si := 0; si < len(points); si++ {
 		p := &points[si]
 		for sj := si + 1; sj < len(points); sj++ {
@@ -1159,13 +1168,14 @@ func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) map[Intersection]*Vec
 			pb := &points[(si+1)%len(points)]
 			qb := &points[(sj+1)%len(points)]
 			intersect, ip := SegmentIntersection(p, pb, q, qb)
+			checks++
 			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
 				intersections[intersection(si, sj)] = ip
 			}
 		}
 	}
 
-	return intersections
+	return intersections, checks
 }
 
 // DCEL represents a doubly-connected edge list.

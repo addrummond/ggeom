@@ -289,7 +289,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		svgout.Close()
 
 		its1 := tests[i+1]
-		its2 := SegmentLoopIntersections(ps)
+		its2, _ := SegmentLoopIntersections(ps)
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")
@@ -378,8 +378,15 @@ func TestConvolve(t *testing.T) {
 		}
 		fmt.Printf("}\n\n")
 
-		itns := SegmentLoopIntersections(cs)
-		//itns := SegmentLoopIntersectionsUsingNaiveAlgo(cs)
+		itns, checks := SegmentLoopIntersections(cs)
+		itnsNaive, checksNaive := SegmentLoopIntersectionsUsingNaiveAlgo(cs)
+		_ = itnsNaive
+
+		if checks >= checksNaive {
+			t.Errorf("Bad performance in 'SegmentLoopIntersections' -- used as many intersection checks or more than 'SegmentLoopIntersectionsUsingNaiveAlgo' (%v vs. %v)", checks, checksNaive)
+		} else {
+			fmt.Printf("Bentley Ottman: %v checks; naive algo: %v checks\n", checks, checksNaive)
+		}
 
 		fmt.Printf("Expected vs actual values:\n")
 		for i := 0; i < l; i++ {
@@ -390,7 +397,6 @@ func TestConvolve(t *testing.T) {
 				fmt.Printf("_____\t")
 			}
 			if i < len(cs) {
-				//fmt.Printf("%v, %v \t", &cs[i].x, &cs[i].y)
 				fmt.Printf("%+2.2f, %+2.2f\t", cs[i].ApproxX(), cs[i].ApproxY())
 			} else {
 				fmt.Printf("_____\t")
