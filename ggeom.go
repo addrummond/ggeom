@@ -794,8 +794,8 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 }
 
 const (
-	start    = 0
-	vertical = 1
+	start    = 1
+	vertical = 0
 	cross    = 2
 	end      = 3
 )
@@ -813,27 +813,28 @@ func bentleyEventCmp(a, b interface{}) int {
 	aa, bb := a.(*bentleyEvent), b.(*bentleyEvent)
 
 	x1, x2 := &aa.left.x, &bb.left.x
-	if aa.kind != start {
+	if aa.kind == end {
 		x1 = &aa.right.x
 	}
-	if bb.kind != start {
+	if bb.kind == end {
 		x2 = &bb.right.x
 	}
 
 	c := x1.Cmp(x2)
 	if c != 0 {
 		return c
-	} else if aa.kind == end && bb.kind != end {
-		return 1
-	} else if aa.kind != end && bb.kind == end {
-		return -1
 	} else {
+		c = aa.kind - bb.kind
+		if c != 0 {
+			return c
+		}
+
 		y1, y2 := &aa.left.y, &bb.left.y
 		c = y1.Cmp(y2)
 		if c != 0 {
 			return c
 		} else {
-			return aa.kind - bb.kind
+			return 0
 		}
 	}
 }
@@ -939,15 +940,13 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 	segToKey := make(map[int]bentleyTreeKey)
 
 	intersections := make(map[Intersection]*Vec2)
-	// Holds intersections which we need to keep track of, but which we
-	// don't want to eventually report, because they lie at a segement vertex.
-	vertIntersections := make(map[Intersection]bool)
+	crosses := make(map[Intersection]bool)
 
 	addIntersection := func(theint Intersection, p *Vec2) {
 		s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
 		s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
 		if s1a.Eq(p) || s1b.Eq(p) || s2a.Eq(p) || s2b.Eq(p) {
-			vertIntersections[theint] = true
+			//vertIntersections[theint] = true
 		} else {
 			intersections[theint] = p
 		}
@@ -955,7 +954,6 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
 		theint := intersection(seg1, seg2)
-		exists := intersections[theint] != nil || vertIntersections[theint]
 		addIntersection(theint, p)
 		events.Push(&bentleyEvent{
 			kind:     cross,
@@ -963,19 +961,16 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 			i2:       seg2,
 			left:     p,
 			right:    p,
-			swapOnly: exists,
+			swapOnly: crosses[theint],
 		})
+		crosses[theint] = true
 	}
 
 	for e, notEmpty := events.Pop(); notEmpty; e, notEmpty = events.Pop() {
 		event := e.(*bentleyEvent)
 
 		if event.kind == start {
-			p1 := &points[event.i]
-			p2 := &points[(event.i+1)%len(points)]
-			y := SegmentYValueAtX(p1, p2, &event.left.x)
-
-			tk := bentleyTreeKey{event.i, &event.left.x, y}
+			tk := bentleyTreeKey{event.i, &event.left.x, &event.left.y}
 			it1, replaced := tree.PutAndGetIterator(tk, event.i)
 			if replaced {
 				panic("Internal error [1] in 'SegmentLoopIntersections'")
@@ -1027,7 +1022,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 
 				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
 				if intersect {
-					//addCross(segi, event.i, ip)
+					// /addCross(segi, event.i, ip)
 					addIntersection(intersection(segi, event.i), ip)
 				}
 			}
@@ -1115,6 +1110,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 						intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 						if intersect {
 							if event.swapOnly {
+								//addCross(si, u, intersectionPoint)
 								addIntersection(intersection(si, u), intersectionPoint)
 							} else {
 								addCross(si, u, intersectionPoint)
@@ -1134,6 +1130,7 @@ func SegmentLoopIntersections(points []Vec2) map[Intersection]*Vec2 {
 						if intersect {
 							if event.swapOnly {
 								addIntersection(intersection(ti, r), intersectionPoint)
+								// /addCross(ti, r, intersectionPoint)
 							} else {
 								addCross(ti, r, intersectionPoint)
 							}
