@@ -899,7 +899,8 @@ func intersection(seg1, seg2 int) Intersection {
 // by segment from last point to first point. The function returns all intersections
 // except for the points in the original input (which could all be considered
 // intersection points). Points at intersection of n distinct pairs
-// of line segments appear n times in the output.
+// of line segments appear n times in the output. The function also returns the total
+// number of pairs of lines for which an intersection test was made.
 func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
@@ -973,7 +974,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 			segToKey[event.i] = tk
 			it2 := it1
 
-			//fmt.Printf("START!\n")
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
@@ -984,7 +984,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					p2 := &points[(event.i+1)%len(points)]
 					intersect, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
 					checks++
-					//fmt.Printf("CMP! previ=%v (%v, %v) -> (%v, %v)\n", prevI, f(&p1.x), f(&p1.y), f(&p2.x), f(&p2.y))
 					if intersect {
 						addCross(prevI, event.i, intersectionPoint)
 					}
@@ -994,7 +993,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					}
 				}
 			}
-			//fmt.Printf("END!\n")
 			for it2.Next() {
 				nextI := it2.Value().(int)
 
@@ -1009,7 +1007,9 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 						addCross(nextI, event.i, intersectionPoint)
 					}
 
-					break
+					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
+						break
+					}
 				}
 			}
 		} else if event.kind == vertical {
@@ -1115,7 +1115,8 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
 							checks++
 							if intersect {
-								addCross(si, u, intersectionPoint)
+								addIntersection(intersection(si, u), intersectionPoint)
+								//addCross(si, u, intersectionPoint)
 							}
 
 							break
@@ -1130,7 +1131,8 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
 							checks++
 							if intersect {
-								addCross(ti, r, intersectionPoint)
+								addIntersection(intersection(ti, r), intersectionPoint)
+								//addCross(ti, r, intersectionPoint)
 							}
 
 							break
