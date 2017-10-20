@@ -1114,6 +1114,9 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	return intersections, checks
 }
 
+// SegmentLoopIntersectionsUsingNaiveAlgo compares every pair of segments
+// in a given segment loop to find all intersections. It returns the intersections
+// together with the total number of intersection tests that were made.
 func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Vec2, int) {
 	intersections := make(map[Intersection]*Vec2)
 
