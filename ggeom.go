@@ -1016,16 +1016,31 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 			p1a := &points[event.i]
 			p1b := &points[(event.i+1)%len(points)]
 
-			it := tree.Iterator()
-			for it.Next() {
-				segi := it.Value().(int)
-				p2a := &points[segi]
-				p2b := &points[(segi+1)%len(points)]
+			minyp, maxyp := p1a, p1b
+			if p1b.y.Cmp(&p1a.y) < 0 {
+				minyp, maxyp = p1b, p1a
+			}
 
-				intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
-				checks++
-				if intersect {
-					addIntersection(intersection(segi, event.i), ip)
+			it, found := tree.CeilingIterator(bentleyTreeKey{segi: event.i, x: &minyp.x, y: &minyp.y})
+			if found {
+				for {
+					segi := it.Value().(int)
+					p2a := &points[segi]
+					p2b := &points[(segi+1)%len(points)]
+
+					if p2a.y.Cmp(&maxyp.y) > 0 && p2b.y.Cmp(&maxyp.y) > 0 {
+						break
+					}
+
+					intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
+					checks++
+					if intersect {
+						addIntersection(intersection(segi, event.i), ip)
+					}
+
+					if !it.Next() {
+						break
+					}
 				}
 			}
 		} else if event.kind == end {

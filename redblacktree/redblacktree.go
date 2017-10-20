@@ -349,6 +349,28 @@ func (tree *Tree) Ceiling(key interface{}) (ceiling *Node, found bool) {
 	return nil, false
 }
 
+// CeilingIterator is a variant of Ceiling that returns an iterator rather than a node.
+// addrummond
+func (tree *Tree) CeilingIterator(key interface{}) (Iterator, bool) {
+	node, found := tree.Ceiling(key)
+	if !found {
+		return tree.Iterator(), false
+	} else {
+		return Iterator{tree: tree, node: node, position: between}, true
+	}
+}
+
+// FloorIterator is a variant of Floor that returns an iterator rather than a node.
+// addrummond
+func (tree *Tree) FloorIterator(key interface{}) (Iterator, bool) {
+	node, found := tree.Floor(key)
+	if !found {
+		return tree.Iterator(), false
+	} else {
+		return Iterator{tree: tree, node: node, position: between}, true
+	}
+}
+
 // Clear removes all nodes from the tree.
 func (tree *Tree) Clear() {
 	tree.Root = nil
