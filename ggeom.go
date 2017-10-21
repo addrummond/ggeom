@@ -1141,6 +1141,53 @@ type DCELFace struct {
 	InnerComponents []*DCELHalfEdge
 }
 
+func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
+	halfEdges := make([]DCELHalfEdge, 0)
+
+	itns, _ := SegmentLoopIntersections(points)
+
+	itnWith := make(map[int][]int)
+	for k := range itns {
+		if itnWith[k.seg1] == nil {
+			itnWith[k.seg1] = []int{k.seg2}
+		} else {
+			itnWith[k.seg1] = append(itnWith[k.seg1], k.seg2)
+		}
+		if itnWith[k.seg2] == nil {
+			itnWith[k.seg2] = []int{k.seg1}
+		} else {
+			itnWith[k.seg2] = append(itnWith[k.seg2], k.seg1)
+		}
+	}
+
+	for segi, _ := range points {
+		p1 := &points[segi]
+		p2 := &points[(segi+1)%len(points)]
+
+		itns := itnWith[segi]
+		if itns == nil || len(itns) == 0 {
+			he1 := DCELHalfEdge{
+				Origin:       &DCELVertex{p1, nil},
+				Twin:         nil,
+				IncidentFace: nil,
+			}
+			he2 := DCELHalfEdge{
+				Origin:       &DCELVertex{p2, nil},
+				Twin:         &he1,
+				IncidentFace: nil,
+			}
+			he1.Origin.IncidentEdge = &he1
+			he2.Origin.IncidentEdge = &he2
+			he1.Twin = &he2
+
+			halfEdges = append(halfEdges, he1, he2)
+		} else {
+			// Sort the intersections by the position on the current segment.
+
+		}
+	}
+}
+
 /*func DCELFromSegmentLoop(points []Vec2) DCEL {
 	itns := SegmentLoopIntersections(points)
 
