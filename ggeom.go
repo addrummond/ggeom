@@ -794,10 +794,9 @@ func SegmentYValueAtX(sa, sb *Vec2, x *Scalar) *Scalar {
 }
 
 const (
-	start    = 1
-	vertical = 0
-	cross    = 2
-	end      = 3
+	start = 1
+	cross = 2
+	end   = 3
 )
 
 type bentleyEvent struct {
@@ -911,27 +910,18 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	events := binaryheap.NewWith(bentleyEventCmp)
 	for i := 0; i < len(points); i++ {
 		left, right := bentleyEventPs(i, points)
-		if left.x.Cmp(&right.x) == 0 {
-			events.Push(&bentleyEvent{
-				kind:  vertical,
-				i:     i,
-				left:  left,
-				right: right,
-			})
-		} else {
-			events.Push(&bentleyEvent{
-				kind:  start,
-				i:     i,
-				left:  left,
-				right: right,
-			})
-			events.Push(&bentleyEvent{
-				kind:  end,
-				i:     i,
-				left:  left,
-				right: right,
-			})
-		}
+		events.Push(&bentleyEvent{
+			kind:  start,
+			i:     i,
+			left:  left,
+			right: right,
+		})
+		events.Push(&bentleyEvent{
+			kind:  end,
+			i:     i,
+			left:  left,
+			right: right,
+		})
 	}
 
 	tree := redblacktree.NewWith(bentleyTreeCmp)
@@ -1012,37 +1002,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					}
 				}
 			}
-		} else if event.kind == vertical {
-			p1a := &points[event.i]
-			p1b := &points[(event.i+1)%len(points)]
-
-			minyp, maxyp := p1a, p1b
-			if p1b.y.Cmp(&p1a.y) < 0 {
-				minyp, maxyp = p1b, p1a
-			}
-
-			it, found := tree.CeilingIterator(bentleyTreeKey{segi: event.i, x: &minyp.x, y: &minyp.y})
-			if found {
-				for {
-					segi := it.Value().(int)
-					p2a := &points[segi]
-					p2b := &points[(segi+1)%len(points)]
-
-					if p2a.y.Cmp(&maxyp.y) > 0 && p2b.y.Cmp(&maxyp.y) > 0 {
-						break
-					}
-
-					intersect, ip := SegmentIntersection(p1a, p1b, p2a, p2b)
-					checks++
-					if intersect {
-						addIntersection(intersection(segi, event.i), ip)
-					}
-
-					if !it.Next() {
-						break
-					}
-				}
-			}
 		} else if event.kind == end {
 			it, f := tree.GetIterator(segToKey[event.i])
 			if !f {
@@ -1081,7 +1040,6 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 				segToKey[si], segToKey[ti] = tKey, sKey
 
 				if !event.swapOnly {
-
 					s1 := &points[si]
 					s2 := &points[(si+1)%len(points)]
 					t1 := &points[ti]
