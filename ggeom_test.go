@@ -429,7 +429,7 @@ func TestConvolve(t *testing.T) {
 		fmt.Printf("\n")
 
 		crosses := make([][]Vec2, 0)
-		for _, p := range itns {
+		for _, p := range itnsNaive {
 			crosses = append(crosses, SofVec2([][]float64{{p.ApproxX(), p.ApproxY()}, {p.ApproxX(), p.ApproxY()}}))
 		}
 
