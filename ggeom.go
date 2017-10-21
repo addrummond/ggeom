@@ -931,7 +931,11 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	crosses := make(map[Intersection]bool)
 
 	addIntersection := func(theint Intersection, p *Vec2) {
-		intersections[theint] = p
+		s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
+		s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
+		if !p.Eq(s1a) && !p.Eq(s1b) && !p.Eq(s2a) && !p.Eq(s2b) {
+			intersections[theint] = p
+		}
 	}
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
@@ -1103,7 +1107,7 @@ func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Ve
 			qb := &points[(sj+1)%len(points)]
 			intersect, ip := SegmentIntersection(p, pb, q, qb)
 			checks++
-			if intersect {
+			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
 				intersections[intersection(si, sj)] = ip
 			}
 		}
