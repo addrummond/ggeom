@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 
 	"github.com/addrummond/ggeom/redblacktree"
 	"github.com/emirpasic/gods/trees/binaryheap"
@@ -1141,22 +1142,43 @@ type DCELFace struct {
 	InnerComponents []*DCELHalfEdge
 }
 
+type IntersectionWith struct {
+	segi int
+	p    *Vec2
+}
+type IntersectionWithByXy []IntersectionWith
+
+func (is IntersectionWithByXy) Len() int {
+	return len(is)
+}
+func (is IntersectionWithByXy) Swap(i, j int) {
+	is[i], is[j] = is[j], is[i]
+}
+func (is IntersectionWithByXy) Less(i, j int) bool {
+	c := is[i].p.x.Cmp(&is[j].p.x)
+	if c != 0 {
+		return c < 0
+	} else {
+		return is[i].p.y.Cmp(&is[j].p.y) < 0
+	}
+}
+
 func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	halfEdges := make([]DCELHalfEdge, 0)
 
 	itns, _ := SegmentLoopIntersections(points)
 
-	itnWith := make(map[int][]int)
-	for k := range itns {
+	itnWith := make(map[int][]IntersectionWith)
+	for k, p := range itns {
 		if itnWith[k.seg1] == nil {
-			itnWith[k.seg1] = []int{k.seg2}
+			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
 		} else {
-			itnWith[k.seg1] = append(itnWith[k.seg1], k.seg2)
+			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
 		}
 		if itnWith[k.seg2] == nil {
-			itnWith[k.seg2] = []int{k.seg1}
+			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
 		} else {
-			itnWith[k.seg2] = append(itnWith[k.seg2], k.seg1)
+			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
 		}
 	}
 
@@ -1183,7 +1205,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 			halfEdges = append(halfEdges, he1, he2)
 		} else {
 			// Sort the intersections by the position on the current segment.
-
+			sort.Sort(IntersectionWithByXy(itns))
 		}
 	}
 }
