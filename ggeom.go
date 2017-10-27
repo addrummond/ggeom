@@ -1146,21 +1146,47 @@ type IntersectionWith struct {
 	segi int
 	p    *Vec2
 }
-type IntersectionWithByXy []IntersectionWith
+type IntersectionWithByXy struct {
+	is []IntersectionWith
+	xd int // x direction (if -1, sorted with segments with smaller x values first)
+	yd int // y direction (if -1, sorted with segments with smaller y values first)
+}
 
 func (is IntersectionWithByXy) Len() int {
-	return len(is)
+	return len(is.is)
 }
 func (is IntersectionWithByXy) Swap(i, j int) {
-	is[i], is[j] = is[j], is[i]
+	is.is[i], is.is[j] = is.is[j], is.is[i]
 }
 func (is IntersectionWithByXy) Less(i, j int) bool {
-	c := is[i].p.x.Cmp(&is[j].p.x)
+	c := is.is[i].p.x.Cmp(&is.is[j].p.x)
 	if c != 0 {
-		return c < 0
+		if is.xd <= 0 {
+			return c < 0
+		} else {
+			return c > 0
+		}
 	} else {
-		return is[i].p.y.Cmp(&is[j].p.y) < 0
+		c := is.is[i].p.y.Cmp(&is.is[j].p.y)
+		if is.yd <= 0 {
+			return c < 0
+		} else {
+			return c > 0
+		}
 	}
+}
+
+func sameDirection(p1, p2, q1, q2 *Vec2) bool {
+	pxd := p1.x.Cmp(&p2.x)
+	pyd := p1.y.Cmp(&p2.y)
+	qxd := q1.x.Cmp(&q2.x)
+	qyd := q1.x.Cmp(&q2.y)
+
+	if pxd == qxd && pyd == qyd {
+		return true
+	}
+
+	return false
 }
 
 func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
@@ -1205,9 +1231,82 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 			halfEdges = append(halfEdges, he1, he2)
 		} else {
 			// Sort the intersections by the position on the current segment.
-			sort.Sort(IntersectionWithByXy(itns))
+			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
+
+			startP := p1
+			for i, itn := range itns {
+				// The half edges for the subpart of the current segment going up
+				// to the intersection.
+				he1 := DCELHalfEdge{
+					Origin:       &DCELVertex{startP, nil},
+					Twin:         nil,
+					IncidentFace: nil,
+				}
+				he2 := DCELHalfEdge{
+					Origin:       &DCELVertex{itn.p, nil},
+					Twin:         &he1,
+					IncidentFace: nil,
+				}
+				he1.Origin.IncidentEdge = &he1
+				he2.Origin.IncidentEdge = &he2
+				he1.Twin = &he2
+
+				// The half edges for the subpart of the current from the current
+				// intersection either to the next intersection if any or to p2.
+				var endp *Vec2
+				if i < len(itns)-1 {
+					endp = itns[i+1].p
+				} else {
+					endp = p2
+				}
+				he3 := DCELHalfEdge{
+					Origin:       &DCELVertex{itn.p, nil},
+					Twin:         nil,
+					IncidentFace: nil,
+				}
+				he4 := DCELHalfEdge{
+					Origin:       &DCELVertex{endp, nil},
+					Twin:         &he3,
+					IncidentFace: nil,
+				}
+				he3.Origin.IncidentEdge = &he3
+				he4.Origin.IncidentEdge = &he4
+				he3.Twin = &he4
+
+				// The two segments derived from the segment that intersects the
+				// current segment.
+				q1 := itn.p
+				q2 := &points[itn.segi]
+				r1 := itn.p
+				r2 := &points[(itn.segi+1)%len(points)]
+
+				if !sameDirection(q2, r2, q1, q2) {
+					q1, q2 = q2, q1
+					r1, r2 = r2, r1
+				}
+
+				he5 := DCELHalfEdge{
+					Origin:       &DCELVertex{q1, nil},
+					Twin:         nil,
+					IncidentFace: nil,
+				}
+				he6 := DCELHalfEdge{
+					Origin:       &DCELVertex{r1, nil},
+					Twin:         &he5,
+					IncidentFace: nil,
+				}
+				he5.Origin.IncidentEdge = &he5
+				he6.Origin.IncidentEdge = &he6
+				he5.Twin = &he6
+
+				halfEdges = append(halfEdges, he1, he2)
+
+				startP = itn.p
+			}
 		}
 	}
+
+	return halfEdges
 }
 
 /*func DCELFromSegmentLoop(points []Vec2) DCEL {
