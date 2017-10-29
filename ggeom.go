@@ -1218,12 +1218,11 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 
 		itns := itnWith[segi]
 		if len(itns) == 0 {
-			he := DCELHalfEdge{
+			halfEdges = append(halfEdges, DCELHalfEdge{
 				Origin: &DCELVertex{p1},
 				Prev:   prev,
 				Next:   nil,
-			}
-			halfEdges = append(halfEdges, he)
+			})
 			if prev != nil {
 				prev.Next = &halfEdges[len(halfEdges)-1]
 			}
@@ -1240,28 +1239,31 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 					itnVertices[itnS] = itnVert
 				}
 
-				// The forward half edge for the subpart of the current segment going up
-				// to the intersection.
-				he1 := DCELHalfEdge{
-					Origin: &DCELVertex{startP},
-					Prev:   prev,
-				}
+				halfEdges = append(halfEdges,
+					// The forward half edge for the subpart of the current segment going up
+					// to the intersection.
+					DCELHalfEdge{
+						Origin: &DCELVertex{startP},
+						Prev:   prev,
+					},
+					// The forward half edge for the subpart of the current segment from the current
+					// intersection to either the next intersection if any or to p2.
+					DCELHalfEdge{
+						Origin: itnVert,
+					})
+
+				he1 := &halfEdges[len(halfEdges)-2]
+				he2 := &halfEdges[len(halfEdges)-1]
+
 				if prev != nil {
-					prev.Next = &he1
+					prev.Next = he1
 				}
 
-				// The forward half edge for the subpart of the current segment from the current
-				// intersection to either the next intersection if any or to p2.
-				he2 := DCELHalfEdge{
-					Origin: itnVert,
-				}
-
-				halfEdges = append(halfEdges, he1, he2)
-				halfEdges[len(halfEdges)-2].Next = &halfEdges[len(halfEdges)-1]
-				halfEdges[len(halfEdges)-1].Prev = &halfEdges[len(halfEdges)-2]
+				he1.Next = he2
+				he2.Prev = he1
 
 				startP = itn.p
-				prev = &halfEdges[len(halfEdges)-1]
+				prev = he2
 			}
 		}
 	}
