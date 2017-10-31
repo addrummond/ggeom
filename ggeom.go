@@ -1299,8 +1299,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	}
 
 	// Tie the knot.
-	halfEdges[lastForwardHalfEdgeIndex+1].Prev = &halfEdges[len(halfEdges)-1]
-	halfEdges[len(halfEdges)-1].Next = &halfEdges[lastForwardHalfEdgeIndex+1]
+	halfEdges[lastForwardHalfEdgeIndex+1].Next = &halfEdges[len(halfEdges)-1]
+	halfEdges[len(halfEdges)-1].Prev = &halfEdges[lastForwardHalfEdgeIndex+1]
 
 	return halfEdges
 }
