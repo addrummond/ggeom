@@ -1223,9 +1223,11 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 				Prev:   prev,
 				Next:   nil,
 			})
+			he := &halfEdges[len(halfEdges)-1]
 			if prev != nil {
-				prev.Next = &halfEdges[len(halfEdges)-1]
+				prev.Next = he
 			}
+			prev = he
 		} else {
 			// Sort the intersections by the position on the current segment.
 			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
