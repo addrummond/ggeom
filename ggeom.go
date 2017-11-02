@@ -1125,6 +1125,7 @@ type DCEL struct {
 
 // DCELHalfEdge represents a half-edge within a doubly-connected edge list.
 type DCELHalfEdge struct {
+	Forward      bool
 	Origin       *DCELVertex
 	Twin         *DCELHalfEdge
 	IncidentFace *DCELFace
@@ -1184,15 +1185,11 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 	qxd := q1.x.Cmp(&q2.x)
 	qyd := q1.x.Cmp(&q2.y)
 
-	if pxd == qxd && pyd == qyd {
-		return true
-	}
-
-	return false
+	return pxd == qxd && pyd == qyd
 }
 
-func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
-	halfEdges := make([]DCELHalfEdge, 0, len(points))
+func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward int) {
+	halfEdges = make([]DCELHalfEdge, 0, len(points))
 	itnVertices := make(map[Intersection]*DCELVertex)
 
 	itns, _ := SegmentLoopIntersections(points)
@@ -1219,9 +1216,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 		itns := itnWith[segi]
 		if len(itns) == 0 {
 			halfEdges = append(halfEdges, DCELHalfEdge{
-				Origin: &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2)},
-				Prev:   prev,
-				Next:   nil,
+				Forward: true,
+				Origin:  &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2)},
+				Prev:    prev,
+				Next:    nil,
 			})
 			he := &halfEdges[len(halfEdges)-1]
 			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
@@ -1247,13 +1245,15 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 					// The forward half edge for the subpart of the current segment going up
 					// to the intersection.
 					DCELHalfEdge{
-						Origin: &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2)},
-						Prev:   prev,
+						Forward: true,
+						Origin:  &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2)},
+						Prev:    prev,
 					},
 					// The forward half edge for the subpart of the current segment from the current
 					// intersection to either the next intersection if any or to p2.
 					DCELHalfEdge{
-						Origin: itnVert,
+						Forward: true,
+						Origin:  itnVert,
 					})
 
 				he1 := &halfEdges[len(halfEdges)-2]
@@ -1281,6 +1281,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 		panic("Fewer half edges than expected in 'HalfEdgesFromSegmentLoop'")
 	}
 
+	nForward = len(halfEdges)
+
 	// Tie the knot.
 	last := &halfEdges[len(halfEdges)-1]
 	first := &halfEdges[0]
@@ -1292,8 +1294,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	var next *DCELHalfEdge
 	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
 		halfEdges = append(halfEdges, DCELHalfEdge{
-			Origin: halfEdges[i].Next.Origin,
-			Next:   prev,
+			Forward: false,
+			Origin:  halfEdges[i].Next.Origin,
+			Next:    prev,
 		})
 		twin := &halfEdges[len(halfEdges)-1]
 		twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
@@ -1311,14 +1314,84 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	}
 
 	// Tie the knot.
-	halfEdges[lastForwardHalfEdgeIndex+1].Next = &halfEdges[len(halfEdges)-1]
-	halfEdges[len(halfEdges)-1].Prev = &halfEdges[lastForwardHalfEdgeIndex+1]
+	last = &halfEdges[len(halfEdges)-1]
+	first = &halfEdges[lastForwardHalfEdgeIndex+1]
+	halfEdges[lastForwardHalfEdgeIndex+1].Next = last
+	halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges = append(halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges, last)
+	halfEdges[len(halfEdges)-1].Prev = first
 
-	return halfEdges
+	return halfEdges, nForward
 }
 
-func tarjan(start *DCELHalfEdge) []*DCELHalfEdge {
+func sortVerts(halfEdges []DCELHalfEdge, nForward int) []*DCELVertex {
+	marks := make(map[*DCELVertex]bool)
+	tempMarks := make(map[*DCELVertex]bool)
+	r := make([]*DCELVertex, 0, 2)
 
+	for {
+		i := 0
+		foundUnmarked := false
+		for ; i < nForward; i++ {
+			if !marks[halfEdges[i].Origin] {
+				foundUnmarked = true
+				break
+			}
+		}
+		if !foundUnmarked {
+			return r
+		}
+		visit(r, halfEdges[i].Origin, marks, tempMarks)
+	}
+}
+
+func visit(r []*DCELVertex, node *DCELVertex, marks map[*DCELVertex]bool, tempMarks map[*DCELVertex]bool) {
+	if tempMarks[node] {
+		return
+	}
+	if !marks[node] {
+		tempMarks[node] = true
+		for _, node2 := range node.IncidentEdges {
+			if node2.Origin == node {
+				visit(r, node2.Twin.Origin, marks, tempMarks)
+			}
+			marks[node] = true
+			delete(tempMarks, node)
+			r = append(r, node)
+		}
+	}
+}
+
+func cycles(sorted []*DCELVertex) [][]*DCELVertex {
+	cs := make([][]*DCELVertex, 0)
+
+	if len(sorted) == 0 {
+		return [][]*DCELVertex{}
+	}
+
+	currentCycle := []*DCELVertex{sorted[0]}
+outer:
+	for i := 1; i < len(sorted); i++ {
+		for _, he := range sorted[i].IncidentEdges {
+			if !he.Forward {
+				break
+			}
+
+			if he.Twin.Origin == currentCycle[0] {
+				currentCycle = append(currentCycle, sorted[i])
+				cs = append(cs, currentCycle)
+				currentCycle = []*DCELVertex{}
+				continue outer
+			}
+		}
+		currentCycle = append(currentCycle, sorted[i])
+	}
+
+	return cs
+}
+
+func GetDECLCycles(halfEdges []DCELHalfEdge, nForward int) [][]*DCELVertex {
+	sorted := sortVerts(halfEdges, nForward)
+	return cycles(sorted)
 }
 
 /*func DCELFromSegmentLoop(points []Vec2) DCEL {

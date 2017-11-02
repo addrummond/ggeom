@@ -367,7 +367,8 @@ var exampleLoops = SofSofVec2([][][]float64{
 func TestHalfEdgesFromSegmentLoop(t *testing.T) {
 	p := Polygon2{verts: exampleLoops[0]}
 	q := Polygon2{verts: exampleLoops[1]}
-	fmt.Printf("%v", HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q)))
+	hedges, _ := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
+	fmt.Printf("%v", hedges)
 }
 
 func TestConvolve(t *testing.T) {
