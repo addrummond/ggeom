@@ -1134,8 +1134,8 @@ type DCELHalfEdge struct {
 
 // DCELVertex represents a vertex within a doubly-connected edge list.
 type DCELVertex struct {
-	P *Vec2
-	//IncidentEdge *DCELHalfEdge
+	P             *Vec2
+	IncidentEdges []*DCELHalfEdge
 }
 
 // DCELFace represents a face within a doubly connected edge list.
@@ -1219,13 +1219,15 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 		itns := itnWith[segi]
 		if len(itns) == 0 {
 			halfEdges = append(halfEdges, DCELHalfEdge{
-				Origin: &DCELVertex{p1},
+				Origin: &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2)},
 				Prev:   prev,
 				Next:   nil,
 			})
 			he := &halfEdges[len(halfEdges)-1]
+			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
 			if prev != nil {
 				prev.Next = he
+				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 			}
 			prev = he
 		} else {
@@ -1237,7 +1239,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
-					itnVert = &DCELVertex{itn.p}
+					itnVert = &DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2)}
 					itnVertices[itnS] = itnVert
 				}
 
@@ -1245,7 +1247,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 					// The forward half edge for the subpart of the current segment going up
 					// to the intersection.
 					DCELHalfEdge{
-						Origin: &DCELVertex{startP},
+						Origin: &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2)},
 						Prev:   prev,
 					},
 					// The forward half edge for the subpart of the current segment from the current
@@ -1259,7 +1261,12 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 
 				if prev != nil {
 					prev.Next = he1
+					he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, prev)
 				}
+
+				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
+				// note that he2.Origin is the intersection point
+				he2.Origin.IncidentEdges = append(he2.Origin.IncidentEdges, he1, he2)
 
 				he1.Next = he2
 				he2.Prev = he1
@@ -1275,8 +1282,11 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	}
 
 	// Tie the knot.
-	halfEdges[0].Prev = &halfEdges[len(halfEdges)-1]
-	halfEdges[len(halfEdges)-1].Next = &halfEdges[0]
+	last := &halfEdges[len(halfEdges)-1]
+	first := &halfEdges[0]
+	halfEdges[0].Prev = last
+	halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
+	halfEdges[len(halfEdges)-1].Next = first
 
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
 	var next *DCELHalfEdge
@@ -1286,9 +1296,11 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 			Next:   prev,
 		})
 		twin := &halfEdges[len(halfEdges)-1]
+		twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
 		if next != nil {
 			next.Prev = twin
-		}``
+			twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, next)
+		}
 		twin.Twin = &halfEdges[i]
 		halfEdges[i].Twin = twin
 		next = twin
