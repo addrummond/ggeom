@@ -1288,7 +1288,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 		twin := &halfEdges[len(halfEdges)-1]
 		if next != nil {
 			next.Prev = twin
-		}
+		}``
 		twin.Twin = &halfEdges[i]
 		halfEdges[i].Twin = twin
 		next = twin
@@ -1305,9 +1305,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) []DCELHalfEdge {
 	return halfEdges
 }
 
-//func tarjan(start *DCELHalfEdge) {
-//	[]
-//}
+func tarjan(start *DCELHalfEdge) []*DCELHalfEdge {
+
+}
 
 /*func DCELFromSegmentLoop(points []Vec2) DCEL {
 	itns := SegmentLoopIntersections(points)
