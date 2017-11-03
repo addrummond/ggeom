@@ -1166,16 +1166,14 @@ func (is IntersectionWithByXy) Less(i, j int) bool {
 	if c != 0 {
 		if is.xd <= 0 {
 			return c < 0
-		} else {
-			return c > 0
 		}
+		return c > 0
 	} else {
 		c := is.is[i].p.y.Cmp(&is.is[j].p.y)
 		if is.yd <= 0 {
 			return c < 0
-		} else {
-			return c > 0
 		}
+		return c > 0
 	}
 }
 
@@ -1189,9 +1187,7 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 }
 
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward int) {
-	halfEdges = make([]DCELHalfEdge, 0, len(points))
 	itnVertices := make(map[Intersection]*DCELVertex)
-
 	itns, _ := SegmentLoopIntersections(points)
 
 	itnWith := make(map[int][]IntersectionWith)
@@ -1208,8 +1204,13 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 		}
 	}
 
+	// In the worst case, each intersection splits two segments in two, and thus increases
+	// the number of segments by three. We also have two half edges for every edge.
+	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
+	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
+
 	var prev *DCELHalfEdge
-	for segi, _ := range points {
+	for segi := range points {
 		p1 := &points[segi]
 		p2 := &points[(segi+1)%len(points)]
 
@@ -1221,6 +1222,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 				Prev:    prev,
 				Next:    nil,
 			})
+			if len(halfEdges) > maxNHalfEdges {
+				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
+			}
 			he := &halfEdges[len(halfEdges)-1]
 			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
 			if prev != nil {
@@ -1255,6 +1259,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 						Forward: true,
 						Origin:  itnVert,
 					})
+				if len(halfEdges) > maxNHalfEdges {
+					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
+				}
 
 				he1 := &halfEdges[len(halfEdges)-2]
 				he2 := &halfEdges[len(halfEdges)-1]
@@ -1288,6 +1295,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	first := &halfEdges[0]
 	halfEdges[0].Prev = last
 	halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
+	if len(halfEdges) > maxNHalfEdges {
+		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
+	}
 	halfEdges[len(halfEdges)-1].Next = first
 
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
@@ -1296,16 +1306,23 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 		halfEdges = append(halfEdges, DCELHalfEdge{
 			Forward: false,
 			Origin:  halfEdges[i].Next.Origin,
-			Next:    prev,
+			Next:    next,
 		})
+		if len(halfEdges) > maxNHalfEdges {
+			panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [4]")
+		}
+
 		twin := &halfEdges[len(halfEdges)-1]
+		twin.Twin = &halfEdges[i]
+		halfEdges[i].Twin = twin
+
 		twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
+
 		if next != nil {
 			next.Prev = twin
 			twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, next)
 		}
-		twin.Twin = &halfEdges[i]
-		halfEdges[i].Twin = twin
+
 		next = twin
 	}
 
@@ -1318,6 +1335,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	first = &halfEdges[lastForwardHalfEdgeIndex+1]
 	halfEdges[lastForwardHalfEdgeIndex+1].Next = last
 	halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges = append(halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges, last)
+	if len(halfEdges) > maxNHalfEdges {
+		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [5]")
+	}
 	halfEdges[len(halfEdges)-1].Prev = first
 
 	return halfEdges, nForward
@@ -1326,7 +1346,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 func sortVerts(halfEdges []DCELHalfEdge, nForward int) []*DCELVertex {
 	marks := make(map[*DCELVertex]bool)
 	tempMarks := make(map[*DCELVertex]bool)
-	r := make([]*DCELVertex, 0, 2)
+	r := make([]*DCELVertex, 0, len(halfEdges))
 
 	for {
 		i := 0
@@ -1340,25 +1360,37 @@ func sortVerts(halfEdges []DCELHalfEdge, nForward int) []*DCELVertex {
 		if !foundUnmarked {
 			return r
 		}
-		visit(r, halfEdges[i].Origin, marks, tempMarks)
+		rr, stop := visit(r, halfEdges[i].Origin, marks, tempMarks)
+		r = rr
+		if stop {
+			break
+		}
 	}
+
+	return r
 }
 
-func visit(r []*DCELVertex, node *DCELVertex, marks map[*DCELVertex]bool, tempMarks map[*DCELVertex]bool) {
+func visit(r []*DCELVertex, node *DCELVertex, marks map[*DCELVertex]bool, tempMarks map[*DCELVertex]bool) (verts []*DCELVertex, stop bool) {
 	if tempMarks[node] {
-		return
+		return r, true
 	}
-	if !marks[node] {
+	if !tempMarks[node] && !marks[node] {
 		tempMarks[node] = true
-		for _, node2 := range node.IncidentEdges {
-			if node2.Origin == node {
-				visit(r, node2.Twin.Origin, marks, tempMarks)
+		for _, edge := range node.IncidentEdges {
+			r = append(r, node)
+			if edge.Forward && edge.Origin == node {
+				rr, stop := visit(r, edge.Twin.Origin, marks, tempMarks)
+				r = rr
+				if stop {
+					return r, true
+				}
 			}
 			marks[node] = true
 			delete(tempMarks, node)
-			r = append(r, node)
 		}
 	}
+
+	return r, false
 }
 
 func cycles(sorted []*DCELVertex) [][]*DCELVertex {
@@ -1368,15 +1400,15 @@ func cycles(sorted []*DCELVertex) [][]*DCELVertex {
 		return [][]*DCELVertex{}
 	}
 
-	currentCycle := []*DCELVertex{sorted[0]}
+	currentCycle := []*DCELVertex{}
 outer:
-	for i := 1; i < len(sorted); i++ {
+	for i := 0; i < len(sorted); i++ {
 		for _, he := range sorted[i].IncidentEdges {
-			if !he.Forward {
+			if !he.Forward { // forward edges will always be at beginning
 				break
 			}
 
-			if he.Twin.Origin == currentCycle[0] {
+			if len(currentCycle) > 0 && he.Twin.Origin == currentCycle[0] {
 				currentCycle = append(currentCycle, sorted[i])
 				cs = append(cs, currentCycle)
 				currentCycle = []*DCELVertex{}
@@ -1393,55 +1425,3 @@ func GetDECLCycles(halfEdges []DCELHalfEdge, nForward int) [][]*DCELVertex {
 	sorted := sortVerts(halfEdges, nForward)
 	return cycles(sorted)
 }
-
-/*func DCELFromSegmentLoop(points []Vec2) DCEL {
-	itns := SegmentLoopIntersections(points)
-
-	itnWith := make(map[int][]int)
-	for k := range itns {
-		if itnWith[k.seg1] == nil {
-			itnWith[k.seg1] = []int{k.seg2}
-		} else {
-			itnWith[k.seg1] = append(itnWith[k.seg1], k.seg2)
-		}
-		if itnWith[k.seg2] == nil {
-			itnWith[k.seg2] = []int{k.seg1}
-		} else {
-			itnWith[k.seg2] = append(itnWith[k.seg2], k.seg1)
-		}
-	}
-
-	faces := make([]DCELFace, 0)
-
-	type trace struct {
-		startSeg int
-		face     *DCELFace
-	}
-
-	traces := make([]trace, 0)
-	startFace := DCELFace{make([]*Vec2, 0)}
-	currentTrace := trace{0, &startFace}
-
-	for {
-		first := true
-		for i := currentTrace.startSeg; i < len(points) && (!first || i != currentTrace.startSeg); i, first = (i+1)%len(points), false {
-			ss := itnWith[i]
-			if ss == nil {
-				currentTrace.face.Vertices = append(currentTrace.face.Vertices, &points[i])
-			} else {
-				for _, s := range ss {
-					newVerts := []*Vec2{itns[intersection(s, i)]}
-					newFace := DCELFace{newVerts}
-					traces = append(traces, trace{(s + 1) % len(points), &newFace})
-				}
-			}
-		}
-
-		if
-
-		if len(traces) == 0 {
-			break
-		}
-		currentTrace, traces = traces[0], traces[1:]
-	}
-}*/
