@@ -369,7 +369,7 @@ func TestHalfEdgesFromSegmentLoop(t *testing.T) {
 	q := Polygon2{verts: exampleLoops[4]}
 	hedges, nForward := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 	fmt.Printf("HEDGES: [%v] %v\n", len(hedges), hedges)
-	cycles := Tarjan(hedges, nForward)
+	cycles := Tarjan(hedges[:nForward])
 	fmt.Printf("COMPONENTS: %v\n", cycles)
 }
 

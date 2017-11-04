@@ -1357,7 +1357,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 // Tarjan computes the set of strongly connected components for the set
 // of vertices consisting of the origin of each edge in the list of
 // edges with index < n.
-func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
+func Tarjan(edges []DCELHalfEdge) [][]*DCELVertex {
 	components := [][]*DCELVertex{}
 
 	indices := make([]int, len(edges), len(edges))
@@ -1409,11 +1409,7 @@ func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
 		}
 	}
 
-	for i, e := range edges {
-		if i >= n {
-			break
-		}
-
+	for _, e := range edges {
 		v := e.Origin
 		if indices[v.Index] == 0 {
 			strongconnect(v)
