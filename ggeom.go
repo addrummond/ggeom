@@ -1343,85 +1343,73 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	return halfEdges, nForward
 }
 
-func sortVerts(halfEdges []DCELHalfEdge, nForward int) []*DCELVertex {
-	marks := make(map[*DCELVertex]bool)
-	tempMarks := make(map[*DCELVertex]bool)
-	r := make([]*DCELVertex, 0, len(halfEdges))
+// Tarjan computes the set of strongly connected components for the set
+// of vertices consisting of the origin of each edge in the list of
+// edges with index < n.
+func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
+	components := [][]*DCELVertex{}
 
-	for {
-		i := 0
-		foundUnmarked := false
-		for ; i < nForward; i++ {
-			if !marks[halfEdges[i].Origin] {
-				foundUnmarked = true
+	indices := make(map[*DCELVertex]int)
+	lowlinks := make(map[*DCELVertex]int)
+	onstack := make(map[*DCELVertex]bool)
+	s := make([]*DCELVertex, 0)
+	index := 0
+
+	var strongconnect func(*DCELVertex)
+	strongconnect = func(v *DCELVertex) {
+		indices[v] = index
+		lowlinks[v] = index
+		index++
+		s = append(s, v)
+		onstack[v] = true
+
+		for _, e := range v.IncidentEdges {
+			if !e.Forward {
 				break
 			}
-		}
-		if !foundUnmarked {
-			return r
-		}
-		rr, stop := visit(r, halfEdges[i].Origin, marks, tempMarks)
-		r = rr
-		if stop {
-			break
-		}
-	}
+			w := e.Twin.Origin
+			if w == v {
+				continue
+			}
 
-	return r
-}
-
-func visit(r []*DCELVertex, node *DCELVertex, marks map[*DCELVertex]bool, tempMarks map[*DCELVertex]bool) (verts []*DCELVertex, stop bool) {
-	if tempMarks[node] {
-		return r, true
-	}
-	if !tempMarks[node] && !marks[node] {
-		tempMarks[node] = true
-		for _, edge := range node.IncidentEdges {
-			r = append(r, node)
-			if edge.Forward && edge.Origin == node {
-				rr, stop := visit(r, edge.Twin.Origin, marks, tempMarks)
-				r = rr
-				if stop {
-					return r, true
+			_, wiOk := indices[w]
+			if !wiOk {
+				strongconnect(w)
+				if lowlinks[w] < lowlinks[v] {
+					lowlinks[v] = lowlinks[w]
+				}
+			} else if onstack[w] {
+				if indices[w] < lowlinks[v] {
+					lowlinks[v] = indices[w]
 				}
 			}
-			marks[node] = true
-			delete(tempMarks, node)
+		}
+
+		if lowlinks[v] == indices[v] {
+			components = append(components, []*DCELVertex{})
+			for {
+				var w *DCELVertex
+				w, s = s[len(s)-1], s[:len(s)-1]
+				onstack[w] = false
+				components[len(components)-1] = append(components[len(components)-1], w)
+				if w == v {
+					break
+				}
+			}
+		}
+	}
+
+	for i, e := range edges {
+		if i >= n {
+			break
+		}
+
+		v := e.Origin
+		_, okVi := indices[v]
+		if !okVi {
+			strongconnect(v)
 		}
 	}
 
-	return r, false
-}
-
-func cycles(sorted []*DCELVertex) [][]*DCELVertex {
-	cs := make([][]*DCELVertex, 0)
-
-	if len(sorted) == 0 {
-		return [][]*DCELVertex{}
-	}
-
-	currentCycle := []*DCELVertex{}
-outer:
-	for i := 0; i < len(sorted); i++ {
-		for _, he := range sorted[i].IncidentEdges {
-			if !he.Forward { // forward edges will always be at beginning
-				break
-			}
-
-			if len(currentCycle) > 0 && he.Twin.Origin == currentCycle[0] {
-				currentCycle = append(currentCycle, sorted[i])
-				cs = append(cs, currentCycle)
-				currentCycle = []*DCELVertex{}
-				continue outer
-			}
-		}
-		currentCycle = append(currentCycle, sorted[i])
-	}
-
-	return cs
-}
-
-func GetDECLCycles(halfEdges []DCELHalfEdge, nForward int) [][]*DCELVertex {
-	sorted := sortVerts(halfEdges, nForward)
-	return cycles(sorted)
+	return components
 }
