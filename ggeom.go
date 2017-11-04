@@ -1192,7 +1192,7 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 	return pxd == qxd && pyd == qyd
 }
 
-func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward int) {
+func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices []DCELVertex) {
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
@@ -1214,6 +1214,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	// the number of segments by three. We also have two half edges for every edge.
 	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
 	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
+	vertices = make([]DCELVertex, 0, maxNHalfEdges)
 
 	vertIndex := 0
 
@@ -1224,9 +1225,13 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 
 		itns := itnWith[segi]
 		if len(itns) == 0 {
+			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
+			if len(vertices) > maxNHalfEdges {
+				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
+			}
 			halfEdges = append(halfEdges, DCELHalfEdge{
 				Forward: true,
-				Origin:  &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex},
+				Origin:  &vertices[len(vertices)-1],
 				Prev:    prev,
 				Next:    nil,
 			})
@@ -1250,17 +1255,25 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
-					itnVert = &DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex}
+					vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
+					if len(vertices) > maxNHalfEdges {
+						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
+					}
+					itnVert = &vertices[len(vertices)-1]
 					vertIndex++
 					itnVertices[itnS] = itnVert
 				}
 
+				vertices = append(vertices, DCELVertex{startP, make([]*DCELHalfEdge, 0, 2), vertIndex})
+				if len(vertices) > maxNHalfEdges {
+					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
+				}
 				halfEdges = append(halfEdges,
 					// The forward half edge for the subpart of the current segment going up
 					// to the intersection.
 					DCELHalfEdge{
 						Forward: true,
-						Origin:  &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2), vertIndex},
+						Origin:  &vertices[len(vertices)-1],
 						Prev:    prev,
 					},
 					// The forward half edge for the subpart of the current segment from the current
@@ -1298,8 +1311,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	if len(halfEdges) < 2 {
 		panic("Fewer half edges than expected in 'HalfEdgesFromSegmentLoop'")
 	}
-
-	nForward = len(halfEdges)
 
 	// Tie the knot.
 	last := &halfEdges[len(halfEdges)-1]
@@ -1351,18 +1362,18 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	}
 	halfEdges[len(halfEdges)-1].Prev = first
 
-	return halfEdges, nForward
+	return halfEdges, vertices
 }
 
 // Tarjan computes the set of strongly connected components for the set
 // of vertices consisting of the origin of each edge in the list of
 // edges with index < n.
-func Tarjan(edges []DCELHalfEdge) [][]*DCELVertex {
+func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 	components := [][]*DCELVertex{}
 
-	indices := make([]int, len(edges), len(edges))
-	lowlinks := make([]int, len(edges), len(edges))
-	onstack := make([]bool, len(edges), len(edges))
+	indices := make([]int, len(vertices), len(vertices))
+	lowlinks := make([]int, len(vertices), len(vertices))
+	onstack := make([]bool, len(vertices), len(vertices))
 	s := make([]*DCELVertex, 0)
 	index := 1
 
