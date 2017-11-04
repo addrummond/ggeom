@@ -1137,6 +1137,12 @@ type DCELHalfEdge struct {
 type DCELVertex struct {
 	P             *Vec2
 	IncidentEdges []*DCELHalfEdge
+	// Vertices in a given graph are numbered consecutively (in an arbitrary
+	// order). This is convenient for tagging vertices
+	// with various properties when implementing certain algorithms,
+	// since it makes it possible to use array indexation rather than
+	// a hashtable lookup.
+	Index int
 }
 
 // DCELFace represents a face within a doubly connected edge list.
@@ -1209,6 +1215,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
 	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
 
+	vertIndex := 0
+
 	var prev *DCELHalfEdge
 	for segi := range points {
 		p1 := &points[segi]
@@ -1218,13 +1226,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 		if len(itns) == 0 {
 			halfEdges = append(halfEdges, DCELHalfEdge{
 				Forward: true,
-				Origin:  &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2)},
+				Origin:  &DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex},
 				Prev:    prev,
 				Next:    nil,
 			})
 			if len(halfEdges) > maxNHalfEdges {
 				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 			}
+			vertIndex++
 			he := &halfEdges[len(halfEdges)-1]
 			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
 			if prev != nil {
@@ -1241,7 +1250,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
-					itnVert = &DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2)}
+					itnVert = &DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex}
+					vertIndex++
 					itnVertices[itnS] = itnVert
 				}
 
@@ -1250,7 +1260,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 					// to the intersection.
 					DCELHalfEdge{
 						Forward: true,
-						Origin:  &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2)},
+						Origin:  &DCELVertex{startP, make([]*DCELHalfEdge, 0, 2), vertIndex},
 						Prev:    prev,
 					},
 					// The forward half edge for the subpart of the current segment from the current
@@ -1262,6 +1272,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 				if len(halfEdges) > maxNHalfEdges {
 					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
 				}
+				vertIndex++
 
 				he1 := &halfEdges[len(halfEdges)-2]
 				he2 := &halfEdges[len(halfEdges)-1]
@@ -1349,19 +1360,19 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, nForward
 func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
 	components := [][]*DCELVertex{}
 
-	indices := make(map[*DCELVertex]int)
-	lowlinks := make(map[*DCELVertex]int)
-	onstack := make(map[*DCELVertex]bool)
+	indices := make([]int, len(edges), len(edges))
+	lowlinks := make([]int, len(edges), len(edges))
+	onstack := make([]bool, len(edges), len(edges))
 	s := make([]*DCELVertex, 0)
-	index := 0
+	index := 1
 
 	var strongconnect func(*DCELVertex)
 	strongconnect = func(v *DCELVertex) {
-		indices[v] = index
-		lowlinks[v] = index
+		indices[v.Index] = index
+		lowlinks[v.Index] = index
 		index++
 		s = append(s, v)
-		onstack[v] = true
+		onstack[v.Index] = true
 
 		for _, e := range v.IncidentEdges {
 			if !e.Forward {
@@ -1372,25 +1383,24 @@ func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
 				continue
 			}
 
-			_, wiOk := indices[w]
-			if !wiOk {
+			if indices[w.Index] == 0 {
 				strongconnect(w)
-				if lowlinks[w] < lowlinks[v] {
-					lowlinks[v] = lowlinks[w]
+				if lowlinks[w.Index] < lowlinks[v.Index] {
+					lowlinks[v.Index] = lowlinks[w.Index]
 				}
-			} else if onstack[w] {
-				if indices[w] < lowlinks[v] {
-					lowlinks[v] = indices[w]
+			} else if onstack[w.Index] {
+				if indices[w.Index] < lowlinks[v.Index] {
+					lowlinks[v.Index] = indices[w.Index]
 				}
 			}
 		}
 
-		if lowlinks[v] == indices[v] {
+		if lowlinks[v.Index] == indices[v.Index] {
 			components = append(components, []*DCELVertex{})
 			for {
 				var w *DCELVertex
 				w, s = s[len(s)-1], s[:len(s)-1]
-				onstack[w] = false
+				onstack[w.Index] = false
 				components[len(components)-1] = append(components[len(components)-1], w)
 				if w == v {
 					break
@@ -1405,8 +1415,7 @@ func Tarjan(edges []DCELHalfEdge, n int) [][]*DCELVertex {
 		}
 
 		v := e.Origin
-		_, okVi := indices[v]
-		if !okVi {
+		if indices[v.Index] == 0 {
 			strongconnect(v)
 		}
 	}
