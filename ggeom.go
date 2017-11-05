@@ -1192,6 +1192,15 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 	return pxd == qxd && pyd == qyd
 }
 
+func checkVertDuplicates(verts []DCELVertex, callsite int) {
+	fmt.Printf("Added [%v] (%v, %v)\n", callsite, verts[len(verts)-1].P.ApproxX(), verts[len(verts)-1].P.ApproxY())
+	for i := 0; i < len(verts)-2; i++ {
+		if verts[i].P.Eq(verts[len(verts)-1].P) {
+			panic("Duplicate added!")
+		}
+	}
+}
+
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices []DCELVertex) {
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
@@ -1226,6 +1235,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		itns := itnWith[segi]
 		if len(itns) == 0 {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
+			checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
 				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 			}
@@ -1250,30 +1260,34 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			// Sort the intersections by the position on the current segment.
 			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
-			startP := p1
+			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
+			checkVertDuplicates(vertices, 3)
+			if len(vertices) > maxNHalfEdges {
+				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
+			}
+			vertIndex++
+			startVert := &vertices[len(vertices)-1]
+
 			for _, itn := range itns {
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
 					vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
+					checkVertDuplicates(vertices, 2)
 					if len(vertices) > maxNHalfEdges {
-						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
+						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
 					}
 					itnVert = &vertices[len(vertices)-1]
 					vertIndex++
 					itnVertices[itnS] = itnVert
 				}
 
-				vertices = append(vertices, DCELVertex{startP, make([]*DCELHalfEdge, 0, 2), vertIndex})
-				if len(vertices) > maxNHalfEdges {
-					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
-				}
 				halfEdges = append(halfEdges,
 					// The forward half edge for the subpart of the current segment going up
 					// to the intersection.
 					DCELHalfEdge{
 						Forward: true,
-						Origin:  &vertices[len(vertices)-1],
+						Origin:  startVert,
 						Prev:    prev,
 					},
 					// The forward half edge for the subpart of the current segment from the current
@@ -1285,7 +1299,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				if len(halfEdges) > maxNHalfEdges {
 					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
 				}
-				vertIndex++
 
 				he1 := &halfEdges[len(halfEdges)-2]
 				he2 := &halfEdges[len(halfEdges)-1]
@@ -1302,7 +1315,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				he1.Next = he2
 				he2.Prev = he1
 
-				startP = itn.p
+				startVert = itnVert
 				prev = he2
 			}
 		}
