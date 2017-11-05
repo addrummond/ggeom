@@ -1365,10 +1365,11 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-// Tarjan computes the set of strongly connected components for the set
-// of vertices consisting of the origin of each edge in the list of
-// edges with index < n.
+// Tarjan computes the set of strongly connected components for the given set
+// of vertices. Edges to vertices outside the set are ignored.
 func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
+	v1i := vertices[0].Index
+
 	components := [][]*DCELVertex{}
 
 	indices := make([]int, len(vertices), len(vertices))
@@ -1379,39 +1380,39 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 
 	var strongconnect func(*DCELVertex)
 	strongconnect = func(v *DCELVertex) {
-		indices[v.Index] = index
-		lowlinks[v.Index] = index
+		indices[v.Index-v1i] = index
+		lowlinks[v.Index-v1i] = index
 		index++
 		s = append(s, v)
-		onstack[v.Index] = true
+		onstack[v.Index-v1i] = true
 
 		for _, e := range v.IncidentEdges {
 			if !e.Forward {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v {
+			if w == v || w.Index < v1i || w.Index+v1i > len(vertices) {
 				continue
 			}
 
-			if indices[w.Index] == 0 {
+			if indices[w.Index-v1i] == 0 {
 				strongconnect(w)
-				if lowlinks[w.Index] < lowlinks[v.Index] {
-					lowlinks[v.Index] = lowlinks[w.Index]
+				if lowlinks[w.Index-v1i] < lowlinks[v.Index-v1i] {
+					lowlinks[v.Index-v1i] = lowlinks[w.Index-v1i]
 				}
-			} else if onstack[w.Index] {
-				if indices[w.Index] < lowlinks[v.Index] {
-					lowlinks[v.Index] = indices[w.Index]
+			} else if onstack[w.Index-v1i] {
+				if indices[w.Index-v1i] < lowlinks[v.Index-v1i] {
+					lowlinks[v.Index-v1i] = indices[w.Index-v1i]
 				}
 			}
 		}
 
-		if lowlinks[v.Index] == indices[v.Index] {
+		if lowlinks[v.Index-v1i] == indices[v.Index-v1i] {
 			components = append(components, []*DCELVertex{})
 			for {
 				var w *DCELVertex
 				w, s = s[len(s)-1], s[:len(s)-1]
-				onstack[w.Index] = false
+				onstack[w.Index-v1i] = false
 				components[len(components)-1] = append(components[len(components)-1], w)
 				if w == v {
 					break
@@ -1421,7 +1422,7 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 	}
 
 	for i, v := range vertices {
-		if indices[v.Index] == 0 {
+		if indices[v.Index-v1i] == 0 {
 			strongconnect(&vertices[i])
 		}
 	}
@@ -1429,10 +1430,14 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 	return components
 }
 
-func ElementaryCycles(vertices []DCELVertex) [][]*DCELVertex {
+func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
+	if vertices[0].Index != 0 {
+		panic("TODO")
+	}
+
 	circuits := make([][]*DCELVertex, 0)
 	blocked := make([]bool, len(vertices), len(vertices))
-	b := make([][]int, 0)
+	b := make([][]int, len(vertices), len(vertices))
 	stack := make([]int, 0)
 
 	var s int
