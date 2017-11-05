@@ -1437,19 +1437,19 @@ func ElementaryCycles(vertices []DCELVertex) [][]*DCELVertex {
 
 	var s int
 
+	var unblock func(u int)
+	unblock = func(u int) {
+		blocked[u] = false
+		for _, w := range b[u] {
+			if blocked[w] {
+				unblock(w)
+			}
+		}
+		b[u] = []int{}
+	}
+
 	var circuit func(v int) bool
 	circuit = func(v int) bool {
-		var unblock func(u int)
-		unblock = func(u int) {
-			blocked[u] = false
-			for _, w := range b[u] {
-				if blocked[w] {
-					unblock(w)
-				}
-			}
-			b[u] = []int{}
-		}
-
 		f := false
 		stack = append(stack, v)
 		blocked[v] = true
