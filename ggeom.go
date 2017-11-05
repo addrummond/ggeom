@@ -1405,7 +1405,7 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v || w.Index < v1i || w.Index+v1i > len(vertices) {
+			if w == v || w.Index < v1i || w.Index-v1i > len(vertices) {
 				continue
 			}
 
