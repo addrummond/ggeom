@@ -1420,12 +1420,129 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 		}
 	}
 
-	for _, e := range edges {
-		v := e.Origin
+	for i, v := range vertices {
 		if indices[v.Index] == 0 {
-			strongconnect(v)
+			strongconnect(&vertices[i])
 		}
 	}
 
 	return components
+}
+
+func ElementaryCycles(vertices []DCELVertex) [][]*DCELVertex {
+	circuits := make([][]*DCELVertex, 0)
+	blocked := make([]bool, len(vertices), len(vertices))
+	b := make([][]int, 0)
+	stack := make([]int, 0)
+
+	var s int
+
+	var circuit func(v int) bool
+	circuit = func(v int) bool {
+		var unblock func(u int)
+		unblock = func(u int) {
+			blocked[u] = false
+			for _, w := range b[u] {
+				if blocked[w] {
+					unblock(w)
+				}
+			}
+			b[u] = []int{}
+		}
+
+		f := false
+		stack = append(stack, v)
+		blocked[v] = true
+
+		for _, e := range vertices[v].IncidentEdges {
+			if !e.Forward {
+				break
+			}
+			w := e.Twin.Origin.Index
+			if w == v {
+				continue
+			}
+
+			if w == s {
+				c := make([]*DCELVertex, len(stack)+1, len(stack)+1)
+				for i, vi := range stack {
+					c[i] = &vertices[vi]
+				}
+				c[len(c)-1] = &vertices[s]
+				circuits = append(circuits, c)
+			} else if !blocked[w] && circuit(w) {
+				f = true
+			}
+		}
+		if f {
+			unblock(v)
+		} else {
+			for _, e := range vertices[v].IncidentEdges {
+				if !e.Forward {
+					break
+				}
+				w := e.Twin.Origin.Index
+				if w == v {
+					continue
+				}
+
+				found := false
+				for _, vv := range b[w] {
+					if v == vv {
+						found = true
+						break
+					}
+				}
+				if !found {
+					b[w] = append(b[w], v)
+				}
+			}
+		}
+
+		stack = stack[:len(stack)-1]
+		return f
+	}
+
+	for s = 0; s < len(vertices); {
+		scs := Tarjan(vertices[s:])
+		empty := true
+		if len(scs) > 0 {
+			for _, sc := range scs {
+				if len(sc) != 0 {
+					empty = false
+					break
+				}
+			}
+		}
+
+		if !empty {
+			least := len(vertices)
+			leastSci := -1
+			leastV := -1
+			for i, sc := range scs {
+				for _, vert := range sc {
+					if vert.Index < least {
+						leastSci = i
+						leastV = vert.Index
+						least = vert.Index
+					}
+				}
+			}
+			if leastSci == -1 {
+				panic("Bad value for 'leastSci' in 'ElementaryCycles'")
+			}
+
+			s = leastV
+			for _, v := range scs[leastSci] {
+				blocked[v.Index] = false
+				b[v.Index] = []int{}
+			}
+			circuit(s)
+			s++
+		} else {
+			break
+		}
+	}
+
+	return circuits
 }
