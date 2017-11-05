@@ -364,33 +364,36 @@ var exampleLoops = SofSofVec2([][][]float64{
 	{{0, 0}, {0.4, 0}, {4.4, 0}, {4.9, 1.75}, {4.95, 1.925}, {4.6, 1.85}, {4.6, 1.95}, {1.1, 1.2}, {1.2, 1.3}, {1.3, 1.3}, {1.4, 1.2}, {1.5, 1.3}, {1.5, 2.3}, {1.3, 2.4}, {1, 2.4}, {1, 2}, {1.4, 2}, {2.4, 3}, {2.45, 3.175}, {2.1, 3.1}, {2.1, 3.2}, {3.1, 3.2}, {3.2, 3.3}, {4.2, 2.3}, {4.3, 2.3}, {4.4, 2.2}, {4.5, 2.3}, {5.5, 3.3}, {5.3, 3.4}, {3.3, 4.4}, {3, 4.4}, {0, 4.4}, {0, 4}, {0, 0}, {1, 1.4}, {1, 1}, {1.4, 1}, {1.45, 1.175}, {1.45, 2.175}, {1.1, 2.1}, {2.1, 3.1}, {3.1, 3.1}, {3.1, 3.2}, {4.1, 2.2}, {4.2, 2.3}, {5.2, 3.3}, {3.2, 4.3}, {0.2, 4.3}, {0.2, 0.3}, {0.3, 0.3}, {0.4, 0.2}, {4.4, 0.2}, {4.5, 0.3}, {5, 2.05}, {4.8, 2.15}, {4.5, 2.15}, {1, 1.4}, {1.1, 1.1}, {1.1, 1.2}, {1.1, 2.2}, {1.2, 2.3}, {1.3, 2.3}, {1.4, 2.2}, {1.5, 2.3}, {2.5, 3.3}, {2.3, 3.4}, {2, 3.4}, {2, 3}, {2.4, 3}, {3.4, 3}, {3.45, 3.175}, {3.1, 3.1}, {4.1, 2.1}, {5.1, 3.1}, {5.1, 3.2}, {3.1, 4.2}, {0.1, 4.2}, {0.1, 0.2}, {4.1, 0.2}, {4.2, 0.3}, {4.7, 2.05}, {1.2, 1.3}, {1.2, 2.3}, {2.2, 3.3}, {2.3, 3.3}, {2.4, 3.2}, {3.4, 3.2}, {3.5, 3.3}, {3.3, 3.4}, {3, 3.4}, {3, 3}, {4, 2}, {4.4, 2}, {5.4, 3}, {5.45, 3.175}, {3.45, 4.175}, {0.45, 4.175}, {0.1, 4.1}, {0.1, 0.1}, {4.1, 0.1}, {4.6, 1.85}},
 })
 
-func TestHalfEdgesFromSegmentLoop(t *testing.T) {
-	p := Polygon2{verts: exampleLoops[6]}
-	q := Polygon2{verts: exampleLoops[7]}
-	hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
-	fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
-	components := Tarjan(vertices)
-	fmt.Printf("Components: %v\n", components)
-	circuits := ElementaryCircuits(vertices)
-	fmt.Printf("Circuits: %v\n", circuits)
-	for i, c := range circuits {
-		fmt.Printf("Circuit %v\n", i)
-		for _, v := range c {
-			fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
+func TestElementaryCircuits(t *testing.T) {
+	for i := 0; i < len(exampleLoops); i += 3 {
+		p := Polygon2{verts: exampleLoops[i]}
+		q := Polygon2{verts: exampleLoops[i+1]}
+		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
+		fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
+		components := Tarjan(vertices)
+		fmt.Printf("Components: %v\n", components)
+		circuits := ElementaryCircuits(vertices)
+		//fmt.Printf("Circuits: %v\n", circuits)
+		fmt.Printf("Circuits:\n")
+		for i, c := range circuits {
+			fmt.Printf("  Circuit %v\n", i)
+			for _, v := range c {
+				fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
+			}
 		}
-	}
 
-	svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestHalfEdgesFromSegmentLoop_figure.svg"))
-	strips := make([][]Vec2, 0)
-	for _, c := range circuits {
-		strip := make([]Vec2, 0)
-		for _, v := range c {
-			strip = append(strip, *(v.P.Copy()))
+		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_figure_%v.svg", i/3))
+		strips := make([][]Vec2, 0)
+		for _, c := range circuits {
+			strip := make([]Vec2, 0)
+			for _, v := range c {
+				strip = append(strip, *(v.P.Copy()))
+			}
+			strips = append(strips, strip)
 		}
-		strips = append(strips, strip)
+		canvas := svg.New(svgout)
+		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
 	}
-	canvas := svg.New(svgout)
-	debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
 }
 
 func TestConvolve(t *testing.T) {

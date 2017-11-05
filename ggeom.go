@@ -1192,6 +1192,7 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 	return pxd == qxd && pyd == qyd
 }
 
+// sometimes useful for debugging 'HalfEdgesFromSegmentLoop'
 func checkVertDuplicates(verts []DCELVertex, callsite int) {
 	fmt.Printf("Added [%v] (%v, %v)\n", callsite, verts[len(verts)-1].P.ApproxX(), verts[len(verts)-1].P.ApproxY())
 	for i := 0; i < len(verts)-2; i++ {
@@ -1235,7 +1236,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		itns := itnWith[segi]
 		if len(itns) == 0 {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-			checkVertDuplicates(vertices, 1)
+			//checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
 				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 			}
@@ -1261,7 +1262,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-			checkVertDuplicates(vertices, 3)
+			//checkVertDuplicates(vertices, 3)
 			if len(vertices) > maxNHalfEdges {
 				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
 			}
@@ -1273,7 +1274,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
 					vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
-					checkVertDuplicates(vertices, 2)
+					//checkVertDuplicates(vertices, 2)
 					if len(vertices) > maxNHalfEdges {
 						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
 					}
