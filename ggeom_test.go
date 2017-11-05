@@ -373,6 +373,24 @@ func TestHalfEdgesFromSegmentLoop(t *testing.T) {
 	fmt.Printf("COMPONENTS: %v\n", components)
 	circuits := ElementaryCircuits(vertices)
 	fmt.Printf("CIRCUITS: %v\n", circuits)
+	for i, c := range circuits {
+		fmt.Printf("Circuit %v\n", i)
+		for _, v := range c {
+			fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
+		}
+	}
+
+	svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestHalfEdgesFromSegmentLoop_figure.svg"))
+	strips := make([][]Vec2, 0)
+	for _, c := range circuits {
+		strip := make([]Vec2, 0)
+		for _, v := range c {
+			strip = append(strip, *(v.P.Copy()))
+		}
+		strips = append(strips, strip)
+	}
+	canvas := svg.New(svgout)
+	debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
 }
 
 func TestConvolve(t *testing.T) {
