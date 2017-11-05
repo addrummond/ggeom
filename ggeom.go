@@ -1446,7 +1446,7 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 
 func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	if vertices[0].Index != 0 {
-		panic("TODO")
+		panic("'ElementaryCircuits' assumes that the first vertex has index 0")
 	}
 
 	circuits := make([][]*DCELVertex, 0)

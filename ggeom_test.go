@@ -382,9 +382,9 @@ func TestElementaryCircuits(t *testing.T) {
 			}
 		}
 
-		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_figure_%v.svg", i/3))
+		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_components_figure_%v.svg", i/3))
 		strips := make([][]Vec2, 0)
-		for _, c := range circuits {
+		for _, c := range components {
 			strip := make([]Vec2, 0)
 			for _, v := range c {
 				strip = append(strip, *(v.P.Copy()))
@@ -392,6 +392,18 @@ func TestElementaryCircuits(t *testing.T) {
 			strips = append(strips, strip)
 		}
 		canvas := svg.New(svgout)
+		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
+
+		svgout, _ = os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
+		strips = make([][]Vec2, 0)
+		for _, c := range circuits {
+			strip := make([]Vec2, 0)
+			for _, v := range c {
+				strip = append(strip, *(v.P.Copy()))
+			}
+			strips = append(strips, strip)
+		}
+		canvas = svg.New(svgout)
 		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
 	}
 }
