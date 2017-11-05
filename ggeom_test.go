@@ -365,8 +365,8 @@ var exampleLoops = SofSofVec2([][][]float64{
 })
 
 func TestHalfEdgesFromSegmentLoop(t *testing.T) {
-	p := Polygon2{verts: exampleLoops[3]}
-	q := Polygon2{verts: exampleLoops[4]}
+	p := Polygon2{verts: exampleLoops[6]}
+	q := Polygon2{verts: exampleLoops[7]}
 	hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 	fmt.Printf("HEDGES: [%v] %v\n", len(hedges), hedges)
 	components := Tarjan(vertices)
