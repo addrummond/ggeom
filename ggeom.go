@@ -1222,7 +1222,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
 	// the number of segments by three. We also have two half edges for every edge.
-	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 3
+	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 3 // TODO FIGURE OUT PROPERLY
 	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
 	vertices = make([]DCELVertex, 0, maxNHalfEdges)
 
@@ -1239,28 +1239,42 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 		// Remove the first intersection if it's equal to p1, and the second if it's
 		// equal to p2.
+		var startVert *DCELVertex
 		if len(itns) > 0 && itns[0].p.Eq(p1) {
+			itnS := intersection(segi, itns[0].segi)
 			itns = itns[1:]
-		} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p1) {
+			if itnVertices[itnS] == nil {
+				vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
+				if len(vertices) > maxNHalfEdges {
+					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+				}
+				vertIndex++
+				startVert = &vertices[len(vertices)-1]
+			}
+		} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p2) {
 			itns = itns[:len(itns)-1]
 		}
 
-		if len(itns) == 0 {
+		if startVert == nil {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
 				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 			}
+			startVert = &vertices[len(vertices)-1]
+			vertIndex++
+		}
+
+		if len(itns) == 0 {
 			halfEdges = append(halfEdges, DCELHalfEdge{
 				Forward: true,
-				Origin:  &vertices[len(vertices)-1],
+				Origin:  startVert,
 				Prev:    prev,
 				Next:    nil,
 			})
 			if len(halfEdges) > maxNHalfEdges {
 				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 			}
-			vertIndex++
 			he := &halfEdges[len(halfEdges)-1]
 			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
 			if prev != nil {
@@ -1269,15 +1283,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			prev = he
 		} else {
-
-			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-			//checkVertDuplicates(vertices, 3)
-			if len(vertices) > maxNHalfEdges {
-				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
-			}
-			vertIndex++
-			startVert := &vertices[len(vertices)-1]
-
 			for _, itn := range itns {
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]

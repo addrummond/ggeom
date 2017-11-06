@@ -115,6 +115,18 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 	canvas.End()
 }
 
+func debugLinesToWkt(lines [][]*Vec2) string {
+	var o string
+	o += fmt.Sprintf("MULTILINESTRING(")
+	for i, l := range lines {
+		if i != 0 {
+			o += ","
+		}
+		o += fmt.Sprintf("(%v %v,%v %v)", l[0].ApproxX(), l[0].ApproxY(), l[1].ApproxX(), l[1].ApproxY())
+	}
+	return o
+}
+
 func TestIsBetweenAnticlockwise(t *testing.T) {
 	falseCases := SofSofVec2([][][]float64{
 		{{-1, 1}, {0, 1}, {1, 1}},
@@ -401,6 +413,17 @@ func TestElementaryCircuits(t *testing.T) {
 			}
 		}
 
+		hedgeLines := make([][]*Vec2, 0)
+		for _, h := range hedges {
+			if h.Forward {
+				hedgeLines = append(hedgeLines, []*Vec2{h.Origin.P, h.Twin.Origin.P})
+			}
+		}
+		wkt := debugLinesToWkt(hedgeLines)
+		wktF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_half_edges_%v.wkt", i/3))
+		wktF.WriteString(wkt)
+		wktF.Close()
+
 		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_components_figure_%v.svg", i/3))
 		strips := make([][]Vec2, 0)
 		for _, c := range components {
@@ -412,6 +435,7 @@ func TestElementaryCircuits(t *testing.T) {
 		}
 		canvas := svg.New(svgout)
 		debugDrawLineStrips(canvas, strips, lines)
+		svgout.Close()
 
 		svgout, _ = os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
 		strips = make([][]Vec2, 0)
@@ -424,6 +448,7 @@ func TestElementaryCircuits(t *testing.T) {
 		}
 		canvas = svg.New(svgout)
 		debugDrawLineStrips(canvas, strips, lines)
+		svgout.Close()
 	}
 }
 
