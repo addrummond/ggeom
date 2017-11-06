@@ -1261,6 +1261,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			// Sort the intersections by the position on the current segment.
 			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
+			// Remove the first intersection if it's equal to p1, and the second if it's
+			// equal to p2.
+			if itns[0].p.Eq(p1) {
+				itns = itns[1:]
+			} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p1) {
+				itns = itns[:len(itns)-1]
+			}
+
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 3)
 			if len(vertices) > maxNHalfEdges {
@@ -1269,16 +1277,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			vertIndex++
 			startVert := &vertices[len(vertices)-1]
 
-			for i, itn := range itns {
-				// Handle the case where p1 is on an intersection point.
-				if i == 0 && itn.p.Eq(startVert.P) {
-					itnS := intersection(segi, itn.segi)
-					if itnVertices[itnS] == nil {
-						itnVertices[itnS] = startVert
-					}
-					continue
-				}
-
+			for _, itn := range itns {
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
@@ -1292,38 +1291,37 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 					itnVertices[itnS] = itnVert
 				}
 
+				// The forward half edge for the subpart of the current segment going up to
+				// the intersection.
 				halfEdges = append(halfEdges,
-					// The forward half edge for the subpart of the current segment going up
-					// to the intersection.
 					DCELHalfEdge{
 						Forward: true,
-						Origin:  startVert,
-						Prev:    prev,
-					},
-					// The forward half edge for the subpart of the current segment from the current
-					// intersection to either the next intersection if any or to p2.
-					DCELHalfEdge{
-						Forward: true,
-						Origin:  itnVert,
+						Origin: startVert,
+						Prev: prev,
 					})
+				he1 := &halfEdges[len(halfEdges)-1]
+				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
+
+				// The forward half edge for the subpart of the current segment from
+				// the current intersection to the next intersection or p2.
+				halfEdges = append(halfEdges,
+					DCELHalfEdge{
+						Forward: true,
+						Origin: itnVert,
+					})
+				he2 := &halfEdges[len(halfEdges)-1]
+				he2.Origin.IncidentEdges = append(he2.Origin.IncidentEdges, he1, he2)
+				he2.Prev = he1
+				he1.Next = he2
+
 				if len(halfEdges) > maxNHalfEdges {
 					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
 				}
-
-				he1 := &halfEdges[len(halfEdges)-2]
-				he2 := &halfEdges[len(halfEdges)-1]
 
 				if prev != nil {
 					prev.Next = he1
 					he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, prev)
 				}
-
-				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
-				// note that he2.Origin is the intersection point
-				he2.Origin.IncidentEdges = append(he2.Origin.IncidentEdges, he1, he2)
-
-				he1.Next = he2
-				he2.Prev = he1
 
 				startVert = itnVert
 				prev = he2

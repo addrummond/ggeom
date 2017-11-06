@@ -382,6 +382,8 @@ var exampleLoops = SofSofVec2([][][]float64{
 })
 
 func TestElementaryCircuits(t *testing.T) {
+	lines := []string{"stroke: black; stroke-width: 12; fill: none", "stroke: red; fill: red; stroke-width: 10; fill: none", "stroke: green; fill: none; stroke-width: 8", "stroke: blue; fill: none; stroke-width: 6", "stroke: yellow; fill: none; stroke-width: 4", "stroke: purple; fill: none; stroke-width: 2", "stroke: orange; fill: none; stroke-width: 1"}
+
 	for i := 0; i < len(exampleLoops); i += 3 {
 		p := Polygon2{verts: exampleLoops[i]}
 		q := Polygon2{verts: exampleLoops[i+1]}
@@ -409,7 +411,7 @@ func TestElementaryCircuits(t *testing.T) {
 			strips = append(strips, strip)
 		}
 		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 8; fill: none", "stroke: red; fill: red; stroke-width: 6; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 2"})
+		debugDrawLineStrips(canvas, strips, lines)
 
 		svgout, _ = os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
 		strips = make([][]Vec2, 0)
@@ -421,7 +423,7 @@ func TestElementaryCircuits(t *testing.T) {
 			strips = append(strips, strip)
 		}
 		canvas = svg.New(svgout)
-		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 8; fill: none", "stroke: red; fill: red; stroke-width: 6; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 2"})
+		debugDrawLineStrips(canvas, strips, lines)
 	}
 }
 
