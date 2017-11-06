@@ -1234,6 +1234,17 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		p2 := &points[(segi+1)%len(points)]
 
 		itns := itnWith[segi]
+		// Sort the intersections by the position on the current segment.
+		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
+
+		// Remove the first intersection if it's equal to p1, and the second if it's
+		// equal to p2.
+		if len(itns) > 0 && itns[0].p.Eq(p1) {
+			itns = itns[1:]
+		} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p1) {
+			itns = itns[:len(itns)-1]
+		}
+
 		if len(itns) == 0 {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 1)
@@ -1258,16 +1269,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			prev = he
 		} else {
-			// Sort the intersections by the position on the current segment.
-			sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
-
-			// Remove the first intersection if it's equal to p1, and the second if it's
-			// equal to p2.
-			if itns[0].p.Eq(p1) {
-				itns = itns[1:]
-			} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p1) {
-				itns = itns[:len(itns)-1]
-			}
 
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 3)
@@ -1296,8 +1297,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				halfEdges = append(halfEdges,
 					DCELHalfEdge{
 						Forward: true,
-						Origin: startVert,
-						Prev: prev,
+						Origin:  startVert,
+						Prev:    prev,
 					})
 				he1 := &halfEdges[len(halfEdges)-1]
 				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
@@ -1307,7 +1308,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				halfEdges = append(halfEdges,
 					DCELHalfEdge{
 						Forward: true,
-						Origin: itnVert,
+						Origin:  itnVert,
 					})
 				he2 := &halfEdges[len(halfEdges)-1]
 				he2.Origin.IncidentEdges = append(he2.Origin.IncidentEdges, he1, he2)
