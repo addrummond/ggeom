@@ -203,6 +203,23 @@ func TestNondegenerateSegmentIntersection(t *testing.T) {
 	}
 }
 
+// Just checks some particular cases that were buggy at some point.
+func TestSegmentIntersection(t *testing.T) {
+	intersectingTests := SofSofVec2([][][]float64{
+		{{1, 1}, {4, 1}, {-1, -1}, {3, 1}, {3, 1}},
+	})
+
+	for i, tst := range intersectingTests {
+		intersects, p := SegmentIntersection(&tst[0], &tst[1], &tst[2], &tst[3])
+		if !intersects {
+			t.Errorf("Intersecting test %v: expected intersection, none found", i)
+		}
+		if !p.Eq(&tst[4]) {
+			t.Errorf("Intersecting test %v; incorrect intersection point computed", i)
+		}
+	}
+}
+
 func TestGetSegmentIntersectionInfo(t *testing.T) {
 	const NONE = -999
 	const NOT_UNIQUE = -9999
@@ -392,7 +409,7 @@ func TestElementaryCircuits(t *testing.T) {
 			strips = append(strips, strip)
 		}
 		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
+		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 8; fill: none", "stroke: red; fill: red; stroke-width: 6; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 2"})
 
 		svgout, _ = os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
 		strips = make([][]Vec2, 0)
@@ -404,7 +421,7 @@ func TestElementaryCircuits(t *testing.T) {
 			strips = append(strips, strip)
 		}
 		canvas = svg.New(svgout)
-		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 4; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 4"})
+		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 8; fill: none", "stroke: red; fill: red; stroke-width: 6; fill: none", "stroke: green; fill: none; stroke-width: 4", "stroke: blue; fill: none; stroke-width: 2"})
 	}
 }
 

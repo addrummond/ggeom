@@ -932,11 +932,11 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 	crosses := make(map[Intersection]bool)
 
 	addIntersection := func(theint Intersection, p *Vec2) {
-		s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
-		s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
-		if !p.Eq(s1a) && !p.Eq(s1b) && !p.Eq(s2a) && !p.Eq(s2b) {
-			intersections[theint] = p
-		}
+		//s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
+		//s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
+		//if !p.Eq(s1a) && !p.Eq(s1b) && !p.Eq(s2a) && !p.Eq(s2b) {
+		intersections[theint] = p
+		//}
 	}
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
@@ -1108,7 +1108,7 @@ func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Ve
 			qb := &points[(sj+1)%len(points)]
 			intersect, ip := SegmentIntersection(p, pb, q, qb)
 			checks++
-			if intersect && !ip.Eq(p) && !ip.Eq(pb) && !ip.Eq(q) && !ip.Eq(qb) {
+			if intersect {
 				intersections[intersection(si, sj)] = ip
 			}
 		}
@@ -1222,7 +1222,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
 	// the number of segments by three. We also have two half edges for every edge.
-	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
+	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 3
 	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
 	vertices = make([]DCELVertex, 0, maxNHalfEdges)
 
@@ -1269,7 +1269,16 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			vertIndex++
 			startVert := &vertices[len(vertices)-1]
 
-			for _, itn := range itns {
+			for i, itn := range itns {
+				// Handle the case where p1 is on an intersection point.
+				if i == 0 && itn.p.Eq(startVert.P) {
+					itnS := intersection(segi, itn.segi)
+					if itnVertices[itnS] == nil {
+						itnVertices[itnS] = startVert
+					}
+					continue
+				}
+
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
@@ -1278,8 +1287,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 					if len(vertices) > maxNHalfEdges {
 						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
 					}
-					itnVert = &vertices[len(vertices)-1]
 					vertIndex++
+					itnVert = &vertices[len(vertices)-1]
 					itnVertices[itnS] = itnVert
 				}
 
@@ -1518,12 +1527,21 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 			}
 		}
 
+		if stack[len(stack)-1] != v {
+			panic("Unexpected value on top of stack in 'ElementaryCircuits'")
+		}
 		stack = stack[:len(stack)-1]
 		return f
 	}
 
 	for s = 0; s < len(vertices); {
+		// TODO: Tarjan algo may need testing.
 		scs := Tarjan(vertices[s:])
+		//scs := [][]*DCELVertex{[]*DCELVertex{}}
+		//for i := s; i < len(vertices); i++ {
+		//	scs[0] = append(scs[0], &vertices[i])
+		//}
+
 		empty := true
 		if len(scs) > 0 {
 			for _, sc := range scs {
