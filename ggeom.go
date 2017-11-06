@@ -1206,17 +1206,22 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
+	// Excludes instances where the endpoint of a segment touches another segment.
 	itnWith := make(map[int][]IntersectionWith)
 	for k, p := range itns {
-		if itnWith[k.seg1] == nil {
-			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
-		} else {
-			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
+		if !p.Eq(&points[(k.seg1+1)%len(points)]) {
+			if itnWith[k.seg1] == nil {
+				itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
+			} else {
+				itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
+			}
 		}
-		if itnWith[k.seg2] == nil {
-			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
-		} else {
-			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
+		if !p.Eq(&points[(k.seg2+1)%len(points)]) {
+			if itnWith[k.seg2] == nil {
+				itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
+			} else {
+				itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
+			}
 		}
 	}
 
@@ -1243,7 +1248,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		if len(itns) > 0 && itns[0].p.Eq(p1) {
 			itnS := intersection(segi, itns[0].segi)
 			itns = itns[1:]
-			if itnVertices[itnS] == nil {
+			startVert = itnVertices[itnS]
+			if startVert == nil {
 				vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
@@ -1252,9 +1258,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				startVert = &vertices[len(vertices)-1]
 				itnVertices[itnS] = startVert
 			}
-		} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p2) {
-			itns = itns[:len(itns)-1]
-		}
+		} // else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p2) {
+		//	itns = itns[:len(itns)-1]
+		//}
 
 		if startVert == nil {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
