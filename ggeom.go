@@ -1250,6 +1250,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				}
 				vertIndex++
 				startVert = &vertices[len(vertices)-1]
+				itnVertices[itnS] = startVert
 			}
 		} else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p2) {
 			itns = itns[:len(itns)-1]
