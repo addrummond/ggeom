@@ -115,15 +115,100 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 	canvas.End()
 }
 
-func debugLinesToWkt(lines [][]*Vec2) string {
+func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int) string {
 	var o string
-	o += fmt.Sprintf("MULTILINESTRING(")
-	for i, l := range lines {
-		if i != 0 {
-			o += ","
+	w := float64(width)
+	h := float64(height)
+
+	var minx, maxx, miny, maxy = math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
+	followed := make(map[*DCELHalfEdge]bool)
+	var findBounds func(vert *DCELVertex)
+	findBounds = func(vert *DCELVertex) {
+		x := vert.P.ApproxX()
+		y := vert.P.ApproxY()
+
+		if x < minx {
+			minx = x
 		}
-		o += fmt.Sprintf("(%v %v,%v %v)", l[0].ApproxX(), l[0].ApproxY(), l[1].ApproxX(), l[1].ApproxY())
+		if x > maxx {
+			maxx = x
+		}
+		if y < miny {
+			miny = y
+		}
+		if y > maxy {
+			maxy = y
+		}
+
+		for _, edge := range vert.IncidentEdges {
+			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
+				followed[edge] = true
+				findBounds(edge.Twin.Origin)
+			}
+		}
 	}
+	findBounds(start)
+
+	maxx *= 1.1
+	minx *= 1.1
+	maxy *= 1.1
+	miny *= 1.1
+
+	tx := func(x float64) float64 {
+		return ((x - minx) / (maxx - minx)) * w
+	}
+	ty := func(y float64) float64 {
+		return ((y - miny) / (maxy - miny)) * h
+	}
+
+	var actions string
+	followed = make(map[*DCELHalfEdge]bool)
+
+	var traverse func(vert, from *DCELVertex)
+	traverse = func(vert, from *DCELVertex) {
+		if from != nil {
+			actions += fmt.Sprintf("actions.push(function () {\nctx.beginPath();\nctx.moveTo(%v,%v);\nctx.lineTo(%v,%v);\nctx.stroke();\n})\n", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
+		}
+		for _, edge := range vert.IncidentEdges {
+			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
+				followed[edge] = true
+				traverse(edge.Twin.Origin, vert)
+			}
+		}
+	}
+
+	traverse(start, nil)
+
+	cw := fmt.Sprintf("%v", w)
+	ch := fmt.Sprintf("%v", h)
+
+	o += `<html>
+		  <body>
+		  <canvas id='canvas' width='` + cw + `' height='` + ch + `'500'></canvas>
+		  <script>
+	          var canvas = document.getElementById('canvas');
+	          var ctx = canvas.getContext('2d');
+	          ctx.strokeStyle = '#000000';
+	          ctx.lineWidth = 4;
+	          var actions = [ ];` + "\n" + actions + `
+	          var i = 0;
+	          var id;
+	          id = setInterval(function () {
+	              if (i >= actions.length) {
+	                  clearInterval(id)
+	              } else {
+	                  if (i > 0) {
+						  ctx.strokeStyle = '#dddddd';
+						  actions[i-1]();
+					  }
+					  ctx.strokeStyle = '#000000';
+	                  actions[i++]();
+	              }
+	          }, 500);
+	      </script>
+	      </body>
+	      </html>`
+
 	return o
 }
 
@@ -413,7 +498,7 @@ func TestElementaryCircuits(t *testing.T) {
 			}
 		}
 
-		hedgeLines := make([][]*Vec2, 0)
+		/*hedgeLines := make([][]*Vec2, 0)
 		for _, h := range hedges {
 			if h.Forward {
 				hedgeLines = append(hedgeLines, []*Vec2{h.Origin.P, h.Twin.Origin.P})
@@ -422,7 +507,12 @@ func TestElementaryCircuits(t *testing.T) {
 		wkt := debugLinesToWkt(hedgeLines)
 		wktF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_half_edges_%v.wkt", i/3))
 		wktF.WriteString(wkt)
-		wktF.Close()
+		wktF.Close()*/
+
+		html := debugHalfEdgeGraphToHtmlAnimation(&vertices[0], 800, 800)
+		canvasF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_animate_half_edges_%v.html", i/3))
+		canvasF.WriteString(html)
+		canvasF.Close()
 
 		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_components_figure_%v.svg", i/3))
 		strips := make([][]Vec2, 0)

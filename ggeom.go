@@ -1242,8 +1242,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		// Sort the intersections by the position on the current segment.
 		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
-		// Remove the first intersection if it's equal to p1, and the second if it's
-		// equal to p2.
 		var startVert *DCELVertex
 		if len(itns) > 0 && itns[0].p.Eq(p1) {
 			itnS := intersection(segi, itns[0].segi)
@@ -1258,9 +1256,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				startVert = &vertices[len(vertices)-1]
 				itnVertices[itnS] = startVert
 			}
-		} // else if len(itns) > 0 && itns[len(itns)-1].p.Eq(p2) {
-		//	itns = itns[:len(itns)-1]
-		//}
+		}
 
 		if startVert == nil {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
