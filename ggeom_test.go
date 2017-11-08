@@ -158,16 +158,22 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 		return ((x - minx) / (maxx - minx)) * w
 	}
 	ty := func(y float64) float64 {
-		return ((y - miny) / (maxy - miny)) * h
+		return h - (((y - miny) / (maxy - miny)) * h)
 	}
 
-	var actions string
+	var coords string
+	var lines string
 	followed = make(map[*DCELHalfEdge]bool)
 
 	var traverse func(vert, from *DCELVertex)
 	traverse = func(vert, from *DCELVertex) {
 		if from != nil {
-			actions += fmt.Sprintf("actions.push(function () {\nctx.beginPath();\nctx.moveTo(%v,%v);\nctx.lineTo(%v,%v);\nctx.stroke();\n})\n", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
+			if len(lines) > 0 {
+				coords += ", "
+				lines += ", "
+			}
+			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
+			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
 		}
 		for _, edge := range vert.IncidentEdges {
 			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
@@ -183,31 +189,58 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 	ch := fmt.Sprintf("%v", h)
 
 	o += `<html>
-		  <body>
-		  <canvas id='canvas' width='` + cw + `' height='` + ch + `'500'></canvas>
-		  <script>
-	          var canvas = document.getElementById('canvas');
-	          var ctx = canvas.getContext('2d');
-	          ctx.strokeStyle = '#000000';
-	          ctx.lineWidth = 4;
-	          var actions = [ ];` + "\n" + actions + `
-	          var i = 0;
-	          var id;
-	          id = setInterval(function () {
-	              if (i >= actions.length) {
-	                  clearInterval(id)
-	              } else {
-	                  if (i > 0) {
-						  ctx.strokeStyle = '#dddddd';
-						  actions[i-1]();
-					  }
-					  ctx.strokeStyle = '#000000';
-	                  actions[i++]();
-	              }
-	          }, 500);
-	      </script>
-	      </body>
-	      </html>`
+<body>
+<p id='info' style='height: 1.5em'>
+</p>
+<canvas id='canvas' width='` + cw + `' height='` + ch + `'></canvas>
+<script>
+var info = document.getElementById('info');
+
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 4;
+var coords = [` + coords + `];
+var lines = [` + lines + `];
+var i = 0;
+
+function draw() {
+    for (var j = 0; j <= i; ++j) {
+        if (j != i)
+            ctx.strokeStyle = '#dddddd';
+        else
+            ctx.strokeStyle = '#000000';
+        ctx.beginPath()
+        ctx.moveTo(lines[j][0][0], lines[j][0][1]);
+        ctx.lineTo(lines[j][1][0], lines[j][1][1]);
+        ctx.stroke();
+    }
+    info.innerHTML = "";
+    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + ")."));
+}
+
+document.onkeydown = function (e) {
+    if (e.keyCode == 37) { // left
+        e.preventDefault();
+        if (i > 0) {
+            --i;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            draw();
+        }
+    } else if (e.keyCode == 39) { // right
+        e.preventDefault();
+        if (i < lines.length - 1) {
+            ++i;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            draw();
+        }
+    }
+}
+
+draw();
+</script>
+</body>
+</html>`
 
 	return o
 }
@@ -482,6 +515,8 @@ func TestElementaryCircuits(t *testing.T) {
 	lines := []string{"stroke: black; stroke-width: 12; fill: none", "stroke: red; fill: red; stroke-width: 10; fill: none", "stroke: green; fill: none; stroke-width: 8", "stroke: blue; fill: none; stroke-width: 6", "stroke: yellow; fill: none; stroke-width: 4", "stroke: purple; fill: none; stroke-width: 2", "stroke: orange; fill: none; stroke-width: 1"}
 
 	for i := 0; i < len(exampleLoops); i += 3 {
+		fmt.Printf("\nTest %v\n\n", i/3)
+
 		p := Polygon2{verts: exampleLoops[i]}
 		q := Polygon2{verts: exampleLoops[i+1]}
 		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
@@ -497,17 +532,6 @@ func TestElementaryCircuits(t *testing.T) {
 				fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
 			}
 		}
-
-		/*hedgeLines := make([][]*Vec2, 0)
-		for _, h := range hedges {
-			if h.Forward {
-				hedgeLines = append(hedgeLines, []*Vec2{h.Origin.P, h.Twin.Origin.P})
-			}
-		}
-		wkt := debugLinesToWkt(hedgeLines)
-		wktF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_half_edges_%v.wkt", i/3))
-		wktF.WriteString(wkt)
-		wktF.Close()*/
 
 		html := debugHalfEdgeGraphToHtmlAnimation(&vertices[0], 800, 800)
 		canvasF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_animate_half_edges_%v.html", i/3))
