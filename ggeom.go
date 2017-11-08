@@ -312,7 +312,7 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		// Unlike Wein's original pseudocode, the modified psuedocode seems to work!
 		//
 		// I'm still using Wein's algorithm for computing the additional convolution
-		// cycles required when both of the polygon's are non-convex.
+		// cycles required when both of the polygons are non-convex.
 
 		incp := IsBetweenAnticlockwise(&qjminus1TOqj, &piTOpiplus1, &qjTOqjplus1) && !labs[label{i, ip1, j, -1}]
 
