@@ -12,6 +12,8 @@ import (
 
 var _ = fmt.Printf
 
+const debug = true
+
 type Scalar = big.Rat
 
 type Vec2 struct {
@@ -276,6 +278,14 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 		panic("Internal error in 'getConvolutionCycle'")
 	}
 	cs = cs[:len(cs)-1]
+
+	if debug {
+		for i := 1; i < len(cs); i++ {
+			if cs[i].Eq(&cs[i-1]) {
+				panic("Two identical adjacent points in convolution cycle in 'getConvolutionCycle'")
+			}
+		}
+	}
 
 	return cs
 }
@@ -1256,9 +1266,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				startVert = &vertices[len(vertices)-1]
 				itnVertices[itnS] = startVert
 			}
-		}
-
-		if startVert == nil {
+		} else {
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
@@ -1267,6 +1275,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			startVert = &vertices[len(vertices)-1]
 			vertIndex++
 		}
+
+		// Remove any intersections with the origin point of this segment.
+		iti := 0
+		for ; iti < len(itns) && itns[iti].p.Eq(p1); iti++ {
+
+		}
+		itns = itns[iti:]
+		fmt.Printf("ITI: %v\n", iti)
 
 		if len(itns) == 0 {
 			halfEdges = append(halfEdges, DCELHalfEdge{
@@ -1283,10 +1299,20 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			if prev != nil {
 				prev.Next = he
 				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
+
+				if debug && prev.Origin.P.Eq(he.Origin.P) {
+					panic(fmt.Sprintf("Two identical adjacent points [0] in construction of half edges in 'HalfEdgesFromSegmentLoop': p1=(%v,%v), p2=(%v,%v)", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY()))
+				}
 			}
 			prev = he
 		} else {
-			for _, itn := range itns {
+			for i, itn := range itns {
+				_ = i
+
+				if segi == itn.segi {
+					panic("Unexpected equality of indices in 'HalfEdgesFromSegmentLoop'")
+				}
+
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
@@ -1330,6 +1356,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				if prev != nil {
 					prev.Next = he1
 					he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, prev)
+
+					if debug && prev.Origin.P.Eq(he1.Origin.P) {
+						panic(fmt.Sprintf("Two identical adjacent points [1] in construction of half edges in 'HalfEdgesFromSegmentLoop' (%v), p1=(%v,%v), p2=(%v,%v), itn=(%v,%v)", i, p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY(), itnVert.P.ApproxX(), itnVert.P.ApproxY()))
+					}
 				}
 
 				startVert = itnVert
