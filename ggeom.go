@@ -1258,6 +1258,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			itns = itns[1:]
 			startVert = itnVertices[itnS]
 			if startVert == nil {
+				fmt.Printf("New [0] for itn of %v,%v at (%v,%v)\n", segi, itns[0].segi, p1.ApproxX(), p2.ApproxY())
 				vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
@@ -1267,6 +1268,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				itnVertices[itnS] = startVert
 			}
 		} else {
+			fmt.Printf("New [1] at (%v,%v)\n", p1.ApproxX(), p2.ApproxY())
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
@@ -1274,6 +1276,38 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			startVert = &vertices[len(vertices)-1]
 			vertIndex++
+		}
+
+		for _, itn := range itns {
+			itnS := intersection(segi, itn.segi)
+			itnVert := itnVertices[itnS]
+			if itnVert == nil {
+				for _, itnw := range itnWith[segi] {
+					if itnw.p.Eq(itn.p) {
+						itnVert = itnVertices[intersection(segi, itnw.segi)]
+						break
+					}
+				}
+			}
+			if itnVert == nil {
+				for _, itnw := range itnWith[itn.segi] {
+					if itnw.p.Eq(itn.p) {
+						itnVert = itnVertices[intersection(segi, itnw.segi)]
+						break
+					}
+				}
+			}
+			if itnVert == nil {
+				fmt.Printf("New [2] for itn of %v,%v at (%v,%v)\n", segi, itn.segi, itn.p.ApproxX(), itn.p.ApproxY())
+				vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
+				if len(vertices) > maxNHalfEdges {
+					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
+				}
+				vertIndex++
+				itnVert = &vertices[len(vertices)-1]
+			}
+
+			itnVertices[itnS] = itnVert
 		}
 
 		if len(itns) > 0 {
@@ -1324,14 +1358,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				itnS := intersection(segi, itn.segi)
 				itnVert := itnVertices[itnS]
 				if itnVert == nil {
-					vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
-					//checkVertDuplicates(vertices, 2)
-					if len(vertices) > maxNHalfEdges {
-						panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
-					}
-					vertIndex++
-					itnVert = &vertices[len(vertices)-1]
-					itnVertices[itnS] = itnVert
+					panic("Unexpected nil value of 'itnVert' in 'HalfEdgesFromSegmentLoop'")
 				}
 
 				if startVert.P.Eq(itnVert.P) {
@@ -1433,6 +1460,16 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [5]")
 	}
 	halfEdges[len(halfEdges)-1].Prev = first
+
+	if debug {
+		for i, v1 := range vertices {
+			for j, v2 := range vertices {
+				if i != j && v1.P.Eq(v2.P) {
+					panic(fmt.Sprintf("Unexpected vertex point equality in 'HalfEdgesFromSegmentLoop': point=(%v,%v) %v,%v", v1.P.ApproxX(), v2.P.ApproxY(), i, j))
+				}
+			}
+		}
+	}
 
 	return halfEdges, vertices
 }
