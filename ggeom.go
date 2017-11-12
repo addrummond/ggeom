@@ -476,7 +476,7 @@ func segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2, *
 	o4 := Orientation(p1, p2, q2)
 
 	if o1 != o2 && o3 != o4 {
-		return false, nil, nil // the segments intersect; not degenerate
+		return true, nil, nil // the segments intersect; not degenerate
 	} else if o1 == 0 && OnSegment(q1, p1, q2) {
 		if OnSegment(p1, q1, p2) {
 			return true, p1, q1
@@ -671,11 +671,10 @@ func SegmentIntersectionSpan(p1, p2, q1, q2 *Vec2) (int, [2]*Vec2) {
 	}
 
 	intersect, degeneratePt1, degeneratePt2 := segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2)
-	_ = degeneratePt2
 	if intersect {
 		if degeneratePt1 != nil {
-			//return 2, [2]*Vec2{degeneratePt1, degeneratePt2}
-			return 1, [2]*Vec2{degeneratePt1, nil}
+			return 2, [2]*Vec2{degeneratePt1, degeneratePt2}
+			//return 1, [2]*Vec2{degeneratePt1, nil}
 		}
 
 		return 1, [2]*Vec2{NondegenerateSegmentIntersection(p1, p2, q1, q2), nil}
@@ -1290,7 +1289,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
-	fmt.Printf("Intersections:")
+	fmt.Printf("Intersections:\n")
 	for itn, _ := range itns {
 		fmt.Printf("    %v with %v\n", itn.seg1, itn.seg2)
 	}
@@ -1436,7 +1435,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 
 				if debug && prev.Origin.P.Eq(he.Origin.P) {
-					//panic(fmt.Sprintf("Two identical adjacent points [0] in construction of half edges in 'HalfEdgesFromSegmentLoop': p1=(%v,%v), p2=(%v,%v)", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY()))
+					panic(fmt.Sprintf("Two identical adjacent points [0] in construction of half edges in 'HalfEdgesFromSegmentLoop': p1=(%v,%v), p2=(%v,%v)", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY()))
 				}
 			}
 			prev = he
@@ -1552,7 +1551,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		for i, v1 := range vertices {
 			for j, v2 := range vertices {
 				if i != j && v1.P.Eq(v2.P) {
-					//panic(fmt.Sprintf("Unexpected vertex point equality in 'HalfEdgesFromSegmentLoop': point=(%v,%v) %v,%v", v1.P.ApproxX(), v2.P.ApproxY(), i, j))
+					panic(fmt.Sprintf("Unexpected vertex point equality in 'HalfEdgesFromSegmentLoop': point=(%v,%v) %v,%v", v1.P.ApproxX(), v2.P.ApproxY(), i, j))
 				}
 			}
 		}
