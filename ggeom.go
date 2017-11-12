@@ -428,7 +428,7 @@ func Orientation(p, q, r *Vec2) int {
 // the second member of the return value is nil. Otherwise, it is set to
 // an arbitrarily chosen member of the subset of {p1,p2,q1,q2} that lies
 // along the intersection.
-func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
+func segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
 		return false, nil // the segments definitely don't intersect; won't be a degenerate case
 	}
@@ -450,12 +450,67 @@ func segmentsIntersectNoJoinCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 		return true, p1
 	} else if o2 == 0 && OnSegment(q1, p2, q2) {
 		return true, p2
-	} else if o3 == 0 && OnSegment(p2, q1, p2) {
+	} else if o3 == 0 && OnSegment(p1, q1, p2) {
 		return true, q1
 	} else if o4 == 0 && OnSegment(p1, q2, p2) {
 		return true, q2
 	} else {
 		return false, nil
+	}
+}
+
+func segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2, *Vec2) {
+	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
+		return false, nil, nil // the segments definitely don't intersect; won't be a degenerate case
+	}
+
+	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
+	// and http://www.cdn.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+	// and http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
+	// and http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
+
+	// Find the four orientations needed for general and special case
+	o1 := Orientation(p1, q1, q2)
+	o2 := Orientation(p2, q1, q2)
+	o3 := Orientation(p1, p2, q1)
+	o4 := Orientation(p1, p2, q2)
+
+	if o1 != o2 && o3 != o4 {
+		return false, nil, nil // the segments intersect; not degenerate
+	} else if o1 == 0 && OnSegment(q1, p1, q2) {
+		if OnSegment(p1, q1, p2) {
+			return true, p1, q1
+		} else if OnSegment(p1, q2, p2) {
+			return true, p1, q2
+		} else {
+			return true, p1, p2
+		}
+	} else if o2 == 0 && OnSegment(q1, p2, q2) {
+		if OnSegment(p1, q1, p2) {
+			return true, p2, q1
+		} else if OnSegment(p1, q2, p2) {
+			return true, p2, q2
+		} else {
+			return true, p1, p2
+		}
+	} else if o3 == 0 && OnSegment(p1, q1, p2) {
+		if OnSegment(q1, p1, q2) {
+			return true, q1, p1
+		} else if OnSegment(q1, p2, q2) {
+			return true, q1, p2
+		} else {
+			return true, q1, q2
+		}
+	} else if o4 == 0 && OnSegment(p1, q2, p2) {
+		if OnSegment(q1, p1, q2) {
+			return true, q2, p1
+		} else if OnSegment(q1, p2, q2) {
+			return true, q2, p2
+		} else {
+			return true, q2, q1
+		}
+	} else {
+		return false, nil, nil
 	}
 }
 
@@ -532,7 +587,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	}
 
 	var v Vec2
-	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	intersect, degeneratePt := segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
 			return SegmentIntersectionInfo{
@@ -579,7 +634,7 @@ func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 		return false, &v
 	}
 
-	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	intersect, degeneratePt := segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2)
 	if intersect && degeneratePt == nil {
 		pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 		if pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2) {
@@ -597,7 +652,7 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 		return true, pt
 	}
 
-	intersect, degeneratePt := segmentsIntersectNoJoinCheck(p1, p2, q1, q2)
+	intersect, degeneratePt := segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
 			return true, degeneratePt
@@ -606,8 +661,25 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 		return true, NondegenerateSegmentIntersection(p1, p2, q1, q2)
 	}
 
-	var v Vec2
-	return false, &v
+	return false, nil
+}
+
+func SegmentIntersectionSpan(p1, p2, q1, q2 *Vec2) (int, [2]*Vec2) {
+	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
+	if adj {
+		return 1, [2]*Vec2{pt, nil}
+	}
+
+	intersect, degeneratePt1, degeneratePt2 := segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2)
+	if intersect {
+		if degeneratePt1 != nil {
+			return 2, [2]*Vec2{degeneratePt1, degeneratePt2}
+		}
+
+		return 1, [2]*Vec2{NondegenerateSegmentIntersection(p1, p2, q1, q2), nil}
+	}
+
+	return 0, [2]*Vec2{nil, nil}
 }
 
 var pinf = math.Inf(1)
@@ -983,10 +1055,10 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
-					intersect, intersectionPoint := SegmentIntersection(psp1, psp2, p1, p2)
+					nPoints, points := SegmentIntersectionSpan(psp1, psp2, p1, p2)
 					checks++
-					if intersect {
-						addCross(prevI, event.i, intersectionPoint)
+					for i := 0; i < nPoints; i++ {
+						addCross(prevI, event.i, points[i])
 					}
 
 					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
@@ -1002,10 +1074,10 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
 					p2 := &points[(event.i+1)%len(points)]
-					intersect, intersectionPoint := SegmentIntersection(nsp1, nsp2, p1, p2)
+					nPoints, points := SegmentIntersectionSpan(nsp1, nsp2, p1, p2)
 					checks++
-					if intersect {
-						addCross(nextI, event.i, intersectionPoint)
+					for i := 0; i < nPoints; i++ {
+						addCross(nextI, event.i, points[i])
 					}
 
 					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
@@ -1062,11 +1134,11 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 							u1 := &points[u]
 							u2 := &points[(u+1)%len(points)]
 
-							intersect, intersectionPoint := SegmentIntersection(s1, s2, u1, u2)
+							nPoints, points := SegmentIntersectionSpan(s1, s2, u1, u2)
 							checks++
-							if intersect {
-								addIntersection(intersection(si, u), intersectionPoint)
-								//addCross(si, u, intersectionPoint)
+							for i := 0; i < nPoints; i++ {
+								addIntersection(intersection(si, u), points[i])
+								//addCross(si, u, points[i])
 							}
 
 							break
@@ -1078,11 +1150,11 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 							r1 := &points[r]
 							r2 := &points[(r+1)%len(points)]
 
-							intersect, intersectionPoint := SegmentIntersection(t1, t2, r1, r2)
+							nPoints, points := SegmentIntersectionSpan(t1, t2, r1, r2)
 							checks++
-							if intersect {
-								addIntersection(intersection(ti, r), intersectionPoint)
-								//addCross(ti, r, intersectionPoint)
+							for i := 0; i < nPoints; i++ {
+								addIntersection(intersection(ti, r), points[i])
+								//addCross(ti, r, points[i])
 							}
 
 							break
@@ -1116,10 +1188,10 @@ func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Ve
 
 			pb := &points[(si+1)%len(points)]
 			qb := &points[(sj+1)%len(points)]
-			intersect, ip := SegmentIntersection(p, pb, q, qb)
+			nPoints, points := SegmentIntersectionSpan(p, pb, q, qb)
 			checks++
-			if intersect {
-				intersections[intersection(si, sj)] = ip
+			for i := 0; i < nPoints; i++ {
+				intersections[intersection(si, sj)] = points[i]
 			}
 		}
 	}
@@ -1216,23 +1288,28 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
+	fmt.Printf("Intersections:")
+	for itn, _ := range itns {
+		fmt.Printf("    %v with %v\n", itn.seg1, itn.seg2)
+	}
+
 	// Excludes instances where the endpoint of a segment touches another segment.
 	itnWith := make(map[int][]IntersectionWith)
 	for k, p := range itns {
-		if !p.Eq(&points[(k.seg1+1)%len(points)]) {
-			if itnWith[k.seg1] == nil {
-				itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
-			} else {
-				itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
-			}
+		//if !p.Eq(&points[(k.seg1+1)%len(points)]) {
+		if itnWith[k.seg1] == nil {
+			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
+		} else {
+			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
 		}
-		if !p.Eq(&points[(k.seg2+1)%len(points)]) {
-			if itnWith[k.seg2] == nil {
-				itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
-			} else {
-				itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
-			}
+		//}
+		//if !p.Eq(&points[(k.seg2+1)%len(points)]) {
+		if itnWith[k.seg2] == nil {
+			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
+		} else {
+			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
 		}
+		//}
 	}
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
@@ -1258,7 +1335,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			itns = itns[1:]
 			startVert = itnVertices[itnS]
 			if startVert == nil {
-				fmt.Printf("New [0] for itn of %v,%v at (%v,%v)\n", segi, itns[0].segi, p1.ApproxX(), p2.ApproxY())
+				fmt.Printf("New [0] for itn of %v,%v at (%v,%v), vi=%v\n", segi, itns[0].segi, p1.ApproxX(), p2.ApproxY(), vertIndex)
 				vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
@@ -1268,7 +1345,13 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				itnVertices[itnS] = startVert
 			}
 		} else {
-			fmt.Printf("New [1] at (%v,%v)\n", p1.ApproxX(), p2.ApproxY())
+			fmt.Printf("New [1] len=%v at (%v,%v), vi=%v, segi=%v\n", len(itns), p1.ApproxX(), p1.ApproxY(), vertIndex, segi)
+			if len(vertices) > 0 {
+				fmt.Printf("Last vert (%v,%v)\n", vertices[len(vertices)-1].P.ApproxX(), vertices[len(vertices)-1].P.ApproxY())
+			}
+			for _, itn := range itns {
+				fmt.Printf("ITN %v at (%v,%v)\n", itn.segi, itn.p.ApproxX(), itn.p.ApproxY())
+			}
 			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			//checkVertDuplicates(vertices, 1)
 			if len(vertices) > maxNHalfEdges {
@@ -1298,7 +1381,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				}
 			}
 			if itnVert == nil {
-				fmt.Printf("New [2] for itn of %v,%v at (%v,%v)\n", segi, itn.segi, itn.p.ApproxX(), itn.p.ApproxY())
+				fmt.Printf("New [2] for itn of %v,%v at (%v,%v), vi=%v\n", segi, itn.segi, itn.p.ApproxX(), itn.p.ApproxY(), vertIndex)
 				vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
