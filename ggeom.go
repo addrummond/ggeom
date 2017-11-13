@@ -1457,22 +1457,24 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 						Origin:  startVert,
 						Prev:    prev,
 					})
-				he1 := &halfEdges[len(halfEdges)-1]
-				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
-				fmt.Printf("HE1 at %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
+				he := &halfEdges[len(halfEdges)-1]
+				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
+				fmt.Printf("HE at %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
 
 				if len(halfEdges) > maxNHalfEdges {
 					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
 				}
 
 				if prev != nil {
-					prev.Next = he1
-					he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, prev)
+					prev.Next = he
+					he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 
-					if debug && prev.Origin.P.Eq(he1.Origin.P) {
+					if debug && prev.Origin.P.Eq(he.Origin.P) {
 						panic(fmt.Sprintf("Two identical adjacent points [1] in construction of half edges in 'HalfEdgesFromSegmentLoop': (%v,%v)  p1=(%v,%v), p2=(%v,%v), iof=%v,%v, he2=%v,%v", prev.Origin.P.ApproxX(), prev.Origin.P.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY(), segi, itns[i].segi))
 					}
 				}
+
+				prev = he
 
 				if i >= len(itns) {
 					break
@@ -1486,7 +1488,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 				//fmt.Printf("Setting prev to %v,%v\n", he2.Origin.P.ApproxX(), he2.Origin.P.ApproxY())
 				//fmt.Printf("Setting start vert to %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY)
-				prev = he1
 			}
 		}
 	}
@@ -1500,14 +1501,12 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	first := &halfEdges[0]
 	halfEdges[0].Prev = last
 	halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
-	if len(halfEdges) > maxNHalfEdges {
-		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
-	}
 	halfEdges[len(halfEdges)-1].Next = first
 
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
 	var next *DCELHalfEdge
 	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
+		fmt.Printf("HERE %v of %v: %p\n", i, lastForwardHalfEdgeIndex, halfEdges[i].Next)
 		halfEdges = append(halfEdges, DCELHalfEdge{
 			Forward: false,
 			Origin:  halfEdges[i].Next.Origin,
