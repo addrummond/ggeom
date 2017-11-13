@@ -1297,20 +1297,20 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	// Excludes instances where the endpoint of a segment touches another segment.
 	itnWith := make(map[int][]IntersectionWith)
 	for k, p := range itns {
-		//if !p.Eq(&points[(k.seg1+1)%len(points)]) {
-		if itnWith[k.seg1] == nil {
-			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
-		} else {
-			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
+		if !p.Eq(&points[(k.seg1+1)%len(points)]) {
+			if itnWith[k.seg1] == nil {
+				itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
+			} else {
+				itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
+			}
 		}
-		//}
-		//if !p.Eq(&points[(k.seg2+1)%len(points)]) {
-		if itnWith[k.seg2] == nil {
-			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
-		} else {
-			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
+		if !p.Eq(&points[(k.seg2+1)%len(points)]) {
+			if itnWith[k.seg2] == nil {
+				itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
+			} else {
+				itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
+			}
 		}
-		//}
 	}
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
@@ -1402,6 +1402,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			for ; iti < len(itns) && itns[iti].p.Eq(p1); iti++ {
 
 			}
+			fmt.Printf("Removing %v\n", iti)
 			itns = itns[iti:]
 
 			// Remove any duplicates with respect to intersection point.
@@ -1440,17 +1441,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			prev = he
 		} else {
+			fmt.Printf("PS: %v,%v   %v,%v\n", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
+			fmt.Printf("START: %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
+			fmt.Printf("The intersections:\n")
 			for _, itn := range itns {
-				itnS := intersection(segi, itn.segi)
-				itnVert := itnVertices[itnS]
-				if itnVert == nil {
-					panic("Unexpected nil value of 'itnVert' in 'HalfEdgesFromSegmentLoop'")
-				}
+				fmt.Printf("    %v,%v\n", itn.p.ApproxX(), itn.p.ApproxY())
+			}
 
-				if startVert.P.Eq(itnVert.P) {
-					panic(fmt.Sprintf("startVert and itnVert unexpectedly lie on same point (%v,%v)", itnVert.P.ApproxX(), itnVert.P.ApproxY()))
-				}
-
+			for i := 0; ; i++ {
 				// The forward half edge for the subpart of the current segment going up to
 				// the intersection.
 				halfEdges = append(halfEdges,
@@ -1461,18 +1459,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 					})
 				he1 := &halfEdges[len(halfEdges)-1]
 				he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, he1)
-
-				// The forward half edge for the subpart of the current segment from
-				// the current intersection to the next intersection or p2.
-				halfEdges = append(halfEdges,
-					DCELHalfEdge{
-						Forward: true,
-						Origin:  itnVert,
-					})
-				he2 := &halfEdges[len(halfEdges)-1]
-				he2.Origin.IncidentEdges = append(he2.Origin.IncidentEdges, he1, he2)
-				he2.Prev = he1
-				he1.Next = he2
+				fmt.Printf("HE1 at %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
 
 				if len(halfEdges) > maxNHalfEdges {
 					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
@@ -1481,10 +1468,25 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				if prev != nil {
 					prev.Next = he1
 					he1.Origin.IncidentEdges = append(he1.Origin.IncidentEdges, prev)
+
+					if debug && prev.Origin.P.Eq(he1.Origin.P) {
+						panic(fmt.Sprintf("Two identical adjacent points [1] in construction of half edges in 'HalfEdgesFromSegmentLoop': (%v,%v)  p1=(%v,%v), p2=(%v,%v), iof=%v,%v, he2=%v,%v", prev.Origin.P.ApproxX(), prev.Origin.P.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY(), segi, itns[i].segi))
+					}
 				}
 
-				startVert = itnVert
-				prev = he2
+				if i >= len(itns) {
+					break
+				}
+
+				itnS := intersection(segi, itns[i].segi)
+				startVert = itnVertices[itnS]
+				if startVert == nil {
+					panic("Unexpected nil value of 'itnVert' in 'HalfEdgesFromSegmentLoop'")
+				}
+
+				//fmt.Printf("Setting prev to %v,%v\n", he2.Origin.P.ApproxX(), he2.Origin.P.ApproxY())
+				//fmt.Printf("Setting start vert to %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY)
+				prev = he1
 			}
 		}
 	}
