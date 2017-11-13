@@ -1506,7 +1506,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
 	var next *DCELHalfEdge
 	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
-		fmt.Printf("HERE %v of %v: %p\n", i, lastForwardHalfEdgeIndex, halfEdges[i].Next)
 		halfEdges = append(halfEdges, DCELHalfEdge{
 			Forward: false,
 			Origin:  halfEdges[i].Next.Origin,
