@@ -163,6 +163,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 
 	var coords string
 	var lines string
+	var nincident string
 	followed = make(map[*DCELHalfEdge]bool)
 
 	var traverse func(vert, from *DCELVertex)
@@ -171,9 +172,17 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 			if len(lines) > 0 {
 				coords += ", "
 				lines += ", "
+				nincident += ", "
 			}
 			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
 			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
+			n := 0
+			for _, ie := range vert.IncidentEdges {
+				if ie.Forward {
+					n++
+				}
+			}
+			nincident += fmt.Sprintf("%v", n)
 		}
 		for _, edge := range vert.IncidentEdges {
 			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
@@ -202,6 +211,7 @@ ctx.strokeStyle = '#000000';
 ctx.lineWidth = 4;
 var coords = [` + coords + `];
 var lines = [` + lines + `];
+var nincident = [` + nincident + `];
 var i = 0;
 
 function draw() {
@@ -216,7 +226,7 @@ function draw() {
         ctx.stroke();
     }
     info.innerHTML = "";
-    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + ")."));
+    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); " + nincident[i] + " incident edges"));
 }
 
 document.onkeydown = function (e) {
