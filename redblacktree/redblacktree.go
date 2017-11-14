@@ -149,14 +149,49 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) (Iterato
 
 // addrummond
 // Inserts the specified node into the tree if no node with the same key already exists.
-func (tree *Tree) PutIfNotExists(key interface{}, func getValue() interface{}) (Iterator, bool) {
-	it, replaced := tree.PutAndGetIterator(key, nil)
-	if ! replaced {
-		it.node.Value = getValue()
+func (tree *Tree) PutIfNotExists(key interface{}, getValue func() interface{}) (Iterator, bool) {
+	var insertedNode *Node
+	if tree.Root == nil {
+		tree.Root = &Node{Key: key, Value: getValue(), color: red}
+		insertedNode = tree.Root
+	} else {
+		node := tree.Root
+		loop := true
+		for loop {
+			compare := tree.Comparator(key, node.Key)
+			switch {
+			case compare == 0:
+				node.Key = key
+				return Iterator{
+					tree:     tree,
+					node:     node,
+					position: between,
+				}, true
+			case compare < 0:
+				if node.Left == nil {
+					node.Left = &Node{Key: key, Value: getValue(), color: red}
+					insertedNode = node.Left
+					loop = false
+				} else {
+					node = node.Left
+				}
+			case compare > 0:
+				if node.Right == nil {
+					node.Right = &Node{Key: key, Value: getValue(), color: red}
+					insertedNode = node.Right
+					loop = false
+				} else {
+					node = node.Right
+				}
+			}
+		}
+		insertedNode.Parent = node
 	}
-	return it, replaced
-}
+	tree.insertCase1(insertedNode)
+	tree.size++
 
+	return Iterator{tree: tree, node: insertedNode, position: between}, false
+}
 
 // Get searches the node in the tree by key and returns its value or nil if key is not found in tree.
 // Second return parameter is true if key was found, otherwise false.

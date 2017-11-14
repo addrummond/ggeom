@@ -58,11 +58,11 @@ type Polygon2 struct {
 }
 
 func (a *Vec2) X() *Scalar {
-    return &a.x
+	return &a.x
 }
 
 func (a *Vec2) Y() *Scalar {
-    return &a.y
+	return &a.y
 }
 
 func (a *Vec2) ApproxX() float64 {
@@ -1298,17 +1298,16 @@ type vertexKey struct {
 }
 
 func vertexNodeCmp(a, b interface{}) int {
-	a := a.(vertexKey)
-	b := b.(vertexKey)
-	yc := a.p.Y().Cmp(b.p.Y())
+	aa := a.(vertexKey)
+	bb := b.(vertexKey)
+	yc := aa.p.Y().Cmp(bb.p.Y())
 	if yc == 0 {
-		return a.p.X().Cmp(b.p.X())
+		return aa.p.X().Cmp(bb.p.X())
 	}
 	return yc
 }
 
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices []DCELVertex) {
-	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
 	itnWith := make(map[int][]IntersectionWith)
@@ -1325,6 +1324,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		}
 	}
 
+	// vertexTree -> *DCELVertex
 	vertexTree := redblacktree.NewWith(vertexNodeCmp)
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
@@ -1343,20 +1343,17 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		// Sort the intersections by the position on the current segment.
 		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
-		it, replaced := vertexTree.PutIfNotExists(vertexNode{p1}, func () interface{} {
-			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-			if len(vertices) > maxNHalfEdges {
-				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+		var lastVert *DCELVertex
+		for i := -1; i < len(itns); i++ {
+			var p *Vec2
+			if i == -1 {
+				p = p1
+			} else {
+				p = itns[i].p
 			}
-			vertIndex++
-			return &vertices[len(vertices)-1]
-		})
 
-		lastVert := it.Value().(*DCELVertex)
-
-		for _,itn := range itns {
-			it2, replaced := vertexTree.PutIfNotExists(vertexNode{itn.p}, func () interface{} {
-				vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex)
+			it2, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
+				vertices = append(vertices, DCELVertex{p, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 				}
@@ -1372,7 +1369,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 			halfEdges = append(halfEdges, DCELHalfEdge{
 				Forward: true,
-				Origin:  startVert,
+				Origin:  itnVert,
 				Prev:    prev,
 				Next:    nil,
 			})
@@ -1381,14 +1378,18 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			he := &halfEdges[len(halfEdges)-1]
 
+			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
+
 			if prev != nil {
+				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 				prev.Next = he
 			}
 
 			prev = he
+			lastVert = itnVert
 		}
 
-		it3, replaced := vertexTree.PutIfNotExists(vertexNode{p2}, func () interface{} {
+		/*it3, _ := vertexTree.PutIfNotExists(vertexKey{p2}, func() interface{} {
 			vertices = append(vertices, DCELVertex{p2, make([]*DCELHalfEdge, 0, 2), vertIndex})
 			if len(vertices) > maxNHalfEdges {
 				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
@@ -1401,7 +1402,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		if endVert != lastVert {
 			halfEdges = append(halfEdges, DCELHalfEdge{
 				Forward: true,
-				Origin:  startVert,
+				Origin:  lastVert,
 				Prev:    prev,
 				Next:    nil,
 			})
@@ -1413,180 +1414,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			if prev != nil {
 				prev.Next = he
 			}
-		}
-	}
 
-	/////
-
-	var prev *DCELHalfEdge
-	for segi := range points {
-		p1 := &points[segi]
-		p2 := &points[(segi+1)%len(points)]
-
-		itns := itnWith[segi]
-		// Sort the intersections by the position on the current segment.
-		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
-
-		var startVert *DCELVertex
-		if len(itns) > 0 && itns[0].p.Eq(p1) {
-			itnS := intersection(segi, itns[0].segi)
-			itns = itns[1:]
-			startVert = itnVertices[itnS]
-			if startVert == nil {
-				if len(itns) > 0 {
-					fmt.Printf("New [0] for itn of %v,%v at (%v,%v), vi=%v\n", segi, itns[0].segi, p1.ApproxX(), p2.ApproxY(), vertIndex)
-				}
-				vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-				if len(vertices) > maxNHalfEdges {
-					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
-				}
-				vertIndex++
-				startVert = &vertices[len(vertices)-1]
-				itnVertices[itnS] = startVert
-			}
-		} else {
-			fmt.Printf("New [1] len=%v at (%v,%v), vi=%v, segi=%v\n", len(itns), p1.ApproxX(), p1.ApproxY(), vertIndex, segi)
-			if len(vertices) > 0 {
-				fmt.Printf("Last vert (%v,%v)\n", vertices[len(vertices)-1].P.ApproxX(), vertices[len(vertices)-1].P.ApproxY())
-			}
-			for _, itn := range itns {
-				fmt.Printf("ITN %v at (%v,%v)\n", itn.segi, itn.p.ApproxX(), itn.p.ApproxY())
-			}
-			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
-			//checkVertDuplicates(vertices, 1)
-			if len(vertices) > maxNHalfEdges {
-				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
-			}
-			startVert = &vertices[len(vertices)-1]
-			vertIndex++
-		}
-
-		for _, itn := range itns {
-			itnS := intersection(segi, itn.segi)
-			itnVert := itnVertices[itnS]
-			if itnVert == nil {
-				for _, itnw := range itnWith[segi] {
-					if itnw.p.Eq(itn.p) {
-						itnVert = itnVertices[intersection(segi, itnw.segi)]
-						break
-					}
-				}
-			}
-			if itnVert == nil {
-				for _, itnw := range itnWith[itn.segi] {
-					if itnw.p.Eq(itn.p) {
-						itnVert = itnVertices[intersection(segi, itnw.segi)]
-						break
-					}
-				}
-			}
-			if itnVert == nil {
-				fmt.Printf("New [2] for itn of %v,%v at (%v,%v), vi=%v\n", segi, itn.segi, itn.p.ApproxX(), itn.p.ApproxY(), vertIndex)
-				vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex})
-				if len(vertices) > maxNHalfEdges {
-					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [3]")
-				}
-				vertIndex++
-				itnVert = &vertices[len(vertices)-1]
-			}
-
-			itnVertices[itnS] = itnVert
-		}
-
-		if len(itns) > 0 {
-			// Remove any intersections with the origin point of this segment.
-			iti := 0
-			for ; iti < len(itns) && itns[iti].p.Eq(p1); iti++ {
-
-			}
-			fmt.Printf("Removing %v\n", iti)
-			itns = itns[iti:]
-
-			// Remove any duplicates with respect to intersection point.
-			for i := 1; i < len(itns); i++ {
-				if itns[i-1].p.Eq(itns[i].p) {
-					itns = append(itns[:i], itns[i+1:]...)
-					i--
-				}
-			}
-		}
-
-		fmt.Printf("Intersections with p1=%v,%v\n", p1.ApproxX(), p1.ApproxY())
-		for _, itn := range itns {
-			fmt.Printf("    At %v,%v\n", itn.p.ApproxX(), itn.p.ApproxY())
-		}
-
-		if len(itns) == 0 {
-			halfEdges = append(halfEdges, DCELHalfEdge{
-				Forward: true,
-				Origin:  startVert,
-				Prev:    prev,
-				Next:    nil,
-			})
-			if len(halfEdges) > maxNHalfEdges {
-				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
-			}
-			he := &halfEdges[len(halfEdges)-1]
-			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
-			if prev != nil {
-				prev.Next = he
-				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
-
-				if debug && prev.Origin.P.Eq(he.Origin.P) {
-					panic(fmt.Sprintf("Two identical adjacent points [0] in construction of half edges in 'HalfEdgesFromSegmentLoop': p1=(%v,%v), p2=(%v,%v)", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY()))
-				}
-			}
 			prev = he
-		} else {
-			fmt.Printf("PS: %v,%v   %v,%v\n", p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY())
-			fmt.Printf("START: %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
-			fmt.Printf("The intersections:\n")
-			for _, itn := range itns {
-				fmt.Printf("    %v,%v\n", itn.p.ApproxX(), itn.p.ApproxY())
-			}
-
-			for i := 0; ; i++ {
-				// The forward half edge for the subpart of the current segment going up to
-				// the intersection.
-				halfEdges = append(halfEdges,
-					DCELHalfEdge{
-						Forward: true,
-						Origin:  startVert,
-						Prev:    prev,
-					})
-				he := &halfEdges[len(halfEdges)-1]
-				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
-				fmt.Printf("HE at %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY())
-
-				if len(halfEdges) > maxNHalfEdges {
-					panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [2]")
-				}
-
-				if prev != nil {
-					prev.Next = he
-					he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
-
-					if debug && prev.Origin.P.Eq(he.Origin.P) {
-						panic(fmt.Sprintf("Two identical adjacent points [1] in construction of half edges in 'HalfEdgesFromSegmentLoop': (%v,%v)  p1=(%v,%v), p2=(%v,%v), iof=%v,%v, he2=%v,%v", prev.Origin.P.ApproxX(), prev.Origin.P.ApproxY(), p1.ApproxX(), p1.ApproxY(), p2.ApproxX(), p2.ApproxY(), segi, itns[i].segi))
-					}
-				}
-
-				prev = he
-
-				if i >= len(itns) {
-					break
-				}
-
-				itnS := intersection(segi, itns[i].segi)
-				startVert = itnVertices[itnS]
-				if startVert == nil {
-					panic("Unexpected nil value of 'itnVert' in 'HalfEdgesFromSegmentLoop'")
-				}
-
-				//fmt.Printf("Setting prev to %v,%v\n", he2.Origin.P.ApproxX(), he2.Origin.P.ApproxY())
-				//fmt.Printf("Setting start vert to %v,%v\n", startVert.P.ApproxX(), startVert.P.ApproxY)
-			}
-		}
+		}*/
 	}
 
 	if len(halfEdges) < 2 {
@@ -1603,6 +1433,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
 	var next *DCELHalfEdge
 	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
+		fmt.Printf("i = %v, n = %p\n", i, halfEdges[i].Next)
 		halfEdges = append(halfEdges, DCELHalfEdge{
 			Forward: false,
 			Origin:  halfEdges[i].Next.Origin,
