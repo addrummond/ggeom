@@ -163,7 +163,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 
 	var coords string
 	var lines string
-	var nincident string
+	var incident string
 	followed = make(map[*DCELHalfEdge]bool)
 
 	var traverse func(vert, from *DCELVertex)
@@ -172,17 +172,22 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 			if len(lines) > 0 {
 				coords += ", "
 				lines += ", "
-				nincident += ", "
+				incident += ", "
 			}
 			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
 			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
-			n := 0
+			incident += "["
+			count := 0
 			for _, ie := range vert.IncidentEdges {
 				if ie.Forward {
-					n++
+					if count != 0 {
+						incident += ", "
+					}
+					incident += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(ie.Origin.P.ApproxX()), ty(ie.Origin.P.ApproxY()), tx(ie.Twin.Origin.P.ApproxX()), ty(ie.Twin.Origin.P.ApproxY()))
+					count++
 				}
 			}
-			nincident += fmt.Sprintf("%v", n)
+			incident += "]"
 		}
 		for _, edge := range vert.IncidentEdges {
 			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
@@ -207,26 +212,48 @@ var info = document.getElementById('info');
 
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
-ctx.strokeStyle = '#000000';
-ctx.lineWidth = 4;
 var coords = [` + coords + `];
 var lines = [` + lines + `];
-var nincident = [` + nincident + `];
+var incident = [` + incident + `];
 var i = 0;
 
 function draw() {
-    for (var j = 0; j <= i; ++j) {
-        if (j != i)
-            ctx.strokeStyle = '#dddddd';
-        else
-            ctx.strokeStyle = '#000000';
-        ctx.beginPath()
+	ctx.lineWidth = 6;
+    for (var j = 0; j < lines.length; ++j) {
+        if (j < i)
+            ctx.strokeStyle = '#aaaaaa';
+        else if (j == i)
+			continue;
+		else if (j > i)
+		    ctx.strokeStyle = '#eeeeee';
+        ctx.beginPath();
         ctx.moveTo(lines[j][0][0], lines[j][0][1]);
         ctx.lineTo(lines[j][1][0], lines[j][1][1]);
-        ctx.stroke();
-    }
+		ctx.stroke();
+	}
+
+	ctx.strokeStyle = '#000000';
+	ctx.beginPath();
+	ctx.moveTo(lines[i][0][0], lines[i][0][1]);
+	ctx.lineTo(lines[i][1][0], lines[i][1][1]);
+	ctx.stroke();
+	ctx.fillStyle = '#000000';	
+	ctx.beginPath();
+	ctx.arc(lines[i][0][0], lines[i	][0][1], 8, 0, 2*Math.PI, false);
+	ctx.fill();
+	
+	var incidentEdges = incident[i];
+	ctx.strokeStyle = '#ee0000';
+	ctx.lineWidth = 2;
+	for (var j = 0; j < incidentEdges.length; ++j) {
+		ctx.beginPath()
+		ctx.moveTo(incidentEdges[j][0][0], incidentEdges[j][0][1]);
+		ctx.lineTo(incidentEdges[j][1][0], incidentEdges[j][1][1]);
+		ctx.stroke();
+	}
+
     info.innerHTML = "";
-    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); " + nincident[i] + " incident edges"));
+    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); " + incident[i].length + " incident edges"));
 }
 
 document.onkeydown = function (e) {
