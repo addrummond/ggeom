@@ -243,9 +243,9 @@ function draw() {
 	ctx.fill();
 	
 	var incidentEdges = incident[i];
-	ctx.strokeStyle = '#ee0000';
 	ctx.lineWidth = 2;
 	for (var j = 0; j < incidentEdges.length; ++j) {
+		ctx.strokeStyle = ['#ee0000', '#00ee00', '#0000ee', '#eeee00', '#0000ee', '#ee00ee'][j % incidentEdges.length]
 		ctx.beginPath()
 		ctx.moveTo(incidentEdges[j][0][0], incidentEdges[j][0][1]);
 		ctx.lineTo(incidentEdges[j][1][0], incidentEdges[j][1][1]);
