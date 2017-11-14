@@ -164,6 +164,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 	var coords string
 	var lines string
 	var incident string
+	var incidentCoords string
 	followed = make(map[*DCELHalfEdge]bool)
 
 	var traverse func(vert, from *DCELVertex)
@@ -173,21 +174,26 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 				coords += ", "
 				lines += ", "
 				incident += ", "
+				incidentCoords += ", "
 			}
 			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
 			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
 			incident += "["
+			incidentCoords += "["
 			count := 0
 			for _, ie := range vert.IncidentEdges {
 				if ie.Forward {
 					if count != 0 {
 						incident += ", "
+						incidentCoords += ", "
 					}
 					incident += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(ie.Origin.P.ApproxX()), ty(ie.Origin.P.ApproxY()), tx(ie.Twin.Origin.P.ApproxX()), ty(ie.Twin.Origin.P.ApproxY()))
+					incidentCoords += fmt.Sprintf("[[%v,%v],[%v,%v]]", ie.Origin.P.ApproxX(), ie.Origin.P.ApproxY(), ie.Twin.Origin.P.ApproxX(), ie.Twin.Origin.P.ApproxY())
 					count++
 				}
 			}
 			incident += "]"
+			incidentCoords += "]"
 		}
 		for _, edge := range vert.IncidentEdges {
 			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
@@ -215,6 +221,7 @@ var ctx = canvas.getContext('2d');
 var coords = [` + coords + `];
 var lines = [` + lines + `];
 var incident = [` + incident + `];
+var incidentCoords = [` + incidentCoords + `];
 var i = 0;
 
 function draw() {
@@ -252,8 +259,15 @@ function draw() {
 		ctx.stroke();
 	}
 
+	var incidentEdgesCoords = incidentCoords[i];
+	var isegs = "";
+	for (var j = 0; j < incidentEdges.length; ++j) {
+		if (j != 0)
+			isegs += "  ";
+		isegs += "(" + incidentEdgesCoords[j][0][0] + "," + incidentEdgesCoords[j][0][1] + " -> " + incidentEdgesCoords[j][1][0] + "," + incidentEdgesCoords[j][1][1] + ")";
+	}
     info.innerHTML = "";
-    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); " + incident[i].length + " incident edges"));
+    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); incident = " + isegs));
 }
 
 document.onkeydown = function (e) {
