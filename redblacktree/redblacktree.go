@@ -147,6 +147,17 @@ func (tree *Tree) PutAndGetIterator(key interface{}, value interface{}) (Iterato
 	return Iterator{tree: tree, node: insertedNode, position: between}, false
 }
 
+// addrummond
+// Inserts the specified node into the tree if no node with the same key already exists.
+func (tree *Tree) PutIfNotExists(key interface{}, func getValue() interface{}) (Iterator, bool) {
+	it, replaced := tree.PutAndGetIterator(key, nil)
+	if ! replaced {
+		it.node.Value = getValue()
+	}
+	return it, replaced
+}
+
+
 // Get searches the node in the tree by key and returns its value or nil if key is not found in tree.
 // Second return parameter is true if key was found, otherwise false.
 // Key should adhere to the comparator's type assertion, otherwise method panics.

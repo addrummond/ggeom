@@ -57,6 +57,14 @@ type Polygon2 struct {
 	verts []Vec2
 }
 
+func (a *Vec2) X() *Scalar {
+    return &a.x
+}
+
+func (a *Vec2) Y() *Scalar {
+    return &a.y
+}
+
 func (a *Vec2) ApproxX() float64 {
 	v, _ := a.x.Float64()
 	return v
@@ -1285,33 +1293,39 @@ func checkVertDuplicates(verts []DCELVertex, callsite int) {
 	}
 }
 
+type vertexKey struct {
+	p *Vec2
+}
+
+func vertexNodeCmp(a, b interface{}) int {
+	a := a.(vertexKey)
+	b := b.(vertexKey)
+	yc := a.p.Y().Cmp(b.p.Y())
+	if yc == 0 {
+		return a.p.X().Cmp(b.p.X())
+	}
+	return yc
+}
+
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices []DCELVertex) {
 	itnVertices := make(map[Intersection]*DCELVertex)
 	itns, _ := SegmentLoopIntersections(points)
 
-	fmt.Printf("Intersections:\n")
-	for itn, _ := range itns {
-		fmt.Printf("    %v with %v\n", itn.seg1, itn.seg2)
-	}
-
-	// Excludes instances where the endpoint of a segment touches another segment.
 	itnWith := make(map[int][]IntersectionWith)
 	for k, p := range itns {
-		if !p.Eq(&points[(k.seg1+1)%len(points)]) {
-			if itnWith[k.seg1] == nil {
-				itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
-			} else {
-				itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
-			}
+		if itnWith[k.seg1] == nil {
+			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
+		} else {
+			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
 		}
-		if !p.Eq(&points[(k.seg2+1)%len(points)]) {
-			if itnWith[k.seg2] == nil {
-				itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
-			} else {
-				itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
-			}
+		if itnWith[k.seg2] == nil {
+			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
+		} else {
+			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
 		}
 	}
+
+	vertexTree := redblacktree.NewWith(vertexNodeCmp)
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
 	// the number of segments by three. We also have two half edges for every edge.
@@ -1320,6 +1334,89 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	vertices = make([]DCELVertex, 0, maxNHalfEdges)
 
 	vertIndex := 0
+	var prev *DCELHalfEdge
+	for segi := range points {
+		p1 := &points[segi]
+		p2 := &points[(segi+1)%len(points)]
+
+		itns := itnWith[segi]
+		// Sort the intersections by the position on the current segment.
+		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
+
+		it, replaced := vertexTree.PutIfNotExists(vertexNode{p1}, func () interface{} {
+			vertices = append(vertices, DCELVertex{p1, make([]*DCELHalfEdge, 0, 2), vertIndex})
+			if len(vertices) > maxNHalfEdges {
+				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+			}
+			vertIndex++
+			return &vertices[len(vertices)-1]
+		})
+
+		lastVert := it.Value().(*DCELVertex)
+
+		for _,itn := range itns {
+			it2, replaced := vertexTree.PutIfNotExists(vertexNode{itn.p}, func () interface{} {
+				vertices = append(vertices, DCELVertex{itn.p, make([]*DCELHalfEdge, 0, 2), vertIndex)
+				if len(vertices) > maxNHalfEdges {
+					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
+				}
+				vertIndex++
+				return &vertices[len(vertices)-1]
+			})
+
+			itnVert := it2.Value().(*DCELVertex)
+
+			if itnVert == lastVert {
+				continue
+			}
+
+			halfEdges = append(halfEdges, DCELHalfEdge{
+				Forward: true,
+				Origin:  startVert,
+				Prev:    prev,
+				Next:    nil,
+			})
+			if len(halfEdges) > maxNHalfEdges {
+				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+			}
+			he := &halfEdges[len(halfEdges)-1]
+
+			if prev != nil {
+				prev.Next = he
+			}
+
+			prev = he
+		}
+
+		it3, replaced := vertexTree.PutIfNotExists(vertexNode{p2}, func () interface{} {
+			vertices = append(vertices, DCELVertex{p2, make([]*DCELHalfEdge, 0, 2), vertIndex})
+			if len(vertices) > maxNHalfEdges {
+				panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+			}
+			vertIndex++
+			return &vertices[len(vertices)-1]
+		})
+
+		endVert := it3.Value().(*DCELVertex)
+		if endVert != lastVert {
+			halfEdges = append(halfEdges, DCELHalfEdge{
+				Forward: true,
+				Origin:  startVert,
+				Prev:    prev,
+				Next:    nil,
+			})
+			if len(halfEdges) > maxNHalfEdges {
+				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
+			}
+			he := &halfEdges[len(halfEdges)-1]
+
+			if prev != nil {
+				prev.Next = he
+			}
+		}
+	}
+
+	/////
 
 	var prev *DCELHalfEdge
 	for segi := range points {
