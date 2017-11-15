@@ -1573,6 +1573,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
+				f = true
 			} else if !blocked[w] && circuit(w) {
 				f = true
 			}
