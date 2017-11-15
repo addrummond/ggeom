@@ -1382,28 +1382,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			he := &halfEdges[len(halfEdges)-1]
 
-			found := false
-			for _, ie := range itnVert.IncidentEdges {
-				if ie.Origin.P.Eq(he.Origin.P) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				itnVert.IncidentEdges = append(itnVert.IncidentEdges, he)
-			}
+			itnVert.IncidentEdges = append(itnVert.IncidentEdges, he)
 
 			if prev != nil {
-				found := false
-				for _, ie := range he.Origin.IncidentEdges {
-					if ie.Origin.P.Eq(prev.Origin.P) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
-				}
+				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 				prev.Next = he
 			}
 
