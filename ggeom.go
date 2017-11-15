@@ -1356,7 +1356,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				break
 			}
 
-			it2, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
+			it, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
 				vertices = append(vertices, DCELVertex{p, make([]*DCELHalfEdge, 0, 2), vertIndex})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
@@ -1365,7 +1365,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				return &vertices[len(vertices)-1]
 			})
 
-			itnVert := it2.Value().(*DCELVertex)
+			itnVert := it.Value().(*DCELVertex)
 
 			if itnVert == lastVert {
 				continue
@@ -1382,10 +1382,28 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 			he := &halfEdges[len(halfEdges)-1]
 
-			he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, he)
+			found := false
+			for _, ie := range itnVert.IncidentEdges {
+				if ie.Origin.P.Eq(he.Origin.P) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				itnVert.IncidentEdges = append(itnVert.IncidentEdges, he)
+			}
 
 			if prev != nil {
-				//he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
+				found := false
+				for _, ie := range he.Origin.IncidentEdges {
+					if ie.Origin.P.Eq(prev.Origin.P) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
+				}
 				prev.Next = he
 			}
 
@@ -1402,7 +1420,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	last := &halfEdges[len(halfEdges)-1]
 	first := &halfEdges[0]
 	halfEdges[0].Prev = last
-	//halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
+	halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
 	halfEdges[len(halfEdges)-1].Next = first
 
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
@@ -1426,7 +1444,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			panic(fmt.Sprintf("Unexpected point identity in 'HalfEdgesFromSegmentLoop (%v,%v)", twin.Origin.P.ApproxX(), twin.Origin.P.ApproxY()))
 		}
 
-		//twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
+		twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
 
 		if next != nil {
 			next.Prev = twin
@@ -1444,7 +1462,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	last = &halfEdges[len(halfEdges)-1]
 	first = &halfEdges[lastForwardHalfEdgeIndex+1]
 	halfEdges[lastForwardHalfEdgeIndex+1].Next = last
-	//halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges = append(halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges, last)
+	halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges = append(halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges, last)
 	if len(halfEdges) > maxNHalfEdges {
 		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [5]")
 	}

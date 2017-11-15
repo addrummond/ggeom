@@ -181,7 +181,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 			incident += "["
 			incidentCoords += "["
 			count := 0
-			for _, ie := range vert.IncidentEdges {
+			for _, ie := range from.IncidentEdges {
 				if ie.Forward {
 					if count != 0 {
 						incident += ", "
