@@ -1408,7 +1408,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	lastForwardHalfEdgeIndex := len(halfEdges) - 1
 	var next *DCELHalfEdge
 	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
-		fmt.Printf("i = %v, n = %p\n", i, halfEdges[i].Next)
 		halfEdges = append(halfEdges, DCELHalfEdge{
 			Forward: false,
 			Origin:  halfEdges[i].Next.Origin,
@@ -1458,6 +1457,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				}
 			}
 		}
+
+		//for i, he1 := range halfEdges {
+		//	for j, he2 := range halfEdges {
+		//		if i != j && he1.Forward && he2.Forward && he1.Origin.P.Eq(he2.Origin.P) && he1.Twin.Origin.P.Eq(he2.Twin.Origin.P) {
+		//			panic(fmt.Sprintf("Unexpected half edge equality in 'HalfEdgesFromSegmentLoop: (%v,%v) -> (%v,%v)", he1.Origin.P.ApproxX(), he1.Origin.P.ApproxY(), he1.Twin.Origin.P.ApproxX(), he1.Twin.Origin.P.ApproxY()))
+		//		}
+		//	}
+		//}
 	}
 
 	return halfEdges, vertices
@@ -1543,19 +1550,19 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	var unblock func(u int)
 	unblock = func(u int) {
 		blocked[u] = false
-		for len(b[u]) > 0 {
-			w := b[u][0]
-			b[u] = b[u][1:]
-			if blocked[w] {
-				unblock(w)
-			}
-		}
-		//for _, w := range b[u] {
+		//for len(b[u]) > 0 {
+		//	w := b[u][0]
+		//	b[u] = b[u][1:]
 		//	if blocked[w] {
 		//		unblock(w)
 		//	}
 		//}
-		//b[u] = []int{}
+		for _, w := range b[u] {
+			if blocked[w] {
+				unblock(w)
+			}
+		}
+		b[u] = []int{}
 	}
 
 	var circuit func(v int) bool
@@ -1585,7 +1592,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
-				f = true
+				//f = true
 			} else if !blocked[w] && circuit(w) {
 				f = true
 			}
