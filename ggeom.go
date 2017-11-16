@@ -1576,14 +1576,16 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		stack = append(stack, v)
 		blocked[v] = true
 
+		visited := make(map[int]bool)
 		for _, e := range vertices[v].IncidentEdges {
 			if !e.Forward {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v {
+			if w == v || visited[w] {
 				continue
 			}
+			visited[w] = true
 
 			if w == s {
 				c := make([]*DCELVertex, len(stack)+1, len(stack)+1)
@@ -1592,28 +1594,31 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
-				//f = true
+				f = true
+				break
 			} else if !blocked[w] && circuit(w) {
 				f = true
+				break
 			}
 		}
 		if f {
 			unblock(v)
 		} else {
+			visited := make(map[int]bool)
 			for _, e := range vertices[v].IncidentEdges {
 				if !e.Forward {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v {
+				if w == v || visited[w] {
 					continue
 				}
+				visited[w] = true
 
 				found := false
 				for _, vv := range b[w] {
 					if v == vv {
 						found = true
-						break
 					}
 				}
 				if !found {
