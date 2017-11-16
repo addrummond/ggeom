@@ -225,8 +225,8 @@ var incidentCoords = [` + incidentCoords + `];
 var i = 0;
 
 function draw() {
-	ctx.lineWidth = 6;
     for (var j = 0; j < lines.length; ++j) {
+		ctx.lineWidth = 6;		
         if (j < i)
             ctx.strokeStyle = '#aaaaaa';
         else if (j == i)
@@ -236,6 +236,27 @@ function draw() {
         ctx.beginPath();
         ctx.moveTo(lines[j][0][0], lines[j][0][1]);
         ctx.lineTo(lines[j][1][0], lines[j][1][1]);
+		ctx.stroke();
+
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = '#000000';
+		var sinv = 0.309
+		var cosv = -0.951
+		var dx = lines[j][1][0] - lines[j][0][0]
+		var dy = lines[j][1][1] - lines[j][0][1]
+		var a1x = dx*cosv-dy*sinv
+		var a1y = dx*sinv+dy*cosv
+		var a2x = dx*cosv+dy*sinv
+		var a2y = dx*-sinv+dy*cosv
+		var l = Math.sqrt(dx*dx + dy*dy)/20
+		a1x /= l
+		a1y /= l
+		a2x /= l
+		a2y /= l
+		ctx.beginPath();
+		ctx.moveTo(lines[j][1][0] + a1x, lines[j][1][1] + a1y);
+		ctx.lineTo(lines[j][1][0], lines[j][1][1])
+		ctx.lineTo(lines[j][1][0] + a2x, lines[j][1][1] + a2y);
 		ctx.stroke();
 	}
 

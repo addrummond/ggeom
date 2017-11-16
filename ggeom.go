@@ -1543,16 +1543,28 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	var unblock func(u int)
 	unblock = func(u int) {
 		blocked[u] = false
-		for _, w := range b[u] {
+		for len(b[u]) > 0 {
+			w := b[u][0]
+			b[u] = b[u][1:]
 			if blocked[w] {
 				unblock(w)
 			}
 		}
-		b[u] = []int{}
+		//for _, w := range b[u] {
+		//	if blocked[w] {
+		//		unblock(w)
+		//	}
+		//}
+		//b[u] = []int{}
 	}
 
 	var circuit func(v int) bool
 	circuit = func(v int) bool {
+		if len(circuits) > len(vertices)*2 {
+			fmt.Printf("Too many iterations\n")
+			return false
+		}
+
 		f := false
 		stack = append(stack, v)
 		blocked[v] = true
@@ -1629,15 +1641,13 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		}
 
 		if !empty {
-			least := len(vertices)
 			leastSci := -1
-			leastV := -1
+			leastV := len(vertices)
 			for i, sc := range scs {
 				for _, vert := range sc {
-					if vert.Index < least {
+					if vert.Index < leastV {
 						leastSci = i
 						leastV = vert.Index
-						least = vert.Index
 					}
 				}
 			}
