@@ -1565,8 +1565,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		b[u] = []int{}
 	}
 
-	var circuit func(v int) bool
-	circuit = func(v int) bool {
+	var circuit func(from int, v int) bool
+	circuit = func(from int, v int) bool {
 		fmt.Printf("Circuit from %v\n", v)
 
 		if len(circuits) > len(vertices)*2 {
@@ -1584,7 +1584,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || visited[w] {
+			if w == v || w < from || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1597,7 +1597,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
 				f = true
-			} else if !blocked[w] && circuit(w) {
+			} else if !blocked[w] && circuit(from, w) {
 				f = true
 			}
 		}
@@ -1610,7 +1610,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || visited[w] {
+				if w == v || w < from || visited[w] {
 					continue
 				}
 				visited[w] = true
@@ -1650,6 +1650,10 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 			for _, sc := range scs {
 				if len(sc) > 1 {
 					lonely = false
+					fmt.Printf("(least) non-lonely %v len=%v\n", sc, len(sc))
+					for i := 0; i < len(sc); i++ {
+						fmt.Printf("    =>%v (least)\n", sc[i].Index)
+					}
 					break
 				}
 			}
@@ -1659,7 +1663,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 			leastSci := -1
 			leastV := len(vertices)
 			for i, sc := range scs {
-				if len(scs) <= 1 {
+				if len(sc) <= 1 {
 					continue
 				}
 
@@ -1681,7 +1685,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				blocked[v.Index] = false
 				b[v.Index] = []int{}
 			}
-			circuit(s)
+			circuit(s, s)
 			s++
 		} else {
 			break

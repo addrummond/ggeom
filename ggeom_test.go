@@ -13,6 +13,10 @@ const SvgWidth = 800
 const SvgHeight = 800
 
 func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
+	if len(strips) == 0 {
+		return
+	}
+
 	var minx, miny, maxx, maxy float64 = strips[0][0].ApproxX(), float64(strips[0][0].ApproxY()), float64(strips[0][0].ApproxX()), float64(strips[0][0].ApproxY())
 	for _, s := range strips {
 		for _, p := range s {
@@ -586,9 +590,9 @@ var exampleLoops = SofSofVec2([][][]float64{
 func TestElementaryCircuits(t *testing.T) {
 	lines := []string{"stroke: black; stroke-width: 12; fill: none", "stroke: red; fill: red; stroke-width: 10; fill: none", "stroke: green; fill: none; stroke-width: 8", "stroke: blue; fill: none; stroke-width: 6", "stroke: yellow; fill: none; stroke-width: 4", "stroke: purple; fill: none; stroke-width: 2", "stroke: orange; fill: none; stroke-width: 1"}
 
-	for i := 0; i < len(exampleLoops); i += 3 {
-		//for i := 2 * 3; i == 2*3; i++ {
-		//for i := 0; i == 0; i++ {
+	//for i := 0; i < len(exampleLoops); i += 3 {
+	//for i := 2 * 3; i == 2*3; i++ {
+	for i := 1 * 3; i == 1*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
