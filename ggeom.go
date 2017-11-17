@@ -1567,8 +1567,10 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 
 	var circuit func(v int) bool
 	circuit = func(v int) bool {
+		fmt.Printf("Circuit from %v\n", v)
+
 		if len(circuits) > len(vertices)*2 {
-			fmt.Printf("Too many iterations\n")
+			panic("Too many iterations")
 			return false
 		}
 
@@ -1595,10 +1597,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
 				f = true
-				break
 			} else if !blocked[w] && circuit(w) {
 				f = true
-				break
 			}
 		}
 		if f {
@@ -1619,6 +1619,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				for _, vv := range b[w] {
 					if v == vv {
 						found = true
+						break
 					}
 				}
 				if !found {
@@ -1642,20 +1643,26 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		//	scs[0] = append(scs[0], &vertices[i])
 		//}
 
-		empty := true
+		fmt.Printf("Tarjan n %v s=%v, (least)\n", len(scs), s)
+
+		lonely := true
 		if len(scs) > 0 {
 			for _, sc := range scs {
-				if len(sc) != 0 {
-					empty = false
+				if len(sc) > 1 {
+					lonely = false
 					break
 				}
 			}
 		}
 
-		if !empty {
+		if !lonely {
 			leastSci := -1
 			leastV := len(vertices)
 			for i, sc := range scs {
+				if len(scs) <= 1 {
+					continue
+				}
+
 				for _, vert := range sc {
 					if vert.Index < leastV {
 						leastSci = i
@@ -1666,6 +1673,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 			if leastSci == -1 {
 				panic("Bad value for 'leastSci' in 'ElementaryCycles'")
 			}
+
+			fmt.Printf("least v %v\n", leastV)
 
 			s = leastV
 			for _, v := range scs[leastSci] {
