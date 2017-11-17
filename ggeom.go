@@ -1457,14 +1457,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 				}
 			}
 		}
-
-		//for i, he1 := range halfEdges {
-		//	for j, he2 := range halfEdges {
-		//		if i != j && he1.Forward && he2.Forward && he1.Origin.P.Eq(he2.Origin.P) && he1.Twin.Origin.P.Eq(he2.Twin.Origin.P) {
-		//			panic(fmt.Sprintf("Unexpected half edge equality in 'HalfEdgesFromSegmentLoop: (%v,%v) -> (%v,%v)", he1.Origin.P.ApproxX(), he1.Origin.P.ApproxY(), he1.Twin.Origin.P.ApproxX(), he1.Twin.Origin.P.ApproxY()))
-		//		}
-		//	}
-		//}
 	}
 
 	return halfEdges, vertices
@@ -1496,7 +1488,7 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v || w.Index < v1i || w.Index-v1i > len(vertices) {
+			if w == v || w.Index < v1i /*|| w.Index+v1i > len(vertices)*/ {
 				continue
 			}
 
@@ -1597,6 +1589,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
 				f = true
+				//break
 			} else if !blocked[w] && circuit(from, w) {
 				f = true
 			}

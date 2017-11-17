@@ -592,7 +592,7 @@ func TestElementaryCircuits(t *testing.T) {
 
 	//for i := 0; i < len(exampleLoops); i += 3 {
 	//for i := 2 * 3; i == 2*3; i++ {
-	for i := 4 * 3; i == 4*3; i++ {
+	for i := 3 * 3; i == 3*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
