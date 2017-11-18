@@ -165,6 +165,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 		return h - (((y - miny) / (maxy - miny)) * h)
 	}
 
+	var vindices string
 	var coords string
 	var lines string
 	var incident string
@@ -175,11 +176,13 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 	traverse = func(vert, from *DCELVertex) {
 		if from != nil {
 			if len(lines) > 0 {
+				vindices += ", "
 				coords += ", "
 				lines += ", "
 				incident += ", "
 				incidentCoords += ", "
 			}
+			vindices += fmt.Sprintf("%v", from.Index)
 			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
 			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
 			incident += "["
@@ -222,6 +225,7 @@ var info = document.getElementById('info');
 
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
+var vindices = [` + vindices + `]
 var coords = [` + coords + `];
 var lines = [` + lines + `];
 var incident = [` + incident + `];
@@ -292,7 +296,7 @@ function draw() {
 		isegs += "(" + incidentEdgesCoords[j][0][0] + "," + incidentEdgesCoords[j][0][1] + " -> " + incidentEdgesCoords[j][1][0] + "," + incidentEdgesCoords[j][1][1] + ")";
 	}
     info.innerHTML = "";
-    info.appendChild(document.createTextNode(i + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); incident = " + isegs));
+    info.appendChild(document.createTextNode(vindices[i] + ": from (" + coords[i][0][0] + "," + coords[i][0][1] + ") to (" + coords[i][1][0] + "," + coords[i][1][1] + "); incident = " + isegs));
 }
 
 document.onkeydown = function (e) {
@@ -592,24 +596,31 @@ func TestElementaryCircuits(t *testing.T) {
 
 	//for i := 0; i < len(exampleLoops); i += 3 {
 	//for i := 2 * 3; i == 2*3; i++ {
-	for i := 3 * 3; i == 3*3; i++ {
+	for i := 4 * 3; i == 4*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
 		q := Polygon2{verts: exampleLoops[i+1]}
 		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 		fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
-		components := Tarjan(vertices)
+		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertices[0].Index)
+		components := Tarjan(vertices[5:])
 		fmt.Printf("Components: %v\n", components)
+		for _, c := range components {
+			fmt.Printf("    Component:\n")
+			for _, v := range c {
+				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
+			}
+		}
 		circuits := ElementaryCircuits(vertices)
 		//fmt.Printf("Circuits: %v\n", circuits)
-		fmt.Printf("Circuits:\n")
+		/*fmt.Printf("Circuits:\n")
 		for i, c := range circuits {
 			fmt.Printf("  Circuit %v\n", i)
 			for _, v := range c {
 				fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
 			}
-		}
+		}*/
 
 		html := debugHalfEdgeGraphToHtmlAnimation(&vertices[0], 800, 800)
 		canvasF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_animate_half_edges_%v.html", i/3))

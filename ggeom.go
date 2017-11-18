@@ -1385,7 +1385,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			itnVert.IncidentEdges = append(itnVert.IncidentEdges, he)
 
 			if prev != nil {
-				he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
+				//he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 				prev.Next = he
 			}
 
@@ -1429,7 +1429,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 		if next != nil {
 			next.Prev = twin
-			twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, next)
+			//twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, next)
 		}
 
 		next = twin
@@ -1542,13 +1542,6 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	var unblock func(u int)
 	unblock = func(u int) {
 		blocked[u] = false
-		//for len(b[u]) > 0 {
-		//	w := b[u][0]
-		//	b[u] = b[u][1:]
-		//	if blocked[w] {
-		//		unblock(w)
-		//	}
-		//}
 		for _, w := range b[u] {
 			if blocked[w] {
 				unblock(w)
@@ -1561,9 +1554,9 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	circuit = func(from int, v int) bool {
 		fmt.Printf("Circuit from %v\n", v)
 
-		if len(circuits) > len(vertices)*2 {
-			panic("Too many iterations")
+		if len(circuits) > len(vertices)*10 {
 			return false
+			//panic("Too many iterations in 'ElementaryCircuits'")
 		}
 
 		f := false
@@ -1580,6 +1573,10 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				continue
 			}
 			visited[w] = true
+			fmt.Printf("FROM %v(=%v) to %v(=%v)   (%v,%v) -> (%v,%v)\n", v, vertices[v].Index, w, vertices[w].Index, vertices[v].P.ApproxX(), vertices[v].P.ApproxY(), vertices[w].P.ApproxX(), vertices[w].P.ApproxY())
+			if debug && vertices[v].P.Eq(vertices[w].P) {
+				panic("Unexpected vertex equality in 'ElementaryCircuits'")
+			}
 
 			if w == s {
 				c := make([]*DCELVertex, len(stack)+1, len(stack)+1)
@@ -1589,7 +1586,6 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
 				f = true
-				//break
 			} else if !blocked[w] && circuit(from, w) {
 				f = true
 			}
