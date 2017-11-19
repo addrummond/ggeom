@@ -1537,6 +1537,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	b := make([][]int, len(vertices), len(vertices))
 	stack := make([]int, 0)
 
+	included := make([]bool, len(vertices), len(vertices))
+
 	var s int
 
 	var unblock func(u int)
@@ -1550,13 +1552,12 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		b[u] = []int{}
 	}
 
-	var circuit func(from int, v int) bool
-	circuit = func(from int, v int) bool {
+	var circuit func(v int) bool
+	circuit = func(v int) bool {
 		fmt.Printf("Circuit from %v\n", v)
 
 		if len(circuits) > len(vertices)*10 {
-			return false
-			//panic("Too many iterations in 'ElementaryCircuits'")
+			panic("Too many iterations in 'ElementaryCircuits'")
 		}
 
 		f := false
@@ -1569,7 +1570,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || w < from || visited[w] {
+			if w == v || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1586,7 +1587,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
 				f = true
-			} else if !blocked[w] && circuit(from, w) {
+			} else if !blocked[w] && circuit(w) {
 				f = true
 			}
 		}
@@ -1599,7 +1600,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || w < from || visited[w] {
+				if w == v || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
@@ -1625,12 +1626,18 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	}
 
 	for s = 0; s < len(vertices); {
-		// TODO: Tarjan algo may need testing.
+		// TODO: We know that the entire graph is strongly connected, so
+		// the call to Tarjan on the first iteration is unnecessary.
 		scs := Tarjan(vertices[s:])
+
 		//scs := [][]*DCELVertex{[]*DCELVertex{}}
 		//for i := s; i < len(vertices); i++ {
 		//	scs[0] = append(scs[0], &vertices[i])
 		//}
+
+		for i := 0; i < len(included); i++ {
+			included[i] = false
+		}
 
 		fmt.Printf("Tarjan n %v s=%v, (least)\n", len(scs), s)
 
@@ -1671,10 +1678,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 
 			s = leastV
 			for _, v := range scs[leastSci] {
+				included[v.Index] = true
 				blocked[v.Index] = false
 				b[v.Index] = []int{}
 			}
-			circuit(s, s)
+			circuit(s)
 			s++
 		} else {
 			break
