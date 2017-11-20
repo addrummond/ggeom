@@ -1651,7 +1651,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				continue
 			}
 			visited[w] = true
-			edgesTaken[w] = i + 1
+
 			fmt.Printf("FROM %v(=%v) to %v(=%v)   (%v,%v) -> (%v,%v)\n", v, vertices[v].Index, w, vertices[w].Index, vertices[v].P.ApproxX(), vertices[v].P.ApproxY(), vertices[w].P.ApproxX(), vertices[w].P.ApproxY())
 			if debug && vertices[v].P.Eq(vertices[w].P) {
 				panic("Unexpected vertex equality in 'ElementaryCircuits'")
@@ -1671,8 +1671,15 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					fmt.Printf("    -> %v\n", v.Index)
 				}
 				f = true
-			} else if !blocked[w] && circuit(w, depth+1) {
-				f = true
+				edgesTaken[w] = i + 1
+			} else if !blocked[w] {
+				before := edgesTaken[w]
+				edgesTaken[w] = i + 1
+				if circuit(w, depth+1) {
+					f = true
+				} else {
+					edgesTaken[w] = before
+				}
 			}
 		}
 
