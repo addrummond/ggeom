@@ -616,7 +616,7 @@ func TestElementaryCircuits(t *testing.T) {
 
 	//for i := 0; i < len(exampleLoops); i += 3 {
 	//for i := 2 * 3; i == 2*3; i++ {
-	for i := 4 * 3; i == 4*3; i++ {
+	for i := 5 * 3; i == 5*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
@@ -633,7 +633,7 @@ func TestElementaryCircuits(t *testing.T) {
 			}
 		}
 		//circuits := ElementaryCircuits(vertices)
-		circuits := [][]*DCELVertex{TraceOutline(vertices)}
+		circuits := [][]*DCELVertex{traceOutline(vertices)}
 		fmt.Printf("Number of circuits: %v\n", len(circuits))
 		/*fmt.Printf("Circuits:\n")
 		for i, c := range circuits {

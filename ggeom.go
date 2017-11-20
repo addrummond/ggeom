@@ -1462,21 +1462,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-// IsBetweenAnticlockwise returns true iff b is reached before c going anticlockwise from a.
-func XXIsBetweenAnticlockwise(a *Vec2, b *Vec2, c *Vec2) bool {
-	ba := b.Det(a)
-	ac := a.Det(c)
-	cb := c.Det(b)
-	sba, sac, scb := ba.Sign(), ac.Sign(), cb.Sign()
-
-	if sba >= 0 {
-		return sac < 0 && scb <= 0
-	} else {
-		return sac < 0 || scb <= 0
-	}
-}
-
-func TraceOutline(vertices []DCELVertex) []*DCELVertex {
+// Get the outline of a convolution. This turns out to be quite simple.
+// All we have to do is take the "most clockwise" turn available at
+// every intersection.
+func traceOutline(vertices []DCELVertex) []*DCELVertex {
 	currentVertex := &vertices[0]
 	var prevVertex *DCELVertex
 
@@ -1487,7 +1476,7 @@ func TraceOutline(vertices []DCELVertex) []*DCELVertex {
 			panic("Too many loop iterations in 'TraceOutine'")
 		}
 
-		fmt.Printf("Adding %v\n", currentVertex.Index)
+		//fmt.Printf("Adding %v\n", currentVertex.Index)
 		trace = append(trace, currentVertex)
 
 		if prevVertex == nil {
@@ -1502,11 +1491,11 @@ func TraceOutline(vertices []DCELVertex) []*DCELVertex {
 				}
 			}
 		} else {
-			var vv Vec2
-			vv.Sub(currentVertex.P, prevVertex.P)
-			currentDirection := &vv
+			var currentDirectionVec Vec2
+			currentDirectionVec.Sub(currentVertex.P, prevVertex.P)
+			currentDirection := &currentDirectionVec
 
-			fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
+			//fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
 
 			best := currentVertex.IncidentEdges[0].Twin.Origin
 			visited := make(map[int]bool)
@@ -1523,16 +1512,12 @@ func TraceOutline(vertices []DCELVertex) []*DCELVertex {
 
 				var d Vec2
 				d.Sub(ie.Twin.Origin.P, currentVertex.P)
-				fmt.Printf("Comparing (%v,%v) to (%v,%v)\n", currentDirection.ApproxX(), currentDirection.ApproxY(), d.ApproxX(), d.ApproxY())
+				//fmt.Printf("Comparing (%v,%v) to (%v,%v)\n", currentDirection.ApproxX(), currentDirection.ApproxY(), d.ApproxX(), d.ApproxY())
 				if currentDirection.Det(&d).Sign() <= 0 {
-					fmt.Printf("Turning to %v\n", ie.Twin.Origin.Index)
+					//fmt.Printf("Turning to %v\n", ie.Twin.Origin.Index)
 					currentDirection = &d
 					best = ie.Twin.Origin
 				}
-			}
-
-			if best == nil {
-				panic("Unexpected nil value of 'best' in 'TraceOutline'")
 			}
 
 			prevVertex = currentVertex
@@ -1564,14 +1549,16 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 		s = append(s, v)
 		onstack[v.Index-v1i] = true
 
+		visited := make(map[int]bool)
 		for _, e := range v.IncidentEdges {
 			if !e.Forward {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v || w.Index < v1i /*|| w.Index+v1i > len(vertices)*/ {
+			if w == v || w.Index < v1i || visited[w.Index] /*|| w.Index+v1i > len(vertices)*/ {
 				continue
 			}
+			visited[w.Index] = true
 
 			if indices[w.Index-v1i] == 0 {
 				strongconnect(w)
