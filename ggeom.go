@@ -1462,6 +1462,87 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
+// IsBetweenAnticlockwise returns true iff b is reached before c going anticlockwise from a.
+func XXIsBetweenAnticlockwise(a *Vec2, b *Vec2, c *Vec2) bool {
+	ba := b.Det(a)
+	ac := a.Det(c)
+	cb := c.Det(b)
+	sba, sac, scb := ba.Sign(), ac.Sign(), cb.Sign()
+
+	if sba >= 0 {
+		return sac < 0 && scb <= 0
+	} else {
+		return sac < 0 || scb <= 0
+	}
+}
+
+func TraceOutline(vertices []DCELVertex) []*DCELVertex {
+	currentVertex := &vertices[0]
+	var prevVertex *DCELVertex
+
+	trace := make([]*DCELVertex, 0)
+
+	for i := 0; prevVertex == nil || currentVertex != &vertices[0]; i++ {
+		if i > len(vertices) {
+			panic("Too many loop iterations in 'TraceOutine'")
+		}
+
+		fmt.Printf("Adding %v\n", currentVertex.Index)
+		trace = append(trace, currentVertex)
+
+		if prevVertex == nil {
+			prevVertex = currentVertex
+			currentVertex = currentVertex.IncidentEdges[0].Twin.Origin
+		} else if len(currentVertex.IncidentEdges) <= 2 {
+			for _, e := range currentVertex.IncidentEdges {
+				if e.Origin.Index == currentVertex.Index {
+					prevVertex = currentVertex
+					currentVertex = e.Twin.Origin
+					break
+				}
+			}
+		} else {
+			var vv Vec2
+			vv.Sub(currentVertex.P, prevVertex.P)
+			currentDirection := &vv
+
+			fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
+
+			best := currentVertex.IncidentEdges[0].Twin.Origin
+			visited := make(map[int]bool)
+			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
+				ie := currentVertex.IncidentEdges[j]
+				if !ie.Forward {
+					break
+				}
+				v := ie.Twin.Origin.Index
+				if v == currentVertex.Index || visited[v] {
+					continue
+				}
+				visited[v] = true
+
+				var d Vec2
+				d.Sub(ie.Twin.Origin.P, currentVertex.P)
+				fmt.Printf("Comparing (%v,%v) to (%v,%v)\n", currentDirection.ApproxX(), currentDirection.ApproxY(), d.ApproxX(), d.ApproxY())
+				if currentDirection.Det(&d).Sign() <= 0 {
+					fmt.Printf("Turning to %v\n", ie.Twin.Origin.Index)
+					currentDirection = &d
+					best = ie.Twin.Origin
+				}
+			}
+
+			if best == nil {
+				panic("Unexpected nil value of 'best' in 'TraceOutline'")
+			}
+
+			prevVertex = currentVertex
+			currentVertex = best
+		}
+	}
+
+	return trace
+}
+
 // Tarjan computes the set of strongly connected components for the given set
 // of vertices. Edges to vertices outside the set are ignored.
 func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
@@ -1552,9 +1633,9 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		b[u] = []int{}
 	}
 
-	var circuit func(v int) bool
-	circuit = func(v int) bool {
-		fmt.Printf("Circuit from %v\n", v)
+	var circuit func(v int, depth int) bool
+	circuit = func(v int, depth int) bool {
+		fmt.Printf("[%v] Circuit from %v\n", depth, v)
 
 		if len(circuits) > len(vertices)*10 {
 			panic("Too many iterations in 'ElementaryCircuits'")
@@ -1579,6 +1660,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				panic("Unexpected vertex equality in 'ElementaryCircuits'")
 			}
 
+			fmt.Printf("[%v] visiting child %v\n", depth, w)
+
 			if w == s {
 				c := make([]*DCELVertex, len(stack)+1, len(stack)+1)
 				for i, vi := range stack {
@@ -1586,12 +1669,18 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
+				fmt.Printf("Found circuit of length %v (out of %v nodes)\n", len(c), len(vertices))
+				for _, v := range c {
+					fmt.Printf("    -> %v\n", v.Index)
+				}
 				f = true
-			} else if !blocked[w] && circuit(w) {
+			} else if !blocked[w] && circuit(w, depth+1) {
 				f = true
 			}
 		}
+
 		if f {
+			fmt.Printf("[%v] Unblocking %v (n verts=%v)\n", depth, v, len(vertices))
 			unblock(v)
 		} else {
 			visited := make(map[int]bool)
@@ -1625,7 +1714,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		return f
 	}
 
-	for s = 0; s < len(vertices); {
+	for i := 0; i < len(included); i++ {
+		included[i] = false
+	}
+
+	for s = 0; s < 1 && s < len(vertices); {
 		// TODO: We know that the entire graph is strongly connected, so
 		// the call to Tarjan on the first iteration is unnecessary.
 		scs := Tarjan(vertices[s:])
@@ -1634,10 +1727,6 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		//for i := s; i < len(vertices); i++ {
 		//	scs[0] = append(scs[0], &vertices[i])
 		//}
-
-		for i := 0; i < len(included); i++ {
-			included[i] = false
-		}
 
 		fmt.Printf("Tarjan n %v s=%v, (least)\n", len(scs), s)
 
@@ -1682,7 +1771,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				blocked[v.Index] = false
 				b[v.Index] = []int{}
 			}
-			circuit(s)
+			circuit(s, 0)
 			s++
 		} else {
 			break

@@ -218,7 +218,8 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 	o += `<html>
 <body>
 <p id='info' style='height: 1.5em'>
-</p>
+<p>Go to vertex <input id='gotovertex' type='text' width='3'>
+<p>
 <canvas id='canvas' width='` + cw + `' height='` + ch + `'></canvas>
 <script>
 var info = document.getElementById('info');
@@ -315,6 +316,25 @@ document.onkeydown = function (e) {
             draw();
         }
     }
+}
+
+var goToVertex = document.getElementById("gotovertex");
+goToVertex.onchange = function (e) {
+	e.preventDefault();
+	var v = parseInt(goToVertex.value);
+	if (! isNaN(v)) {
+		var j;
+		for (j = 0; j < vindices.length; ++j) {
+			if (vindices[j] == v) {
+				break;
+			}
+		}
+
+		if (j < vindices.length && j != i) {
+			i = j;
+			draw();
+		}
+	}
 }
 
 draw();
@@ -612,8 +632,9 @@ func TestElementaryCircuits(t *testing.T) {
 				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
 			}
 		}
-		circuits := ElementaryCircuits(vertices)
-		//fmt.Printf("Circuits: %v\n", circuits)
+		//circuits := ElementaryCircuits(vertices)
+		circuits := [][]*DCELVertex{TraceOutline(vertices)}
+		fmt.Printf("Number of circuits: %v\n", len(circuits))
 		/*fmt.Printf("Circuits:\n")
 		for i, c := range circuits {
 			fmt.Printf("  Circuit %v\n", i)
