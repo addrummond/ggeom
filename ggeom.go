@@ -1501,8 +1501,12 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 
 			//fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
 
-			best := currentVertex.IncidentEdges[0].Twin.Origin
-			var bestI int
+			// 'best' will end up being set to the most clockwise possible turn if
+			// we find at least one option to make a clockwise turn. In the case where
+			// 'best' remains as nil, 'leastWorst' is the least anticlockwise turn possible.
+			var best, leastWorst *DCELVertex
+			var bestI, leastWorstI int
+
 			visited := make(map[int]bool)
 			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
 				ie := currentVertex.IncidentEdges[j]
@@ -1523,12 +1527,31 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 					currentDirection = &d
 					best = ie.Twin.Origin
 					bestI = j
+				} else if best == nil {
+					if leastWorst == nil {
+						leastWorst = ie.Twin.Origin
+						leastWorstI = j
+					} else {
+						var d2 Vec2
+						d2.Sub(leastWorst.P, currentVertex.P)
+						if d.Det(&d2).Sign() <= 0 {
+							leastWorst = ie.Twin.Origin
+							leastWorstI = j
+						}
+					}
 				}
 			}
 
-			edgesTaken[currentVertex.Index] = bestI
 			prevVertex = currentVertex
-			currentVertex = best
+			if best != nil {
+				edgesTaken[currentVertex.Index] = bestI
+				currentVertex = best
+			} else if leastWorst != nil {
+				edgesTaken[currentVertex.Index] = leastWorstI
+				currentVertex = leastWorst
+			} else {
+				panic("'best' and 'leastWorst' unexpectedly both nil in 'traceOutline'")
+			}
 		}
 	}
 
