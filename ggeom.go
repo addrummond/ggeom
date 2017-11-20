@@ -1534,7 +1534,7 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 					} else {
 						var d2 Vec2
 						d2.Sub(leastWorst.P, currentVertex.P)
-						if d.Det(&d2).Sign() <= 0 {
+						if d.Det(&d2).Sign() < 0 {
 							leastWorst = ie.Twin.Origin
 							leastWorstI = j
 						}
