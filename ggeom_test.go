@@ -616,7 +616,7 @@ func TestElementaryCircuits(t *testing.T) {
 
 	//for i := 0; i < len(exampleLoops); i += 3 {
 	//for i := 2 * 3; i == 2*3; i++ {
-	for i := 5 * 3; i == 5*3; i++ {
+	for i := 4 * 3; i == 4*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
@@ -624,7 +624,7 @@ func TestElementaryCircuits(t *testing.T) {
 		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 		fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
 		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertices[0].Index)
-		components := Tarjan(vertices[5:])
+		components := tarjan(vertices[5:], []int{})
 		fmt.Printf("Components: %v\n", components)
 		for _, c := range components {
 			fmt.Printf("    Component:\n")
@@ -632,8 +632,9 @@ func TestElementaryCircuits(t *testing.T) {
 				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
 			}
 		}
-		//circuits := ElementaryCircuits(vertices)
-		circuits := [][]*DCELVertex{traceOutline(vertices)}
+		circuits := ElementaryCircuits(vertices)
+		//outline, _ := traceOutline(vertices)
+		//circuits := [][]*DCELVertex{outline}
 		fmt.Printf("Number of circuits: %v\n", len(circuits))
 		/*fmt.Printf("Circuits:\n")
 		for i, c := range circuits {

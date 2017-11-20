@@ -1464,8 +1464,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 // Get the outline of a convolution. This turns out to be quite simple.
 // All we have to do is take the "most clockwise" turn available at
-// every intersection.
-func traceOutline(vertices []DCELVertex) []*DCELVertex {
+// every intersection. Assumes that vertex indices start at zero.
+func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
+	edgesTaken := make([]int, len(vertices), len(vertices))
+
 	currentVertex := &vertices[0]
 	var prevVertex *DCELVertex
 
@@ -1480,11 +1482,13 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 		trace = append(trace, currentVertex)
 
 		if prevVertex == nil {
+			edgesTaken[0] = 1
 			prevVertex = currentVertex
 			currentVertex = currentVertex.IncidentEdges[0].Twin.Origin
 		} else if len(currentVertex.IncidentEdges) <= 2 {
-			for _, e := range currentVertex.IncidentEdges {
+			for i, e := range currentVertex.IncidentEdges {
 				if e.Origin.Index == currentVertex.Index {
+					edgesTaken[currentVertex.Index] = i + 1
 					prevVertex = currentVertex
 					currentVertex = e.Twin.Origin
 					break
@@ -1498,6 +1502,7 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 			//fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
 
 			best := currentVertex.IncidentEdges[0].Twin.Origin
+			var bestI int
 			visited := make(map[int]bool)
 			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
 				ie := currentVertex.IncidentEdges[j]
@@ -1517,20 +1522,22 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 					//fmt.Printf("Turning to %v\n", ie.Twin.Origin.Index)
 					currentDirection = &d
 					best = ie.Twin.Origin
+					bestI = j
 				}
 			}
 
+			edgesTaken[currentVertex.Index] = bestI
 			prevVertex = currentVertex
 			currentVertex = best
 		}
 	}
 
-	return trace
+	return trace, edgesTaken
 }
 
 // Tarjan computes the set of strongly connected components for the given set
 // of vertices. Edges to vertices outside the set are ignored.
-func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
+func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
 	v1i := vertices[0].Index
 
 	components := [][]*DCELVertex{}
@@ -1550,12 +1557,12 @@ func Tarjan(vertices []DCELVertex) [][]*DCELVertex {
 		onstack[v.Index-v1i] = true
 
 		visited := make(map[int]bool)
-		for _, e := range v.IncidentEdges {
+		for i, e := range v.IncidentEdges {
 			if !e.Forward {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v || w.Index < v1i || visited[w.Index] /*|| w.Index+v1i > len(vertices)*/ {
+			if w == v || w.Index < v1i || (v.Index < len(dontTakeEdges) && dontTakeEdges[v.Index] == i+1) || visited[w.Index] {
 				continue
 			}
 			visited[w.Index] = true
@@ -1600,7 +1607,9 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		panic("'ElementaryCircuits' assumes that the first vertex has index 0")
 	}
 
-	circuits := make([][]*DCELVertex, 0)
+	outline, edgesTaken := traceOutline(vertices)
+
+	circuits := [][]*DCELVertex{outline}
 	blocked := make([]bool, len(vertices), len(vertices))
 	b := make([][]int, len(vertices), len(vertices))
 	stack := make([]int, 0)
@@ -1633,12 +1642,12 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		blocked[v] = true
 
 		visited := make(map[int]bool)
-		for _, e := range vertices[v].IncidentEdges {
+		for i, e := range vertices[v].IncidentEdges {
 			if !e.Forward {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || !included[w] || visited[w] {
+			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1671,12 +1680,12 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 			unblock(v)
 		} else {
 			visited := make(map[int]bool)
-			for _, e := range vertices[v].IncidentEdges {
+			for i, e := range vertices[v].IncidentEdges {
 				if !e.Forward {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || !included[w] || visited[w] {
+				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
@@ -1708,7 +1717,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 	for s = 0; s < 1 && s < len(vertices); {
 		// TODO: We know that the entire graph is strongly connected, so
 		// the call to Tarjan on the first iteration is unnecessary.
-		scs := Tarjan(vertices[s:])
+		scs := tarjan(vertices[s:], edgesTaken)
 
 		//scs := [][]*DCELVertex{[]*DCELVertex{}}
 		//for i := s; i < len(vertices); i++ {
