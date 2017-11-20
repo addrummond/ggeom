@@ -1478,7 +1478,6 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 			panic("Too many loop iterations in 'TraceOutine'")
 		}
 
-		//fmt.Printf("Adding %v\n", currentVertex.Index)
 		trace = append(trace, currentVertex)
 
 		if prevVertex == nil {
@@ -1498,8 +1497,6 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 			var currentDirectionVec Vec2
 			currentDirectionVec.Sub(currentVertex.P, prevVertex.P)
 			currentDirection := &currentDirectionVec
-
-			//fmt.Printf("At vertex %v with direction (%v,%v)\n", currentVertex.Index, currentDirection.ApproxX(), currentDirection.ApproxY())
 
 			// 'best' will end up being set to the most clockwise possible turn if
 			// we find at least one option to make a clockwise turn. In the case where
@@ -1521,9 +1518,7 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 
 				var d Vec2
 				d.Sub(ie.Twin.Origin.P, currentVertex.P)
-				//fmt.Printf("Comparing (%v,%v) to (%v,%v)\n", currentDirection.ApproxX(), currentDirection.ApproxY(), d.ApproxX(), d.ApproxY())
 				if currentDirection.Det(&d).Sign() <= 0 {
-					//fmt.Printf("Turning to %v\n", ie.Twin.Origin.Index)
 					currentDirection = &d
 					best = ie.Twin.Origin
 					bestI = j
