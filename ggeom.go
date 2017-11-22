@@ -1468,7 +1468,9 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 // every intersection. We know that no hole with ever share an
 // edge with the outline. Thus, by excluding edges on the outline
 // from our subsequent search for cycles, we can reduce the size
-// of the graph and speed up the computation somewhat.
+// of the graph and speed up the computation somewhat. (Since any
+// cycles that we miss will be non-hole cycles which we can
+// safely ignore.)
 // Assumes that vertex indices start at zero.
 func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 	edgesTaken := make([]int, len(vertices), len(vertices))
