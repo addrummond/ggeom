@@ -1668,7 +1668,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 5 || !included[w] || visited[w] {
+			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 100 || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1714,7 +1714,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 5 || !included[w] || visited[w] {
+				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 100 || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
@@ -1740,11 +1740,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 		return f
 	}
 
-	for i := 0; i < len(included); i++ {
-		included[i] = false
-	}
-
 	for s = 0; s < len(vertices); {
+		for i := 0; i < len(included); i++ {
+			included[i] = false
+		}
+
 		// TODO: We know that the entire graph is strongly connected, so
 		// the call to Tarjan on the first iteration is unnecessary.
 		scs := tarjan(vertices[s:], edgesTaken)
