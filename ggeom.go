@@ -1462,9 +1462,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-// Get the outline of a convolution. This turns out to be quite simple.
+// traceOutline gets the outline of a convolution from the list
+// of vertices in the DCEL. This turns out to be quite simple.
 // All we have to do is take the "most clockwise" turn available at
-// every intersection. Assumes that vertex indices start at zero.
+// every intersection. We know that no hole with ever share an
+// edge with the outline. Thus, by excluding edges on the outline
+// from our subsequent search for cycles, we can reduce the size
+// of the graph and speed up the computation somewhat.
+// Assumes that vertex indices start at zero.
 func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 	edgesTaken := make([]int, len(vertices), len(vertices))
 
