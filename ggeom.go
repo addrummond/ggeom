@@ -1641,6 +1641,9 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 
 	included := make([]bool, len(vertices), len(vertices))
 
+	edgeCircuitCount := make(map[*DCELHalfEdge]int)
+	currentEdges := make([]*DCELHalfEdge, 0)
+
 	var s int
 
 	var unblock func(u int)
@@ -1672,7 +1675,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
+			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 2 || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1691,12 +1694,17 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
+				for _, e := range currentEdges {
+					edgeCircuitCount[e] = edgeCircuitCount[e] + 1
+				}
+				currentEdges = make([]*DCELHalfEdge, 0)
 				fmt.Printf("Found circuit of length %v (out of %v nodes)\n", len(c), len(vertices))
 				for _, v := range c {
 					fmt.Printf("    -> %v\n", v.Index)
 				}
 				f = true
 			} else if !blocked[w] {
+				currentEdges = append(currentEdges, e)
 				if circuit(w, depth+1) {
 					f = true
 				}
@@ -1713,10 +1721,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
+				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 2 || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
+				//currentEdges = append(currentEdges, e)
 
 				found := false
 				for _, vv := range b[w] {
