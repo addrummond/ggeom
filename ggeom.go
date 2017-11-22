@@ -1627,6 +1627,9 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 
 	outline, edgesTaken := traceOutline(vertices)
 
+	edgeUseCounts := make(map[*DCELHalfEdge]int)
+	edgesNewlyTaken := make([]*DCELHalfEdge, 0)
+
 	circuits := [][]*DCELVertex{outline}
 	blocked := make([]bool, len(vertices), len(vertices))
 	b := make([][]int, len(vertices), len(vertices))
@@ -1665,10 +1668,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
+			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 5 || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
+			edgesNewlyTaken = append(edgesNewlyTaken, e)
 
 			fmt.Printf("FROM %v(=%v) to %v(=%v)   (%v,%v) -> (%v,%v)\n", v, vertices[v].Index, w, vertices[w].Index, vertices[v].P.ApproxX(), vertices[v].P.ApproxY(), vertices[w].P.ApproxX(), vertices[w].P.ApproxY())
 			if debug && vertices[v].P.Eq(vertices[w].P) {
@@ -1684,19 +1688,18 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				}
 				c[len(c)-1] = &vertices[s]
 				circuits = append(circuits, c)
+				for _, e := range edgesNewlyTaken {
+					edgeUseCounts[e] = edgeUseCounts[e] + 1
+				}
+				edgesNewlyTaken = make([]*DCELHalfEdge, 0)
 				fmt.Printf("Found circuit of length %v (out of %v nodes)\n", len(c), len(vertices))
 				for _, v := range c {
 					fmt.Printf("    -> %v\n", v.Index)
 				}
 				f = true
-				edgesTaken[w] = i + 1
 			} else if !blocked[w] {
-				before := edgesTaken[w]
-				edgesTaken[w] = i + 1
 				if circuit(w, depth+1) {
 					f = true
-				} else {
-					edgesTaken[w] = before
 				}
 			}
 		}
@@ -1711,11 +1714,11 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || !included[w] || visited[w] {
+				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeUseCounts[e] > 5 || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
-				//edgesTaken[w] = i + 1
+				edgesNewlyTaken = append(edgesNewlyTaken, e)
 
 				found := false
 				for _, vv := range b[w] {

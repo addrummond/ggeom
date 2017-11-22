@@ -632,6 +632,7 @@ func TestElementaryCircuits(t *testing.T) {
 				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
 			}
 		}
+		//circuits := traceInnies(vertices)
 		circuits := ElementaryCircuits(vertices)
 		//outline, _ := traceOutline(vertices)
 		//circuits := [][]*DCELVertex{outline}
