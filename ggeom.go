@@ -1546,10 +1546,10 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 
 			prevVertex = currentVertex
 			if best != nil {
-				edgesTaken[currentVertex.Index] = bestI
+				edgesTaken[currentVertex.Index] = bestI + 1
 				currentVertex = best
 			} else if leastWorst != nil {
-				edgesTaken[currentVertex.Index] = leastWorstI
+				edgesTaken[currentVertex.Index] = leastWorstI + 1
 				currentVertex = leastWorst
 			} else {
 				panic("'best' and 'leastWorst' unexpectedly both nil in 'traceOutline'")
