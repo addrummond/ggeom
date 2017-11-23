@@ -1675,7 +1675,7 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin.Index
-			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 2 || !included[w] || visited[w] {
+			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 40 || !included[w] || visited[w] {
 				continue
 			}
 			visited[w] = true
@@ -1721,11 +1721,10 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 					break
 				}
 				w := e.Twin.Origin.Index
-				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 2 || !included[w] || visited[w] {
+				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 40 || !included[w] || visited[w] {
 					continue
 				}
 				visited[w] = true
-				//currentEdges = append(currentEdges, e)
 
 				found := false
 				for _, vv := range b[w] {
