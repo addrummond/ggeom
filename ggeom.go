@@ -1462,6 +1462,75 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
+func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int) [][]*DCELVertex {
+	traces := make([]*DCELVertex)
+
+	visitCount[v.Index]++
+
+	for {
+		if len(prev) == 0 {
+			for _, ie := range v.IncidentEdges {
+				if ! ie.Forward {
+					break;
+				}
+
+				traceFrom([]*DCELVertex{v}, ie.Twin.Origin, visitCount)
+			}
+		} else {
+			// Is this a cycle?
+			for i, pv := range prev {
+				if pv == v {
+					theCycle := make([]*DCELVertex, len(prev)-i)
+					copy(theCycle, prev[i:len(prev)])
+					return [][]*DCELVertex{theCycle}
+				}
+			}
+
+			prevV := prev[len(prev)-1]
+
+			for _, ie := range v.IncidentEdges {
+				if ! ie.Forward {
+					break
+				}
+				if visitCount[v.Twin.Origin.Index] > 0 {
+					continue
+				}
+
+				nextP := v.Twin.Origin.P
+
+				lastDir := v.P.Sub(prevV.P)
+				newDir := nextP.Sub(v.P)
+
+				cp := lastDir.Cross(newDir)
+
+				if cp >= 0 { // clockwise turn
+					newPrev := make([]*DCELVertex, len(prev), len(prev)+1)
+					copy(newPrev, prev)
+					newPrev = append(newPrev, v)
+					traceFrom(newPrev, v.Twin.Origin, visitCount)
+				}
+			}
+		}
+	}
+
+	return [][]*DCELVertex{ }
+}
+
+func traceInner(vertices, outline []DCELVertex) ([][]*DCELVertex) {
+	traces := make([][]*DCELVertex, 0)
+	visitCount := make(int, len(vertices), len(vertices))
+
+	for _, v := range outline {
+		visitCount[v.Index] = 1;
+	}
+
+	for _, v := range vertices {
+		traces := append(traces, traceFrom(nil, v, visitCount)...)
+	}
+
+	return traces
+}
+
 // traceOutline gets the outline of a convolution from the list
 // of vertices in the DCEL. This turns out to be quite simple.
 // All we have to do is take the "most clockwise" turn available at
@@ -1493,6 +1562,9 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 			currentVertex = currentVertex.IncidentEdges[0].Twin.Origin
 		} else if len(currentVertex.IncidentEdges) <= 2 {
 			for i, e := range currentVertex.IncidentEdges {
+				if ! e.Forward {
+					break
+				}
 				if e.Origin.Index == currentVertex.Index {
 					edgesTaken[currentVertex.Index] = i + 1
 					prevVertex = currentVertex
