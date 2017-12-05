@@ -237,7 +237,7 @@ func convexOutlineOf(p *Polygon2) Polygon2 {
 		d1.Sub(&p.verts[i], &p.verts[(i+len(p.verts)-1)%len(p.verts)])
 		d2.Sub(&p.verts[(i+1)%len(p.verts)], &p.verts[i])
 		det := d1.Det(&d2)
-		if det.Sign() >= 0 {
+		if det.Sign() >= 0 { // It's an counterclockwise turn, hence a convex vertex given that the polygon is wound counterclockwise
 			newVerts = append(newVerts, *(p.verts[i].Copy()))
 		}
 	}
@@ -251,8 +251,8 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	// Roughly follows the algorithm described in
 	//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
 
-	qq := convexOutlineOf(q)
-	q = &qq
+	//qq := convexOutlineOf(q)
+	//q = &qq
 
 	// Get the number of reflex vertices for each polygon.
 	rp := GetReflexVertIndices(p)
@@ -1587,6 +1587,8 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 
 		visitCount[i] = math.MaxInt8
 	}
+
+	return traces
 
 	goodTraces := make([][]*DCELVertex, 0)
 	for _, t := range traces {
