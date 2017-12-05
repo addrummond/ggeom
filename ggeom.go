@@ -1462,14 +1462,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int) [][]*DCELVertex {
-	if visitCount[v.Index] > 1 {
+const MAX_COUNT = 1
+
+func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVertex {
+	if visitCount[v.Index] > MAX_COUNT+1 {
 		return [][]*DCELVertex{}
 	}
 
 	visitCount[v.Index]++
-
-	fmt.Printf("At %v\n", v.Index)
 
 	if len(prev) == 0 {
 		for _, ie := range v.IncidentEdges {
@@ -1485,18 +1485,16 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int) [][]*DCELVer
 	} else {
 		prevV := prev[len(prev)-1]
 
-		for iii, ie := range v.IncidentEdges {
+		var bestNextV *DCELVertex
+		var bestCp *Scalar
+		for _, ie := range v.IncidentEdges {
 			if !ie.Forward {
 				break
 			}
 
 			nextV := ie.Twin.Origin
 
-			if nextV == v {
-				panic("FOO")
-			}
-
-			if visitCount[nextV.Index] > 0 {
+			if visitCount[nextV.Index] > MAX_COUNT {
 				// Is this a cycle?
 				for i, pv := range prev {
 					if i > len(prev)-3 {
@@ -1507,9 +1505,8 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int) [][]*DCELVer
 						theCycle := make([]*DCELVertex, len(prev)-i)
 						copy(theCycle, prev[i:len(prev)])
 						theCycle = append(theCycle, nextV)
-						fmt.Printf("FOUND CYCLE OF LEN %v at %v\n", len(theCycle), nextV.Index)
 						for _, v := range theCycle {
-							fmt.Printf("   vertex %v (%v,%v)\n", v.Index, v.P.ApproxX(), v.P.ApproxY())
+							visitCount[v.Index] = math.MaxInt8
 						}
 						return [][]*DCELVertex{theCycle}
 					}
@@ -1525,35 +1522,48 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int) [][]*DCELVer
 			cp := lastDir.Det(&newDir)
 
 			if cp.Sign() <= 0 { // clockwise turn
-				newPrev := make([]*DCELVertex, len(prev), len(prev)+1)
-				copy(newPrev, prev)
-				newPrev = append(newPrev, v)
-				fmt.Printf("From %v to %v on edge %v\n", v.Index, nextV.Index, iii)
-				r := traceFrom(newPrev, nextV, visitCount)
-				if len(r) > 0 {
-					return r
+				if bestNextV == nil {
+					bestNextV = nextV
+					bestCp = cp
+				} else if cp.Cmp(bestCp) < 0 {
+					bestNextV = nextV
+					bestCp = cp
 				}
+			}
+		}
+
+		if bestNextV != nil {
+			newPrev := make([]*DCELVertex, len(prev), len(prev)+1)
+			copy(newPrev, prev)
+			newPrev = append(newPrev, v)
+			r := traceFrom(newPrev, bestNextV, visitCount)
+			if len(r) > 0 {
+				return r
 			}
 		}
 	}
 
 	visitCount[v.Index]--
 
-	fmt.Printf("--- %v\n", v.Index)
-
 	return [][]*DCELVertex{}
 }
 
 func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 	traces := make([][]*DCELVertex, 0)
-	visitCount := make([]int, len(vertices), len(vertices))
+	visitCount := make([]int8, len(vertices), len(vertices))
 
 	for _, v := range outline {
-		visitCount[v.Index] = 2
+		visitCount[v.Index] = math.MaxInt8
 	}
 
-	for i, _ := range vertices {
+	for i := range vertices {
+		if visitCount[i] > MAX_COUNT {
+			continue
+		}
+
 		traces = append(traces, traceFrom([]*DCELVertex{}, &vertices[i], visitCount)...)
+
+		visitCount[i] = math.MaxInt8
 	}
 
 	return traces
