@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"unsafe" // just used to convert pointers to integers (but not back again!)
 
 	"github.com/addrummond/ggeom/redblacktree"
 	"github.com/emirpasic/gods/trees/binaryheap"
@@ -229,8 +230,10 @@ func (p *Polygon2) indexOfBottommost() int {
 	return mini
 }
 
-func convexOutlineOf(p *Polygon2) Polygon2 {
-	newVerts := make([]Vec2, 0)
+// ConvexOutlineOf returns the polygon consisting of the convex vertices of its argument.
+// (Assumes that the polygon is wound anticlockwise.)
+func ConvexOutlineOf(p *Polygon2) Polygon2 {
+	newVerts := make([]Vec2, 0, len(p.verts))
 
 	for i := 0; i < len(p.verts); i++ {
 		var d1, d2 Vec2
@@ -251,8 +254,8 @@ func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	// Roughly follows the algorithm described in
 	//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
 
-	//qq := convexOutlineOf(q)
-	//q = &qq
+	qq := ConvexOutlineOf(q)
+	q = &qq
 
 	// Get the number of reflex vertices for each polygon.
 	rp := GetReflexVertIndices(p)
@@ -1247,12 +1250,10 @@ type DCELHalfEdge struct {
 type DCELVertex struct {
 	P             *Vec2
 	IncidentEdges []*DCELHalfEdge
-	// Vertices in a given graph are numbered consecutively (in an arbitrary
-	// order). This is convenient for tagging vertices
-	// with various properties when implementing certain algorithms,
-	// since it makes it possible to use array indexation rather than
-	// a hashtable lookup.
-	Index int
+}
+
+func vertexIndex(base, v *DCELVertex) int {
+	return int(uintptr(unsafe.Pointer(v))-uintptr(unsafe.Pointer(base))) / int(unsafe.Sizeof(DCELVertex{}))
 }
 
 // DCELFace represents a face within a doubly connected edge list.
@@ -1352,7 +1353,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
 	vertices = make([]DCELVertex, 0, maxNHalfEdges)
 
-	vertIndex := 0
 	var prev *DCELHalfEdge
 	for segi := range points {
 		p1 := &points[segi]
@@ -1376,11 +1376,10 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 
 			it, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
-				vertices = append(vertices, DCELVertex{p, make([]*DCELHalfEdge, 0, 2), vertIndex})
+				vertices = append(vertices, DCELVertex{p, make([]*DCELHalfEdge, 0, 2)})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 				}
-				vertIndex++
 				return &vertices[len(vertices)-1]
 			})
 
@@ -1481,12 +1480,12 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVertex {
-	if visitCount[v.Index] > 0 {
+func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*DCELVertex {
+	if visitCount[vertexIndex(base, v)] > 0 {
 		return [][]*DCELVertex{}
 	}
 
-	visitCount[v.Index]++
+	visitCount[vertexIndex(base, v)]++
 
 	if len(prev) == 0 {
 		for _, ie := range v.IncidentEdges {
@@ -1494,7 +1493,7 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 				break
 			}
 
-			r := traceFrom([]*DCELVertex{v}, ie.Twin.Origin, visitCount)
+			r := traceFrom([]*DCELVertex{v}, base, ie.Twin.Origin, visitCount)
 			if len(r) > 0 {
 				return r
 			}
@@ -1515,7 +1514,7 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 				continue
 			}
 
-			if visitCount[nextV.Index] > 0 {
+			if visitCount[vertexIndex(base, nextV)] > 0 {
 				// Is this a cycle?
 				for i := len(prev) - 1; i >= 0; i-- {
 					pv := prev[i]
@@ -1525,7 +1524,7 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 						copy(theCycle, prev[i:len(prev)])
 						theCycle = append(theCycle, v)
 						for _, v := range theCycle {
-							visitCount[v.Index] = math.MaxInt8
+							visitCount[vertexIndex(base, v)] = math.MaxInt8
 						}
 						return [][]*DCELVertex{theCycle}
 					}
@@ -1555,14 +1554,14 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 			newPrev := make([]*DCELVertex, len(prev), len(prev)+1)
 			copy(newPrev, prev)
 			newPrev = append(newPrev, v)
-			r := traceFrom(newPrev, bestNextV, visitCount)
+			r := traceFrom(newPrev, base, bestNextV, visitCount)
 			if len(r) > 0 {
 				return r
 			}
 		}
 	}
 
-	visitCount[v.Index]--
+	visitCount[vertexIndex(base, v)]--
 
 	return [][]*DCELVertex{}
 }
@@ -1575,7 +1574,7 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 	visitCount := make([]int8, len(vertices), len(vertices))
 
 	for _, v := range outline {
-		visitCount[v.Index] = math.MaxInt8
+		visitCount[vertexIndex(&vertices[0], v)] = math.MaxInt8
 	}
 
 	for i := range vertices {
@@ -1639,7 +1638,7 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 				if !e.Forward {
 					break
 				}
-				if e.Origin.Index == currentVertex.Index {
+				if e.Origin == currentVertex {
 					prevVertex = currentVertex
 					currentVertex = e.Twin.Origin
 					break
@@ -1662,11 +1661,11 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 				if !ie.Forward {
 					break
 				}
-				v := ie.Twin.Origin.Index
-				if v == currentVertex.Index || visited[v] {
+				v := ie.Twin.Origin
+				if v == currentVertex || visited[vertexIndex(&vertices[0], v)] {
 					continue
 				}
-				visited[v] = true
+				visited[vertexIndex(&vertices[0], v)] = true
 
 				var d Vec2
 				d.Sub(ie.Twin.Origin.P, currentVertex.P)
@@ -1698,8 +1697,8 @@ func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
 
 // Tarjan computes the set of strongly connected components for the given set
 // of vertices. Edges to vertices outside the set are ignored.
-func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
-	v1i := vertices[0].Index
+func tarjan(base *DCELVertex, vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
+	v1i := vertexIndex(base, &vertices[0])
 
 	components := [][]*DCELVertex{}
 
@@ -1711,11 +1710,12 @@ func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
 
 	var strongconnect func(*DCELVertex)
 	strongconnect = func(v *DCELVertex) {
-		indices[v.Index-v1i] = index
-		lowlinks[v.Index-v1i] = index
+		vi := vertexIndex(base, v)
+		indices[vi-v1i] = index
+		lowlinks[vi-v1i] = index
 		index++
 		s = append(s, v)
-		onstack[v.Index-v1i] = true
+		onstack[vi-v1i] = true
 
 		visited := make(map[int]bool)
 		for i, e := range v.IncidentEdges {
@@ -1723,29 +1723,31 @@ func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
 				break
 			}
 			w := e.Twin.Origin
-			if w == v || w.Index < v1i || (v.Index < len(dontTakeEdges) && dontTakeEdges[v.Index] == i+1) || visited[w.Index] {
+			wi := vertexIndex(base, w)
+			if w == v || wi < v1i || (vi < len(dontTakeEdges) && dontTakeEdges[vi] == i+1) || visited[wi] {
 				continue
 			}
-			visited[w.Index] = true
+			visited[wi] = true
 
-			if indices[w.Index-v1i] == 0 {
+			if indices[wi-v1i] == 0 {
 				strongconnect(w)
-				if lowlinks[w.Index-v1i] < lowlinks[v.Index-v1i] {
-					lowlinks[v.Index-v1i] = lowlinks[w.Index-v1i]
+				if lowlinks[wi-v1i] < lowlinks[vi-v1i] {
+					lowlinks[vi-v1i] = lowlinks[wi-v1i]
 				}
-			} else if onstack[w.Index-v1i] {
-				if indices[w.Index-v1i] < lowlinks[v.Index-v1i] {
-					lowlinks[v.Index-v1i] = indices[w.Index-v1i]
+			} else if onstack[wi-v1i] {
+				if indices[wi-v1i] < lowlinks[vi-v1i] {
+					lowlinks[vi-v1i] = indices[wi-v1i]
 				}
 			}
 		}
 
-		if lowlinks[v.Index-v1i] == indices[v.Index-v1i] {
+		if lowlinks[vi-v1i] == indices[vi-v1i] {
 			components = append(components, []*DCELVertex{})
 			for {
 				var w *DCELVertex
 				w, s = s[len(s)-1], s[:len(s)-1]
-				onstack[w.Index-v1i] = false
+				wi := vertexIndex(base, w)
+				onstack[wi-v1i] = false
 				components[len(components)-1] = append(components[len(components)-1], w)
 				if w == v {
 					break
@@ -1754,8 +1756,8 @@ func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
 		}
 	}
 
-	for i, v := range vertices {
-		if indices[v.Index-v1i] == 0 {
+	for i := range vertices {
+		if indices[vertexIndex(base, &vertices[i])-v1i] == 0 {
 			strongconnect(&vertices[i])
 		}
 	}

@@ -182,7 +182,7 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 				incident += ", "
 				incidentCoords += ", "
 			}
-			vindices += fmt.Sprintf("%v", from.Index)
+			vindices += fmt.Sprintf("%v", vertexIndex(start, from))
 			coords += fmt.Sprintf("[[%v,%v],[%v,%v]]", from.P.ApproxX(), from.P.ApproxY(), vert.P.ApproxX(), vert.P.ApproxY())
 			lines += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(from.P.ApproxX()), ty(from.P.ApproxY()), tx(vert.P.ApproxX()), ty(vert.P.ApproxY()))
 			incident += "["
@@ -614,9 +614,9 @@ var exampleLoops = SofSofVec2([][][]float64{
 func TestElementaryCircuits(t *testing.T) {
 	lines := []string{"stroke: black; stroke-width: 12; fill: none", "stroke: red; fill: red; stroke-width: 10; fill: none", "stroke: green; fill: none; stroke-width: 8", "stroke: blue; fill: none; stroke-width: 6", "stroke: yellow; fill: none; stroke-width: 4", "stroke: purple; fill: none; stroke-width: 2", "stroke: orange; fill: none; stroke-width: 1"}
 
-	//for i := 0; i < len(exampleLoops); i += 3 {
-	//for i := 2 * 3; i == 2*3; i++ {
-	for i := 5 * 3; i == 5*3; i++ {
+	for i := 0; i < len(exampleLoops); i += 3 {
+		//for i := 2 * 3; i == 2*3; i++ {
+		//for i := 5 * 3; i == 5*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
@@ -624,13 +624,13 @@ func TestElementaryCircuits(t *testing.T) {
 		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 		_ = hedges
 		//fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
-		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertices[0].Index)
-		components := tarjan(vertices[5:], []int{})
+		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertexIndex(&vertices[0], &vertices[0]))
+		components := tarjan(&vertices[0], vertices[5:], []int{})
 		//fmt.Printf("Components: %v\n", components)
 		for _, c := range components {
 			fmt.Printf("    Component:\n")
 			for _, v := range c {
-				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
+				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), vertexIndex(&vertices[0], v))
 			}
 		}
 		//outline, _ := traceOutline(vertices)
@@ -644,7 +644,7 @@ func TestElementaryCircuits(t *testing.T) {
 		for i, c := range circuits {
 			fmt.Printf("  Circuit %v\n", i)
 			for _, v := range c {
-				fmt.Printf("    [%v] (%v,%v)\n", v.Index, v.P.ApproxX(), v.P.ApproxY())
+				fmt.Printf("    [%v] (%v,%v)\n", vertexIndex(&vertices[0], v), v.P.ApproxX(), v.P.ApproxY())
 			}
 		}
 
