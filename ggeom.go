@@ -1494,6 +1494,10 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 
 			nextV := ie.Twin.Origin
 
+			if nextV == prevV {
+				continue
+			}
+
 			if visitCount[nextV.Index] > MAX_COUNT {
 				// Is this a cycle?
 				for i, pv := range prev {

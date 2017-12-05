@@ -615,8 +615,8 @@ func TestElementaryCircuits(t *testing.T) {
 	lines := []string{"stroke: black; stroke-width: 12; fill: none", "stroke: red; fill: red; stroke-width: 10; fill: none", "stroke: green; fill: none; stroke-width: 8", "stroke: blue; fill: none; stroke-width: 6", "stroke: yellow; fill: none; stroke-width: 4", "stroke: purple; fill: none; stroke-width: 2", "stroke: orange; fill: none; stroke-width: 1"}
 
 	//for i := 0; i < len(exampleLoops); i += 3 {
-	//for i := 3 * 3; i == 3*3; i++ {
-	for i := 5 * 3; i == 5*3; i++ {
+	for i := 2 * 3; i == 2*3; i++ {
+		//for i := 5 * 3; i == 5*3; i++ {
 		fmt.Printf("\nTest %v\n\n", i/3)
 
 		p := Polygon2{verts: exampleLoops[i]}
@@ -640,13 +640,13 @@ func TestElementaryCircuits(t *testing.T) {
 		//outline, _ := traceOutline(vertices)
 		//circuits := [][]*DCELVertex{outline}
 		fmt.Printf("Number of circuits: %v\n", len(circuits))
-		/*fmt.Printf("Circuits:\n")
+		fmt.Printf("Circuits:\n")
 		for i, c := range circuits {
 			fmt.Printf("  Circuit %v\n", i)
 			for _, v := range c {
-				fmt.Printf("    (%v,%v)\n", v.P.ApproxX(), v.P.ApproxY())
+				fmt.Printf("    [%v] (%v,%v)\n", v.Index, v.P.ApproxX(), v.P.ApproxY())
 			}
-		}*/
+		}
 
 		html := debugHalfEdgeGraphToHtmlAnimation(&vertices[0], 800, 800)
 		canvasF, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_animate_half_edges_%v.html", i/3))
