@@ -1403,7 +1403,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			itnVert.IncidentEdges = append(itnVert.IncidentEdges, he)
 
 			if prev != nil {
-				//he.Origin.IncidentEdges = append(he.Origin.IncidentEdges, prev)
 				prev.Next = he
 			}
 
@@ -1447,7 +1446,6 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 
 		if next != nil {
 			next.Prev = twin
-			//twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, next)
 		}
 
 		next = twin
