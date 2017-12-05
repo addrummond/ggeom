@@ -626,17 +626,17 @@ func TestElementaryCircuits(t *testing.T) {
 		//fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
 		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertices[0].Index)
 		components := tarjan(vertices[5:], []int{})
-		fmt.Printf("Components: %v\n", components)
+		//fmt.Printf("Components: %v\n", components)
 		for _, c := range components {
 			fmt.Printf("    Component:\n")
 			for _, v := range c {
 				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), v.Index)
 			}
 		}
-		outline, _ := traceOutline(vertices)
-		circuits := traceInnies(vertices, outline)
-		circuits = append(circuits, outline)
-		//circuits := ElementaryCircuits(vertices)
+		//outline, _ := traceOutline(vertices)
+		//circuits := traceInnies(vertices, outline)
+		//circuits = append(circuits, outline)
+		circuits := ElementaryCircuits(vertices)
 		//outline, _ := traceOutline(vertices)
 		//circuits := [][]*DCELVertex{outline}
 		fmt.Printf("Number of circuits: %v\n", len(circuits))

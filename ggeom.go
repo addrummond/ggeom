@@ -1579,9 +1579,7 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 // cycles that we miss will be non-hole cycles which we can
 // safely ignore.)
 // Assumes that vertex indices start at zero.
-func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
-	edgesTaken := make([]int, len(vertices), len(vertices))
-
+func traceOutline(vertices []DCELVertex) []*DCELVertex {
 	currentVertex := &vertices[0]
 	var prevVertex *DCELVertex
 
@@ -1595,16 +1593,14 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 		trace = append(trace, currentVertex)
 
 		if prevVertex == nil {
-			edgesTaken[0] = 1
 			prevVertex = currentVertex
 			currentVertex = currentVertex.IncidentEdges[0].Twin.Origin
 		} else if len(currentVertex.IncidentEdges) <= 2 {
-			for i, e := range currentVertex.IncidentEdges {
+			for _, e := range currentVertex.IncidentEdges {
 				if !e.Forward {
 					break
 				}
 				if e.Origin.Index == currentVertex.Index {
-					edgesTaken[currentVertex.Index] = i + 1
 					prevVertex = currentVertex
 					currentVertex = e.Twin.Origin
 					break
@@ -1620,6 +1616,7 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 			// 'best' remains as nil, 'leastWorst' is the least anticlockwise turn possible.
 			var best, leastWorst *DCELVertex
 			var bestI, leastWorstI int
+			_, _ = bestI, leastWorstI
 
 			visited := make(map[int]bool)
 			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
@@ -1656,10 +1653,8 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 
 			prevVertex = currentVertex
 			if best != nil {
-				edgesTaken[currentVertex.Index] = bestI + 1
 				currentVertex = best
 			} else if leastWorst != nil {
-				edgesTaken[currentVertex.Index] = leastWorstI + 1
 				currentVertex = leastWorst
 			} else {
 				panic("'best' and 'leastWorst' unexpectedly both nil in 'traceOutline'")
@@ -1667,7 +1662,14 @@ func traceOutline(vertices []DCELVertex) ([]*DCELVertex, []int) {
 		}
 	}
 
-	return trace, edgesTaken
+	return trace
+}
+
+func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
+	outline := traceOutline(vertices)
+	innies := traceInnies(vertices, outline)
+	r := make([][]*DCELVertex, 0, len(innies)+1)
+	return append(append(r, outline), innies...)
 }
 
 // Tarjan computes the set of strongly connected components for the given set
@@ -1735,189 +1737,4 @@ func tarjan(vertices []DCELVertex, dontTakeEdges []int) [][]*DCELVertex {
 	}
 
 	return components
-}
-
-func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
-	if vertices[0].Index != 0 {
-		panic("'ElementaryCircuits' assumes that the first vertex has index 0")
-	}
-
-	outline, edgesTaken := traceOutline(vertices)
-
-	circuits := [][]*DCELVertex{outline}
-	blocked := make([]bool, len(vertices), len(vertices))
-	b := make([][]int, len(vertices), len(vertices))
-	stack := make([]int, 0)
-
-	included := make([]bool, len(vertices), len(vertices))
-
-	edgeCircuitCount := make(map[*DCELHalfEdge]int)
-	currentEdges := make([]*DCELHalfEdge, 0)
-
-	var s int
-
-	var unblock func(u int)
-	unblock = func(u int) {
-		blocked[u] = false
-		for _, w := range b[u] {
-			if blocked[w] {
-				unblock(w)
-			}
-		}
-		b[u] = []int{}
-	}
-
-	var circuit func(v int, depth int) bool
-	circuit = func(v int, depth int) bool {
-		fmt.Printf("[%v] Circuit from %v\n", depth, v)
-
-		if len(circuits) > len(vertices)*10000 {
-			panic("Too many iterations in 'ElementaryCircuits'")
-		}
-
-		f := false
-		stack = append(stack, v)
-		blocked[v] = true
-
-		visited := make(map[int]bool)
-		for i, e := range vertices[v].IncidentEdges {
-			if !e.Forward {
-				break
-			}
-			w := e.Twin.Origin.Index
-			if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 40 || !included[w] || visited[w] {
-				continue
-			}
-			visited[w] = true
-
-			fmt.Printf("FROM %v(=%v) to %v(=%v)   (%v,%v) -> (%v,%v)\n", v, vertices[v].Index, w, vertices[w].Index, vertices[v].P.ApproxX(), vertices[v].P.ApproxY(), vertices[w].P.ApproxX(), vertices[w].P.ApproxY())
-			if debug && vertices[v].P.Eq(vertices[w].P) {
-				panic("Unexpected vertex equality in 'ElementaryCircuits'")
-			}
-
-			fmt.Printf("[%v] visiting child %v\n", depth, w)
-
-			if w == s {
-				c := make([]*DCELVertex, len(stack)+1, len(stack)+1)
-				for i, vi := range stack {
-					c[i] = &vertices[vi]
-				}
-				c[len(c)-1] = &vertices[s]
-				circuits = append(circuits, c)
-				for _, e := range currentEdges {
-					edgeCircuitCount[e] = edgeCircuitCount[e] + 1
-				}
-				currentEdges = make([]*DCELHalfEdge, 0)
-				fmt.Printf("Found circuit of length %v (out of %v nodes)\n", len(c), len(vertices))
-				for _, v := range c {
-					fmt.Printf("    -> %v\n", v.Index)
-				}
-				f = true
-			} else if !blocked[w] {
-				currentEdges = append(currentEdges, e)
-				if circuit(w, depth+1) {
-					f = true
-				}
-			}
-		}
-
-		if f {
-			fmt.Printf("[%v] Unblocking %v (n verts=%v)\n", depth, v, len(vertices))
-			unblock(v)
-		} else {
-			visited := make(map[int]bool)
-			for i, e := range vertices[v].IncidentEdges {
-				if !e.Forward {
-					break
-				}
-				w := e.Twin.Origin.Index
-				if w == v || (w < len(edgesTaken) && edgesTaken[w] == i+1) || edgeCircuitCount[e] > 40 || !included[w] || visited[w] {
-					continue
-				}
-				visited[w] = true
-
-				found := false
-				for _, vv := range b[w] {
-					if v == vv {
-						found = true
-						break
-					}
-				}
-				if !found {
-					b[w] = append(b[w], v)
-				}
-			}
-		}
-
-		if stack[len(stack)-1] != v {
-			panic("Unexpected value on top of stack in 'ElementaryCircuits'")
-		}
-		stack = stack[:len(stack)-1]
-		return f
-	}
-
-	for s = 0; s < len(vertices); {
-		for i := 0; i < len(included); i++ {
-			included[i] = false
-		}
-
-		// TODO: We know that the entire graph is strongly connected, so
-		// the call to Tarjan on the first iteration is unnecessary.
-		scs := tarjan(vertices[s:], edgesTaken)
-		//scs := [][]*DCELVertex{[]*DCELVertex{}}
-		//for i := s; i < len(vertices); i++ {
-		//	scs[0] = append(scs[0], &vertices[i])
-		//}
-
-		fmt.Printf("Tarjan n %v s=%v, (least)\n", len(scs), s)
-
-		lonely := true
-		if len(scs) > 0 {
-			for _, sc := range scs {
-				if len(sc) > 1 {
-					lonely = false
-					fmt.Printf("(least) non-lonely %v len=%v\n", sc, len(sc))
-					for i := 0; i < len(sc); i++ {
-						fmt.Printf("    =>%v (least)\n", sc[i].Index)
-					}
-					break
-				}
-			}
-		}
-
-		if !lonely {
-			leastSci := -1
-			leastV := len(vertices)
-			for i, sc := range scs {
-				if len(sc) <= 1 {
-					continue
-				}
-
-				for _, vert := range sc {
-					if vert.Index < leastV {
-						leastSci = i
-						leastV = vert.Index
-					}
-				}
-			}
-			if leastSci == -1 {
-				panic("Bad value for 'leastSci' in 'ElementaryCycles'")
-			}
-
-			fmt.Printf("least v %v\n", leastV)
-
-			s = leastV
-			for _, v := range scs[leastSci] {
-				included[v.Index] = true
-				blocked[v.Index] = false
-				b[v.Index] = []int{}
-			}
-			circuit(s, 0)
-			s++
-		} else {
-			break
-		}
-	}
-
-	return circuits
 }
