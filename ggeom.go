@@ -1582,29 +1582,12 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 			continue
 		}
 
-		traces = append(traces, traceFrom([]*DCELVertex{}, &vertices[i], visitCount)...)
+		traces = append(traces, traceFrom([]*DCELVertex{}, &vertices[0], &vertices[i], visitCount)...)
 
 		visitCount[i] = math.MaxInt8
 	}
 
 	return traces
-
-	goodTraces := make([][]*DCELVertex, 0)
-	for _, t := range traces {
-		loopI := 0
-		convI := 0
-		for loopI < len(t) && convI < len(vertices) {
-			if t[loopI] == &vertices[convI] {
-				loopI++
-			}
-			convI++
-		}
-		if loopI == len(t) {
-			goodTraces = append(goodTraces, t)
-		}
-	}
-
-	return goodTraces
 }
 
 // traceOutline gets the outline of a convolution from the list
