@@ -229,11 +229,30 @@ func (p *Polygon2) indexOfBottommost() int {
 	return mini
 }
 
+func convexOutlineOf(p *Polygon2) Polygon2 {
+	newVerts := make([]Vec2, 0)
+
+	for i := 0; i < len(p.verts); i++ {
+		var d1, d2 Vec2
+		d1.Sub(&p.verts[i], &p.verts[(i+len(p.verts)-1)%len(p.verts)])
+		d2.Sub(&p.verts[(i+1)%len(p.verts)], &p.verts[i])
+		det := d1.Det(&d2)
+		if det.Sign() >= 0 {
+			newVerts = append(newVerts, *(p.verts[i].Copy()))
+		}
+	}
+
+	return Polygon2{verts: newVerts}
+}
+
 // GetConvolutionCycle returns the sequence of vertices that forms
 // the convolution cycle for the polyons p and q.
 func GetConvolutionCycle(p *Polygon2, q *Polygon2) []Vec2 {
 	// Roughly follows the algorithm described in
 	//     Ron Wein. 2006. Exact and Efficient Construction of Planar Minkowski Sums using the Convolution Method. European Symposium on Algorithms, LNCS 4168, pp. 829-840.
+
+	qq := convexOutlineOf(q)
+	q = &qq
 
 	// Get the number of reflex vertices for each polygon.
 	rp := GetReflexVertIndices(p)
@@ -1548,6 +1567,9 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 	return [][]*DCELVertex{}
 }
 
+// See https://pdfs.semanticscholar.org/a2d2/186d8b6481be81eed75857d831b32a2ad940.pdf
+// p. 16 section 3.1.1
+// for some indication that this algorithm that I made up is on the right track
 func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 	traces := make([][]*DCELVertex, 0)
 	visitCount := make([]int8, len(vertices), len(vertices))
@@ -1566,7 +1588,22 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 		visitCount[i] = math.MaxInt8
 	}
 
-	return traces
+	goodTraces := make([][]*DCELVertex, 0)
+	for _, t := range traces {
+		loopI := 0
+		convI := 0
+		for loopI < len(t) && convI < len(vertices) {
+			if t[loopI] == &vertices[convI] {
+				loopI++
+			}
+			convI++
+		}
+		if loopI == len(t) {
+			goodTraces = append(goodTraces, t)
+		}
+	}
+
+	return goodTraces
 }
 
 // traceOutline gets the outline of a convolution from the list
@@ -1633,8 +1670,8 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 				d.Sub(ie.Twin.Origin.P, currentVertex.P)
 				det := currentDirection.Det(&d)
 				if bestCp == nil || det.Cmp(bestCp) < 0 {
-					bestCp = det;
-					best = ie.Twin.Origin;
+					bestCp = det
+					best = ie.Twin.Origin
 				}
 			}
 
