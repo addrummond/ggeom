@@ -1462,10 +1462,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-const MAX_COUNT = 1
-
 func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVertex {
-	if visitCount[v.Index] > MAX_COUNT+1 {
+	if visitCount[v.Index] > 0 {
 		return [][]*DCELVertex{}
 	}
 
@@ -1494,21 +1492,19 @@ func traceFrom(prev []*DCELVertex, v *DCELVertex, visitCount []int8) [][]*DCELVe
 
 			nextV := ie.Twin.Origin
 
-			if nextV == prevV {
+			if nextV == prevV || nextV == v {
 				continue
 			}
 
-			if visitCount[nextV.Index] > MAX_COUNT {
+			if visitCount[nextV.Index] > 0 {
 				// Is this a cycle?
-				for i, pv := range prev {
-					if i > len(prev)-3 {
-						continue
-					}
+				for i := len(prev) - 1; i >= 0; i-- {
+					pv := prev[i]
 
 					if pv == nextV {
 						theCycle := make([]*DCELVertex, len(prev)-i)
 						copy(theCycle, prev[i:len(prev)])
-						theCycle = append(theCycle, nextV)
+						theCycle = append(theCycle, v)
 						for _, v := range theCycle {
 							visitCount[v.Index] = math.MaxInt8
 						}
@@ -1561,7 +1557,7 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 	}
 
 	for i := range vertices {
-		if visitCount[i] > MAX_COUNT {
+		if visitCount[i] > 0 {
 			continue
 		}
 
