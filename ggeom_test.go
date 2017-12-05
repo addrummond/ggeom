@@ -623,22 +623,8 @@ func TestElementaryCircuits(t *testing.T) {
 		q := Polygon2{verts: exampleLoops[i+1]}
 		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
 		_ = hedges
-		//fmt.Printf("Half edges: [%v] %v\n", len(hedges), hedges)
 		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertexIndex(&vertices[0], &vertices[0]))
-		components := tarjan(&vertices[0], vertices[5:], []int{})
-		//fmt.Printf("Components: %v\n", components)
-		for _, c := range components {
-			fmt.Printf("    Component:\n")
-			for _, v := range c {
-				fmt.Printf("        %v, %v  (%v)\n", v.P.ApproxX(), v.P.ApproxY(), vertexIndex(&vertices[0], v))
-			}
-		}
-		//outline, _ := traceOutline(vertices)
-		//circuits := traceInnies(vertices, outline)
-		//circuits = append(circuits, outline)
 		circuits := ElementaryCircuits(vertices)
-		//outline, _ := traceOutline(vertices)
-		//circuits := [][]*DCELVertex{outline}
 		fmt.Printf("Number of circuits: %v\n", len(circuits))
 		fmt.Printf("Circuits:\n")
 		for i, c := range circuits {
@@ -653,21 +639,8 @@ func TestElementaryCircuits(t *testing.T) {
 		canvasF.WriteString(html)
 		canvasF.Close()
 
-		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_components_figure_%v.svg", i/3))
+		svgout, _ := os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
 		strips := make([][]Vec2, 0)
-		for _, c := range components {
-			strip := make([]Vec2, 0)
-			for _, v := range c {
-				strip = append(strip, *(v.P.Copy()))
-			}
-			strips = append(strips, strip)
-		}
-		canvas := svg.New(svgout)
-		debugDrawLineStrips(canvas, strips, lines)
-		svgout.Close()
-
-		svgout, _ = os.Create(fmt.Sprintf("testoutputs/TestElementaryCircuits_circuits_figure_%v.svg", i/3))
-		strips = make([][]Vec2, 0)
 		for _, c := range circuits {
 			strip := make([]Vec2, 0)
 			for _, v := range c {
@@ -675,7 +648,7 @@ func TestElementaryCircuits(t *testing.T) {
 			}
 			strips = append(strips, strip)
 		}
-		canvas = svg.New(svgout)
+		canvas := svg.New(svgout)
 		debugDrawLineStrips(canvas, strips, lines)
 		svgout.Close()
 	}
