@@ -1294,13 +1294,13 @@ func (is IntersectionWithByXy) Less(i, j int) bool {
 			return c < 0
 		}
 		return c > 0
-	} else {
-		c := is.is[i].p.y.Cmp(&is.is[j].p.y)
-		if is.yd <= 0 {
-			return c < 0
-		}
-		return c > 0
 	}
+
+	c = is.is[i].p.y.Cmp(&is.is[j].p.y)
+	if is.yd <= 0 {
+		return c < 0
+	}
+	return c > 0
 }
 
 func sameDirection(p1, p2, q1, q2 *Vec2) bool {
