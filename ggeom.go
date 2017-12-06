@@ -1271,23 +1271,23 @@ type ELFace struct {
 	InnerComponents []*ELHalfEdge
 }
 
-type IntersectionWith struct {
+type intersectionWith struct {
 	segi int
 	p    *Vec2
 }
-type IntersectionWithByXy struct {
-	is []IntersectionWith
+type intersectionWithByXy struct {
+	is []intersectionWith
 	xd int // x direction (if -1, sorted with segments with smaller x values first)
 	yd int // y direction (if -1, sorted with segments with smaller y values first)
 }
 
-func (is IntersectionWithByXy) Len() int {
+func (is intersectionWithByXy) Len() int {
 	return len(is.is)
 }
-func (is IntersectionWithByXy) Swap(i, j int) {
+func (is intersectionWithByXy) Swap(i, j int) {
 	is.is[i], is.is[j] = is.is[j], is.is[i]
 }
-func (is IntersectionWithByXy) Less(i, j int) bool {
+func (is intersectionWithByXy) Less(i, j int) bool {
 	c := is.is[i].p.x.Cmp(&is.is[j].p.x)
 	if c != 0 {
 		if is.xd <= 0 {
@@ -1339,17 +1339,17 @@ func vertexNodeCmp(a, b interface{}) int {
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
 	itns, _ := SegmentLoopIntersections(points)
 
-	itnWith := make(map[int][]IntersectionWith)
+	itnWith := make(map[int][]intersectionWith)
 	for k, p := range itns {
 		if itnWith[k.seg1] == nil {
-			itnWith[k.seg1] = []IntersectionWith{{k.seg2, p}}
+			itnWith[k.seg1] = []intersectionWith{{k.seg2, p}}
 		} else {
-			itnWith[k.seg1] = append(itnWith[k.seg1], IntersectionWith{k.seg2, p})
+			itnWith[k.seg1] = append(itnWith[k.seg1], intersectionWith{k.seg2, p})
 		}
 		if itnWith[k.seg2] == nil {
-			itnWith[k.seg2] = []IntersectionWith{{k.seg1, p}}
+			itnWith[k.seg2] = []intersectionWith{{k.seg1, p}}
 		} else {
-			itnWith[k.seg2] = append(itnWith[k.seg2], IntersectionWith{k.seg1, p})
+			itnWith[k.seg2] = append(itnWith[k.seg2], intersectionWith{k.seg1, p})
 		}
 	}
 
@@ -1369,7 +1369,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices [
 
 		itns := itnWith[segi]
 		// Sort the intersections by the position on the current segment.
-		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
+		sort.Sort(intersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
 		var lastVert *ELVertex
 		for i := -1; i < len(itns); i++ {
