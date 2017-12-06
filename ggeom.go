@@ -1230,36 +1230,33 @@ func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Ve
 	return intersections, checks
 }
 
-// DCEL represents a doubly-connected edge list.
-// See pp. 31-32 of Mark de Berg, Marc van Kreveld, Mark Overmars, Otfried Schwarzkopf. 1998. Computational Geometry: Algorithms and Applications. Second, Revised Edition. Springer.
-type DCEL struct {
-	Faces []DCELFace
+// EL represents a singly-linked edge list.
+type EL struct {
+	Faces []ELFace
 }
 
-// DCELHalfEdge represents a half-edge within a doubly-connected edge list.
-type DCELHalfEdge struct {
-	Forward      bool
-	Origin       *DCELVertex
-	Twin         *DCELHalfEdge
-	IncidentFace *DCELFace
-	Prev         *DCELHalfEdge
-	Next         *DCELHalfEdge
+// ELHalfEdge represents a half-edge within a doubly-connected edge list.
+type ELHalfEdge struct {
+	Origin       *ELVertex
+	Twin         *ELHalfEdge
+	IncidentFace *ELFace
+	Next         *ELHalfEdge
 }
 
-// DCELVertex represents a vertex within a doubly-connected edge list.
-type DCELVertex struct {
+// ELVertex represents a vertex within a doubly-connected edge list.
+type ELVertex struct {
 	P             *Vec2
-	IncidentEdges []*DCELHalfEdge
+	IncidentEdges []*ELHalfEdge
 }
 
-func vertexIndex(base, v *DCELVertex) int {
-	return int(uintptr(unsafe.Pointer(v))-uintptr(unsafe.Pointer(base))) / int(unsafe.Sizeof(DCELVertex{}))
+func vertexIndex(base, v *ELVertex) int {
+	return int(uintptr(unsafe.Pointer(v))-uintptr(unsafe.Pointer(base))) / int(unsafe.Sizeof(ELVertex{}))
 }
 
-// DCELFace represents a face within a doubly connected edge list.
-type DCELFace struct {
-	OuterComponent  *DCELHalfEdge
-	InnerComponents []*DCELHalfEdge
+// ELFace represents a face within a doubly connected edge list.
+type ELFace struct {
+	OuterComponent  *ELHalfEdge
+	InnerComponents []*ELHalfEdge
 }
 
 type IntersectionWith struct {
@@ -1304,7 +1301,7 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 }
 
 // sometimes useful for debugging 'HalfEdgesFromSegmentLoop'
-func checkVertDuplicates(verts []DCELVertex, callsite int) {
+func checkVertDuplicates(verts []ELVertex, callsite int) {
 	fmt.Printf("Added [%v] (%v, %v)\n", callsite, verts[len(verts)-1].P.ApproxX(), verts[len(verts)-1].P.ApproxY())
 	for i := 0; i < len(verts)-2; i++ {
 		if verts[i].P.Eq(verts[len(verts)-1].P) {
@@ -1327,7 +1324,7 @@ func vertexNodeCmp(a, b interface{}) int {
 	return yc
 }
 
-func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices []DCELVertex) {
+func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
 	itns, _ := SegmentLoopIntersections(points)
 
 	itnWith := make(map[int][]IntersectionWith)
@@ -1344,16 +1341,16 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		}
 	}
 
-	// vertexTree -> *DCELVertex
+	// vertexTree -> *ELVertex
 	vertexTree := redblacktree.NewWith(vertexNodeCmp)
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
 	// the number of segments by three. We also have two half edges for every edge.
 	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 3 // TODO FIGURE OUT PROPERLY
-	halfEdges = make([]DCELHalfEdge, 0, maxNHalfEdges)
-	vertices = make([]DCELVertex, 0, maxNHalfEdges)
+	halfEdges = make([]ELHalfEdge, 0, maxNHalfEdges)
+	vertices = make([]ELVertex, 0, maxNHalfEdges)
 
-	var prev *DCELHalfEdge
+	var prev *ELHalfEdge
 	for segi := range points {
 		p1 := &points[segi]
 		p2 := &points[(segi+1)%len(points)]
@@ -1362,7 +1359,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 		// Sort the intersections by the position on the current segment.
 		sort.Sort(IntersectionWithByXy{itns, p1.x.Cmp(&p2.x), p1.y.Cmp(&p2.y)})
 
-		var lastVert *DCELVertex
+		var lastVert *ELVertex
 		for i := -1; i < len(itns); i++ {
 			var p *Vec2
 			if i == -1 {
@@ -1376,24 +1373,22 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 			}
 
 			it, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
-				vertices = append(vertices, DCELVertex{p, make([]*DCELHalfEdge, 0, 2)})
+				vertices = append(vertices, ELVertex{p, make([]*ELHalfEdge, 0, 2)})
 				if len(vertices) > maxNHalfEdges {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 				}
 				return &vertices[len(vertices)-1]
 			})
 
-			itnVert := it.Value().(*DCELVertex)
+			itnVert := it.Value().(*ELVertex)
 
 			if itnVert == lastVert {
 				continue
 			}
 
-			halfEdges = append(halfEdges, DCELHalfEdge{
-				Forward: true,
-				Origin:  itnVert,
-				Prev:    prev,
-				Next:    nil,
+			halfEdges = append(halfEdges, ELHalfEdge{
+				Origin: itnVert,
+				Next:   nil,
 			})
 			if len(halfEdges) > maxNHalfEdges {
 				panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [0]")
@@ -1418,52 +1413,8 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	// Tie the knot.
 	last := &halfEdges[len(halfEdges)-1]
 	first := &halfEdges[0]
-	halfEdges[0].Prev = last
-	halfEdges[0].Origin.IncidentEdges = append(halfEdges[0].Origin.IncidentEdges, last)
+	first.Origin.IncidentEdges = append(first.Origin.IncidentEdges, last)
 	halfEdges[len(halfEdges)-1].Next = first
-
-	lastForwardHalfEdgeIndex := len(halfEdges) - 1
-	var next *DCELHalfEdge
-	for i := 0; i <= lastForwardHalfEdgeIndex; i++ {
-		halfEdges = append(halfEdges, DCELHalfEdge{
-			Forward: false,
-			Origin:  halfEdges[i].Next.Origin,
-			Next:    next,
-		})
-		if len(halfEdges) > maxNHalfEdges {
-			panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [4]")
-		}
-
-		twin := &halfEdges[len(halfEdges)-1]
-		twin.Twin = &halfEdges[i]
-		halfEdges[i].Twin = twin
-
-		if debug && twin.Origin.P.Eq(twin.Twin.Origin.P) {
-			panic(fmt.Sprintf("Unexpected point identity in 'HalfEdgesFromSegmentLoop (%v,%v)", twin.Origin.P.ApproxX(), twin.Origin.P.ApproxY()))
-		}
-
-		twin.Origin.IncidentEdges = append(twin.Origin.IncidentEdges, twin)
-
-		if next != nil {
-			next.Prev = twin
-		}
-
-		next = twin
-	}
-
-	if len(halfEdges) < lastForwardHalfEdgeIndex+3 {
-		panic("Fewer half edges than expected [2] in 'HalfEdgesFromSegmentLoop")
-	}
-
-	// Tie the knot.
-	last = &halfEdges[len(halfEdges)-1]
-	first = &halfEdges[lastForwardHalfEdgeIndex+1]
-	halfEdges[lastForwardHalfEdgeIndex+1].Next = last
-	halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges = append(halfEdges[lastForwardHalfEdgeIndex+1].Origin.IncidentEdges, last)
-	if len(halfEdges) > maxNHalfEdges {
-		panic("Maximum length of 'halfEdges' exceeded in 'HalfEdgesFromSegmentLoop' [5]")
-	}
-	halfEdges[len(halfEdges)-1].Prev = first
 
 	if debug {
 		for i, v1 := range vertices {
@@ -1478,20 +1429,16 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []DCELHalfEdge, vertices
 	return halfEdges, vertices
 }
 
-func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*DCELVertex {
+func traceFrom(prev []*ELVertex, base, v *ELVertex, visitCount []int8) [][]*ELVertex {
 	if visitCount[vertexIndex(base, v)] > 0 {
-		return [][]*DCELVertex{}
+		return [][]*ELVertex{}
 	}
 
 	visitCount[vertexIndex(base, v)]++
 
 	if len(prev) == 0 {
 		for _, ie := range v.IncidentEdges {
-			if !ie.Forward {
-				break
-			}
-
-			r := traceFrom([]*DCELVertex{v}, base, ie.Twin.Origin, visitCount)
+			r := traceFrom([]*ELVertex{v}, base, ie.Next.Origin, visitCount)
 			if len(r) > 0 {
 				return r
 			}
@@ -1499,14 +1446,10 @@ func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*
 	} else {
 		prevV := prev[len(prev)-1]
 
-		var bestNextV *DCELVertex
+		var bestNextV *ELVertex
 		var bestCp *Scalar
 		for _, ie := range v.IncidentEdges {
-			if !ie.Forward {
-				break
-			}
-
-			nextV := ie.Twin.Origin
+			nextV := ie.Next.Origin
 
 			if nextV == prevV || nextV == v {
 				continue
@@ -1518,13 +1461,13 @@ func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*
 					pv := prev[i]
 
 					if pv == nextV {
-						theCycle := make([]*DCELVertex, len(prev)-i)
+						theCycle := make([]*ELVertex, len(prev)-i)
 						copy(theCycle, prev[i:len(prev)])
 						theCycle = append(theCycle, v)
 						for _, v := range theCycle {
 							visitCount[vertexIndex(base, v)] = math.MaxInt8
 						}
-						return [][]*DCELVertex{theCycle}
+						return [][]*ELVertex{theCycle}
 					}
 				}
 
@@ -1549,7 +1492,7 @@ func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*
 		}
 
 		if bestNextV != nil {
-			newPrev := make([]*DCELVertex, len(prev), len(prev)+1)
+			newPrev := make([]*ELVertex, len(prev), len(prev)+1)
 			copy(newPrev, prev)
 			newPrev = append(newPrev, v)
 			r := traceFrom(newPrev, base, bestNextV, visitCount)
@@ -1561,14 +1504,14 @@ func traceFrom(prev []*DCELVertex, base, v *DCELVertex, visitCount []int8) [][]*
 
 	visitCount[vertexIndex(base, v)]--
 
-	return [][]*DCELVertex{}
+	return [][]*ELVertex{}
 }
 
 // See https://pdfs.semanticscholar.org/a2d2/186d8b6481be81eed75857d831b32a2ad940.pdf
 // p. 16 section 3.1.1
 // for some indication that this algorithm that I made up is on the right track
-func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
-	traces := make([][]*DCELVertex, 0)
+func traceInnies(vertices []ELVertex, outline []*ELVertex) [][]*ELVertex {
+	traces := make([][]*ELVertex, 0)
 	visitCount := make([]int8, len(vertices), len(vertices))
 
 	for _, v := range outline {
@@ -1580,7 +1523,7 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 			continue
 		}
 
-		traces = append(traces, traceFrom([]*DCELVertex{}, &vertices[0], &vertices[i], visitCount)...)
+		traces = append(traces, traceFrom([]*ELVertex{}, &vertices[0], &vertices[i], visitCount)...)
 
 		visitCount[i] = math.MaxInt8
 	}
@@ -1589,7 +1532,7 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 }
 
 // traceOutline gets the outline of a convolution from the list
-// of vertices in the DCEL. This turns out to be quite simple.
+// of vertices in the EL. This turns out to be quite simple.
 // All we have to do is take the "most clockwise" turn available at
 // every intersection. We know that no hole will ever share an
 // edge with the outline. Thus, by excluding edges on the outline
@@ -1598,13 +1541,15 @@ func traceInnies(vertices []DCELVertex, outline []*DCELVertex) [][]*DCELVertex {
 // cycles that we miss will be non-hole cycles which we can
 // safely ignore.)
 // Assumes that vertex indices start at zero.
-func traceOutline(vertices []DCELVertex) []*DCELVertex {
+func traceOutline(vertices []ELVertex) []*ELVertex {
 	currentVertex := &vertices[0]
-	var prevVertex *DCELVertex
+	var prevVertex *ELVertex
 
-	trace := make([]*DCELVertex, 0)
+	trace := make([]*ELVertex, 0)
 
 	for i := 0; prevVertex == nil || currentVertex != &vertices[0]; i++ {
+		fmt.Printf("LOOP WITH %v\n", vertexIndex(&vertices[0], currentVertex))
+
 		if i > len(vertices) {
 			panic("Too many loop iterations in 'TraceOutine'")
 		}
@@ -1613,15 +1558,12 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 
 		if prevVertex == nil {
 			prevVertex = currentVertex
-			currentVertex = currentVertex.IncidentEdges[0].Twin.Origin
-		} else if len(currentVertex.IncidentEdges) <= 2 {
+			currentVertex = currentVertex.IncidentEdges[0].Next.Origin
+		} else if len(currentVertex.IncidentEdges) == 1 {
 			for _, e := range currentVertex.IncidentEdges {
-				if !e.Forward {
-					break
-				}
 				if e.Origin == currentVertex {
 					prevVertex = currentVertex
-					currentVertex = e.Twin.Origin
+					currentVertex = e.Next.Origin
 					break
 				}
 			}
@@ -1634,26 +1576,23 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 			// most clockwise possible turn.
 
 			var bestCp *Scalar
-			var best *DCELVertex
+			var best *ELVertex
 
 			visited := make(map[int]bool)
 			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
 				ie := currentVertex.IncidentEdges[j]
-				if !ie.Forward {
-					break
-				}
-				v := ie.Twin.Origin
+				v := ie.Next.Origin
 				if v == currentVertex || visited[vertexIndex(&vertices[0], v)] {
 					continue
 				}
 				visited[vertexIndex(&vertices[0], v)] = true
 
 				var d Vec2
-				d.Sub(ie.Twin.Origin.P, currentVertex.P)
+				d.Sub(v.P, currentVertex.P)
 				det := currentDirection.Det(&d)
 				if bestCp == nil || det.Cmp(bestCp) < 0 {
 					bestCp = det
-					best = ie.Twin.Origin
+					best = v
 				}
 			}
 
@@ -1669,9 +1608,9 @@ func traceOutline(vertices []DCELVertex) []*DCELVertex {
 	return trace
 }
 
-func ElementaryCircuits(vertices []DCELVertex) [][]*DCELVertex {
+func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
 	outline := traceOutline(vertices)
 	innies := traceInnies(vertices, outline)
-	r := make([][]*DCELVertex, 0, len(innies)+1)
+	r := make([][]*ELVertex, 0, len(innies)+1)
 	return append(append(r, outline), innies...)
 }

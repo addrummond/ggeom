@@ -119,15 +119,15 @@ func debugDrawLineStrips(canvas *svg.SVG, strips [][]Vec2, formats []string) {
 	canvas.End()
 }
 
-func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int) string {
+func debugHalfEdgeGraphToHtmlAnimation(start *ELVertex, width int, height int) string {
 	var o string
 	w := float64(width)
 	h := float64(height)
 
 	var minx, maxx, miny, maxy = math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
-	followed := make(map[*DCELHalfEdge]bool)
-	var findBounds func(vert *DCELVertex)
-	findBounds = func(vert *DCELVertex) {
+	followed := make(map[*ELHalfEdge]bool)
+	var findBounds func(vert *ELVertex)
+	findBounds = func(vert *ELVertex) {
 		x := vert.P.ApproxX()
 		y := vert.P.ApproxY()
 
@@ -145,9 +145,9 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 		}
 
 		for _, edge := range vert.IncidentEdges {
-			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
+			if !followed[edge] && edge.Origin.P.Eq(vert.P) {
 				followed[edge] = true
-				findBounds(edge.Twin.Origin)
+				findBounds(edge.Next.Origin)
 			}
 		}
 	}
@@ -170,10 +170,10 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 	var lines string
 	var incident string
 	var incidentCoords string
-	followed = make(map[*DCELHalfEdge]bool)
+	followed = make(map[*ELHalfEdge]bool)
 
-	var traverse func(vert, from *DCELVertex)
-	traverse = func(vert, from *DCELVertex) {
+	var traverse func(vert, from *ELVertex)
+	traverse = func(vert, from *ELVertex) {
 		if from != nil {
 			if len(lines) > 0 {
 				vindices += ", "
@@ -189,23 +189,21 @@ func debugHalfEdgeGraphToHtmlAnimation(start *DCELVertex, width int, height int)
 			incidentCoords += "["
 			count := 0
 			for _, ie := range from.IncidentEdges {
-				if ie.Forward {
-					if count != 0 {
-						incident += ", "
-						incidentCoords += ", "
-					}
-					incident += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(ie.Origin.P.ApproxX()), ty(ie.Origin.P.ApproxY()), tx(ie.Twin.Origin.P.ApproxX()), ty(ie.Twin.Origin.P.ApproxY()))
-					incidentCoords += fmt.Sprintf("[[%v,%v],[%v,%v]]", ie.Origin.P.ApproxX(), ie.Origin.P.ApproxY(), ie.Twin.Origin.P.ApproxX(), ie.Twin.Origin.P.ApproxY())
-					count++
+				if count != 0 {
+					incident += ", "
+					incidentCoords += ", "
 				}
+				incident += fmt.Sprintf("[[%v,%v],[%v,%v]]", tx(ie.Origin.P.ApproxX()), ty(ie.Origin.P.ApproxY()), tx(ie.Next.Origin.P.ApproxX()), ty(ie.Next.Origin.P.ApproxY()))
+				incidentCoords += fmt.Sprintf("[[%v,%v],[%v,%v]]", ie.Origin.P.ApproxX(), ie.Origin.P.ApproxY(), ie.Next.Origin.P.ApproxX(), ie.Next.Origin.P.ApproxY())
+				count++
 			}
 			incident += "]"
 			incidentCoords += "]"
 		}
 		for _, edge := range vert.IncidentEdges {
-			if !followed[edge] && edge.Forward && edge.Origin.P.Eq(vert.P) {
+			if !followed[edge] && edge.Origin.P.Eq(vert.P) {
 				followed[edge] = true
-				traverse(edge.Twin.Origin, vert)
+				traverse(edge.Next.Origin, vert)
 			}
 		}
 	}
