@@ -1014,9 +1014,9 @@ type Intersection struct{ seg1, seg2 int }
 func intersection(seg1, seg2 int) Intersection {
 	if seg1 < seg2 {
 		return Intersection{seg1, seg2}
-	} else {
-		return Intersection{seg2, seg1}
 	}
+
+	return Intersection{seg2, seg1}
 }
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
