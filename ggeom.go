@@ -54,8 +54,16 @@ type Segment2 struct {
 	to   Vec2
 }
 
+// Polygon2 represents a convex or nonconvex 2D polygon without holes
 type Polygon2 struct {
+	// wound anticlockwise
 	verts []Vec2
+}
+
+// Polygon2WithHoles represents a convex or nonconvex 2D polygon with holes
+type Polygon2WithHoles struct {
+	outer *Polygon2
+	holes []*Polygon2
 }
 
 func (a *Vec2) X() *Scalar {
@@ -588,17 +596,21 @@ func segmentsAdjacent(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	}
 }
 
+// SegmentIntersectionFlagIntersects is set iff the segments intersect, incuding all weird/degenerate intersection cases
+const SegmentIntersectionFlagIntersects = 1
+
+// SegmentIntersectionFlagUnique is set iff the segments intersect and there is a unique intersection point
+const SegmentIntersectionFlagUnique = 2
+
+// SegmentIntersectionFlagAdjacent is set iff the segments intersect and are adjacent (no overlaping section, intersect at a vertex shared by the two)
+const SegmentIntersectionFlagAdjacent = 4
+
+// SegmentIntersectionFlagAtVertex is set iff the segments intersect and the intersection point is one of the segment vertices.
+const SegmentIntersectionFlagAtVertex = 8
+
 type SegmentIntersectionInfo struct {
-	// true iff the segments intersect, incuding all weird/degenerate intersection cases
-	intersect bool
-	// true iff the segments intersect and there is a unique intersection point
-	unique bool
-	// true iff the segments intersect and are adjacent (no overlaping section, intersect at a vertex shared by the two)
-	adjacent bool
-	// true iff the segments intersect and the intersection point is one of the segment vertices.
-	atVertex bool
-	// the intersection point if any; set to an arbitrarily chosen point on the intersection if there is no unique intersection point; set to (0,0) if there is no intersection point.
-	p *Vec2
+	flags int
+	p     *Vec2
 }
 
 // SegmentIntersection returns a SegmentIntersectionInfo
@@ -608,11 +620,11 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
 		return SegmentIntersectionInfo{
-			intersect: true,
-			unique:    true,
-			adjacent:  true,
-			atVertex:  true,
-			p:         pt,
+			flags: SegmentIntersectionFlagIntersects |
+				SegmentIntersectionFlagUnique |
+				SegmentIntersectionFlagAdjacent |
+				SegmentIntersectionFlagAtVertex,
+			p: pt,
 		}
 	}
 
@@ -620,30 +632,30 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	intersect, degeneratePt := segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2)
 	if intersect {
 		if degeneratePt != nil {
-			return SegmentIntersectionInfo{
-				intersect: true,
-				unique:    false,
-				adjacent:  false,
-				atVertex:  degeneratePt.Eq(p1) || degeneratePt.Eq(p2) || degeneratePt.Eq(q1) || degeneratePt.Eq(q2),
-				p:         degeneratePt,
+			f := SegmentIntersectionFlagIntersects
+			if degeneratePt.Eq(p1) || degeneratePt.Eq(p2) || degeneratePt.Eq(q1) || degeneratePt.Eq(q2) {
+				f |= SegmentIntersectionFlagAtVertex
 			}
-		} else {
-			pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
 			return SegmentIntersectionInfo{
-				intersect: true,
-				unique:    true,
-				adjacent:  false,
-				atVertex:  pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2),
-				p:         pt,
+				flags: f,
+				p:     degeneratePt,
 			}
 		}
-	} else {
+
+		pt := NondegenerateSegmentIntersection(p1, p2, q1, q2)
+		f := SegmentIntersectionFlagIntersects | SegmentIntersectionFlagUnique
+		if pt.Eq(p1) || pt.Eq(p2) || pt.Eq(q1) || pt.Eq(q2) {
+			f |= SegmentIntersectionFlagAtVertex
+		}
 		return SegmentIntersectionInfo{
-			intersect: false,
-			unique:    false,
-			adjacent:  false,
-			p:         &v,
+			flags: f,
+			p:     pt,
 		}
+	}
+
+	return SegmentIntersectionInfo{
+		flags: 0,
+		p:     &v,
 	}
 }
 
