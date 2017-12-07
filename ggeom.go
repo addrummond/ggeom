@@ -1552,8 +1552,7 @@ func indexBoolArray(a []uint64, i int) bool {
 }
 func setBoolArray(a []uint64, i int, v bool) {
 	ii := uint(i)
-	var x uint64 = 1 << (ii % 64)
-	a[i/64] |= x
+	a[i/64] |= 1 << (ii % 64)
 }
 func clearBoolArray(a []uint64) {
 	for i := 0; i < len(a); i++ {
