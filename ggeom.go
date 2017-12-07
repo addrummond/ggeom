@@ -1543,6 +1543,24 @@ func traceInnies(vertices []ELVertex, outline []*ELVertex) [][]*ELVertex {
 	return traces
 }
 
+func makeBoolArray(size int) []uint64 {
+	return make([]uint64, (size/65)+1)
+}
+func indexBoolArray(a []uint64, i int) bool {
+	ii := uint(i)
+	return (a[ii/64]>>(ii%64))&1 != 0
+}
+func setBoolArray(a []uint64, i int, v bool) {
+	ii := uint(i)
+	var x uint64 = 1 << (ii % 64)
+	a[i/64] |= x
+}
+func clearBoolArray(a []uint64) {
+	for i := 0; i < len(a); i++ {
+		a[i] = 0
+	}
+}
+
 // traceOutline gets the outline of a convolution from the list
 // of vertices in the EL. This turns out to be quite simple.
 // All we have to do is take the "most clockwise" turn available at
@@ -1558,6 +1576,7 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 	var prevVertex *ELVertex
 
 	trace := make([]*ELVertex, 0)
+	visited := makeBoolArray(len(vertices))
 
 	for i := 0; prevVertex == nil || currentVertex != &vertices[0]; i++ {
 		fmt.Printf("LOOP WITH %v\n", vertexIndex(&vertices[0], currentVertex))
@@ -1590,14 +1609,17 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 			var bestCp *Scalar
 			var best *ELVertex
 
-			visited := make(map[int]bool)
+			if i != 0 {
+				clearBoolArray(visited)
+			}
+
 			for j := 0; j < len(currentVertex.IncidentEdges); j++ {
 				ie := currentVertex.IncidentEdges[j]
 				v := ie.Next.Origin
-				if v == currentVertex || visited[vertexIndex(&vertices[0], v)] {
+				if v == currentVertex || indexBoolArray(visited, vertexIndex(&vertices[0], v)) {
 					continue
 				}
-				visited[vertexIndex(&vertices[0], v)] = true
+				setBoolArray(visited, vertexIndex(&vertices[0], v), true)
 
 				var d Vec2
 				d.Sub(v.P, currentVertex.P)
