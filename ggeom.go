@@ -1358,7 +1358,7 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices [
 
 	// In the worst case, each intersection splits two segments in two, and thus increases
 	// the number of segments by three. We also have two half edges for every edge.
-	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 3 // TODO FIGURE OUT PROPERLY
+	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
 	halfEdges = make([]ELHalfEdge, 0, maxNHalfEdges)
 	vertices = make([]ELVertex, 0, maxNHalfEdges)
 
@@ -1639,6 +1639,10 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 	}
 
 	return trace
+}
+
+func WeilerAtherton(polygon1, polygon2 *Polygon2) {
+
 }
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
