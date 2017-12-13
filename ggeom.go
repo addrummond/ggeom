@@ -1018,6 +1018,14 @@ func noCheckNeeded(s1, s2, l int, starts []int) bool {
 		return false
 	}
 
+	// Check it's not one of the bogus segments from one loop to the next.
+	for _,s := range starts {
+		ss := s + 1
+		if s1 == ss || s2 == ss {
+			return true
+		}
+	}
+
 	i := 0
 	for i < len(starts) && s1 > starts[i] {
 		i++
@@ -1073,11 +1081,7 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 	crosses := make(map[Intersection]bool)
 
 	addIntersection := func(theint Intersection, p *Vec2) {
-		//s1a, s1b := &points[theint.seg1], &points[(theint.seg1+1)%len(points)]
-		//s2a, s2b := &points[theint.seg2], &points[(theint.seg2+1)%len(points)]
-		//if !p.Eq(s1a) && !p.Eq(s1b) && !p.Eq(s2a) && !p.Eq(s2b) {
 		intersections[theint] = p
-		//}
 	}
 
 	addCross := func(seg1, seg2 int, p *Vec2) {
