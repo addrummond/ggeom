@@ -534,7 +534,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		svgout.Close()
 
 		its1 := tests[i+1]
-		its2, _ := SegmentLoopIntersections(ps)
+		its2, _ := SegmentLoopIntersections(ps, []int{})
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")
@@ -670,7 +670,7 @@ func TestConvolve(t *testing.T) {
 		}
 		fmt.Printf("}\n\n")
 
-		itns, checks := SegmentLoopIntersections(cs)
+		itns, checks := SegmentLoopIntersections(cs, []int{})
 		itnsNaive, checksNaive := SegmentLoopIntersectionsUsingNaiveAlgo(cs)
 		_ = itnsNaive
 		//itns = itnsNaive

@@ -1009,6 +1009,22 @@ func sameOrAdjacent(s1, s2, l int) bool {
 	return dd <= 1 || d == l-1 || d == -(l-1)
 }
 
+func noCheckNeeded(s1, s2, l int, starts []int) bool {
+	if sameOrAdjacent(s1, s2, l) {
+		return true
+	}
+
+	if len(starts) == 0 {
+		return false
+	}
+
+	i := 0
+	for i < len(starts) && s1 > starts[i] {
+		i++
+	}
+	return s2 >= starts[i] || (i > 0 && s2 < starts[i-1])
+}
+
 type Intersection struct{ seg1, seg2 int }
 
 func intersection(seg1, seg2 int) Intersection {
@@ -1026,7 +1042,7 @@ func intersection(seg1, seg2 int) Intersection {
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output. The function also returns the total
 // number of pairs of lines for which an intersection test was made.
-func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
+func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Vec2, int) {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
@@ -1093,7 +1109,7 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
-				if !sameOrAdjacent(event.i, prevI, len(points)) {
+				if !noCheckNeeded(event.i, prevI, len(points), starts) {
 					psp1 := &points[prevI]
 					psp2 := &points[(prevI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1112,7 +1128,7 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 			for it2.Next() {
 				nextI := it2.Value().(int)
 
-				if !sameOrAdjacent(event.i, nextI, len(points)) {
+				if !noCheckNeeded(event.i, nextI, len(points), starts) {
 					nsp1 := &points[nextI]
 					nsp2 := &points[(nextI+1)%len(points)]
 					p1 := &points[event.i]
@@ -1173,7 +1189,7 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 
 					for sIt.Next() {
 						u := sIt.Value().(int)
-						if !sameOrAdjacent(u, si, len(points)) {
+						if !noCheckNeeded(u, si, len(points), starts) {
 							u1 := &points[u]
 							u2 := &points[(u+1)%len(points)]
 
@@ -1189,7 +1205,7 @@ func SegmentLoopIntersections(points []Vec2) (map[Intersection]*Vec2, int) {
 					}
 					for tIt.Prev() {
 						r := tIt.Value().(int)
-						if !sameOrAdjacent(r, ti, len(points)) {
+						if !noCheckNeeded(r, ti, len(points), starts) {
 							r1 := &points[r]
 							r2 := &points[(r+1)%len(points)]
 
@@ -1337,7 +1353,7 @@ func vertexNodeCmp(a, b interface{}) int {
 }
 
 func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
-	itns, _ := SegmentLoopIntersections(points)
+	itns, _ := SegmentLoopIntersections(points, []int{})
 
 	itnWith := make(map[int][]intersectionWith)
 	for k, p := range itns {
