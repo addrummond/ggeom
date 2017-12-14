@@ -1019,7 +1019,7 @@ func noCheckNeeded(s1, s2, l int, starts []int) bool {
 	}
 
 	// Check it's not one of the bogus segments from one loop to the next.
-	for _,s := range starts {
+	for _, s := range starts {
 		ss := s + 1
 		if s1 == ss || s2 == ss {
 			return true
@@ -1563,6 +1563,7 @@ func traceInnies(vertices []ELVertex, outline []*ELVertex) [][]*ELVertex {
 	return traces
 }
 
+// Implements arrays of booleans using bit arrays.
 func makeBoolArray(size int) []uint64 {
 	return make([]uint64, (size/65)+1)
 }
@@ -1661,7 +1662,58 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 	return trace
 }
 
+type intermediateSort struct {
+	xord, yord int
+	points     []*Vec2
+}
+
+func (is intermediateSort) Len() int {
+	return len(is.points)
+}
+
+func (is intermediateSort) Swap(i, j int) {
+	is.points[i], is.points[j] = is.points[j], is.points[i]
+}
+
+func (is intermediateSort) Less(i, j int) bool {
+	if is.xord == 0 && is.yord == 0 {
+		panic("'xord' and 'yord' are both zero!")
+	}
+
+	if is.xord == 0 {
+		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+	}
+	if is.yord == 0 {
+		return is.points[i].x.Cmp(&is.points[j].x) == is.xord
+	}
+
+	c := is.points[i].x.Cmp(&is.points[j].x)
+	if c == 0 {
+		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+	}
+	return c == is.xord
+}
+
 func WeilerAtherton(polygon1, polygon2 *Polygon2) {
+	// Shallow copying Vec2s is ok if we don't modify them.
+	n := len(polygon1.verts) + len(polygon2.verts)
+	combined := make([]Vec2, n, n)
+	copy(combined, polygon1.verts)
+	copy(combined[len(polygon1.verts):len(combined)], polygon2.verts)
+
+	intersections, _ := SegmentLoopIntersections(combined, []int{len(polygon1.verts)})
+	intermediates := make([][]*Vec2, n, n)
+
+	for itn, v := range intersections {
+		intermediates[itn.seg1] = append(intermediates[itn.seg1], v)
+		intermediates[itn.seg2] = append(intermediates[itn.seg2], v)
+	}
+
+	for i, im := range intermediates {
+		v1 := &combined[i]
+		v2 := &combined[(i+1)%len(combined)]
+		sort.Sort(intermediateSort{v1.x.Cmp(&v2.x), v1.y.Cmp(&v2.y), im})
+	}
 
 }
 
