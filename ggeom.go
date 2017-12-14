@@ -1694,6 +1694,56 @@ func (is intermediateSort) Less(i, j int) bool {
 	return c == is.xord
 }
 
+func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
+	// Construct a horizontal segment from the point extending rightward.
+	// If this segment intersects an odd number of the polygon's segments,
+	// the point lies inside the polygon.
+
+	crossings := 0
+	for i := 0; i < len(polygon.verts); i++ {
+		p1 := &polygon.verts[i]
+		p2 := &polygon.verts[(i+1)%len(polygon.verts)]
+		c := p1.y.Cmp(&p2.y)
+		if c == 0 {
+			// This segment of the polygon is horizontal, so it's just a question
+			// of whether it has the same y coordinate and whether there's horizontal
+			// overlap.
+			if p1.y.Cmp(&point.y) == 0 && (p1.x.Cmp(&point.x) >= 0 || p2.x.Cmp(&point.x) >=0 {
+				crossings++
+			}
+		} else {
+			if p1.y.Cmp(&point.y) == c && p2.y.Cmp(&point.y) == -c {
+				// The polygon segment crosses the horizontal line vertically.
+				// If both points overlap horizontally with the horizontal segment,
+				// the we know immediately that there's an intersection.
+				c1 := p1.x.Cmp(&point.x)
+				c2 := p2.x.Cmp(&point.x)
+				if c1 >= 0 && c2 >= 0 {
+					crossings++
+				} else if c1 >=0 || c2 >= 0 {
+					// This is the more complicated case. The segment crosses the horizontal
+					// line vertically, but we have to figure out whether or not it's too far
+					// to the left to touch it. This requires doing some actual arithmetic,
+					// which hopefully won't happen too often.
+					var ydiff, xdiff, yd Scalar
+					ydiff.Sub(&p1.y, &p2.y)
+					xdiff.Sub(&p2.x, &p1.x)
+					yd.Sub(&p1.x, &point.x)
+					ydiff.Inv()
+					yd.Mul(&yd, &ydiff)
+					yd.Mul(&yd, &xdiff)
+					yd.Add(&p1.x, &xdiff)
+					if yd.Cmp(&point.x) >= 0 {
+						crossings++
+					}
+				}
+			}
+		}
+	}
+
+	return (crossings % 2) == 1
+}
+
 func WeilerAtherton(polygon1, polygon2 *Polygon2) {
 	// Shallow copying Vec2s is ok if we don't modify them.
 	n := len(polygon1.verts) + len(polygon2.verts)
