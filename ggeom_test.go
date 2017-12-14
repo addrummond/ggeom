@@ -677,7 +677,8 @@ func TestPointInsidePolygon(t *testing.T) {
 		}
 
 		r := PointInsidePolygon(point, &polygon)
-		if ! ((r && pap[1].ApproxX() == INSIDE) || (!r && pap[1].ApproxX() == OUTSIDE)) {
+		ax := pap[1].ApproxX()
+		if ! ((r && ax == INSIDE) || (!r && ax == OUTSIDE)) {
 			t.Error()
 		}
 	}
