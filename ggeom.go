@@ -1695,9 +1695,10 @@ func (is intermediateSort) Less(i, j int) bool {
 }
 
 func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
-	// Construct a horizontal segment from the point extending rightward.
-	// If this segment intersects an odd number of the polygon's segments,
-	// the point lies inside the polygon.
+	// Construct a horizontal segment from the point extending rightward to
+	// a point beyond the rightmost vertex of the polygon. If this segment
+	// intersects an odd number of the polygon's segments, the point lies
+	// inside the polygon.
 
 	crossings := 0
 	for i := 0; i < len(polygon.verts); i++ {
