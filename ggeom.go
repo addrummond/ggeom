@@ -1708,7 +1708,7 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 			// This segment of the polygon is horizontal, so it's just a question
 			// of whether it has the same y coordinate and whether there's horizontal
 			// overlap.
-			if p1.y.Cmp(&point.y) == 0 && (p1.x.Cmp(&point.x) >= 0 || p2.x.Cmp(&point.x) >=0 {
+			if p1.y.Cmp(&point.y) == 0 && (p1.x.Cmp(&point.x) >= 0 || p2.x.Cmp(&point.x) >=0) {
 				crossings++
 			}
 		} else {
@@ -1729,7 +1729,7 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 					ydiff.Sub(&p1.y, &p2.y)
 					xdiff.Sub(&p2.x, &p1.x)
 					yd.Sub(&p1.x, &point.x)
-					ydiff.Inv()
+					ydiff.Inv(&ydiff)
 					yd.Mul(&yd, &ydiff)
 					yd.Mul(&yd, &xdiff)
 					yd.Add(&p1.x, &xdiff)
@@ -1744,6 +1744,7 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 	return (crossings % 2) == 1
 }
 
+/*
 func WeilerAtherton(polygon1, polygon2 *Polygon2) {
 	// Shallow copying Vec2s is ok if we don't modify them.
 	n := len(polygon1.verts) + len(polygon2.verts)
@@ -1766,6 +1767,7 @@ func WeilerAtherton(polygon1, polygon2 *Polygon2) {
 	}
 
 }
+*/
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
 	outline := traceOutline(vertices)

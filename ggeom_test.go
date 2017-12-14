@@ -652,6 +652,37 @@ func TestElementaryCircuits(t *testing.T) {
 	}
 }
 
+func TestPointInsidePolygon(t *testing.T) {
+	var INSIDE, OUTSIDE float64 = 1, 0
+
+	// first member of each subarray is point; first member of second member
+	// specifies whether or not point is contained in polygon;
+	// remaining members give polygon vertices.
+	pointsAndPolygons := SofSofVec2([][][]float64{
+		{{0,0}, {INSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+		{{-1,1}, {INSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+		{{-1,-1}, {INSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+		{{1,-1}, {INSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+		{{1,1}, {INSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+
+		{{1.01,1.01}, {OUTSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+		{{5,5}, {OUTSIDE,0}, {-1,1}, {-1,-1}, {1,-1}, {1, 1}},
+	})
+
+	for _, pap := range pointsAndPolygons {
+		point := &pap[0]
+		polygon := Polygon2{ }
+		for _, v := range pap[2:len(pap)] {
+			polygon.verts = append(polygon.verts, v)
+		}
+
+		r := PointInsidePolygon(point, &polygon)
+		if ! ((r && pap[1].ApproxX() == INSIDE) || (!r && pap[1].ApproxX() == OUTSIDE)) {
+			t.Error()
+		}
+	}
+}
+
 func TestConvolve(t *testing.T) {
 	for i := 0; i < len(exampleLoops); i += 3 {
 		p := Polygon2{verts: exampleLoops[i]}
