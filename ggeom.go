@@ -1694,6 +1694,8 @@ func (is intermediateSort) Less(i, j int) bool {
 	return c == is.xord
 }
 
+// PointInsidePolygon tests whether or not a point lies inside a polygon
+// or on one of its segments.
 func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 	// Construct a horizontal segment from the point extending rightward to
 	// a point beyond the rightmost vertex of the polygon. If this segment
@@ -1704,24 +1706,46 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 	for i := 0; i < len(polygon.verts); i++ {
 		p1 := &polygon.verts[i]
 		p2 := &polygon.verts[(i+1)%len(polygon.verts)]
+
 		c := p1.y.Cmp(&p2.y)
 		if c == 0 {
-			// This segment of the polygon is horizontal, so it's just a question
-			// of whether it has the same y coordinate and whether there's horizontal
-			// overlap.
-			if p1.y.Cmp(&point.y) == 0 && (p1.x.Cmp(&point.x) >= 0 || p2.x.Cmp(&point.x) >=0) {
-				crossings++
+			// This segment of the polygon is horizontal. If the point lies on the segment,
+			// return true. Otherwise, even if the segment extending from the point goes along
+			// the polygon intersection, we don't count this as a crossing. Consider e.g. the
+			// following, where the point to be tested is marked by '.'. If '.' has the same
+			// y coordinate as the horizontal segment labeled S, then if S adds a crossing
+			// to the counter, the total number of crossings is even, giving the wrong result.
+			//
+			//    ___        ___
+			//    |  \      /  |
+			//    | . \____/   |
+			//    |     S      |
+			//    |            |
+			//    |____________|
+			//
+			if p1.y.Cmp(&point.y) == 0 {
+				c1 := p1.x.Cmp(&point.x)
+				c2 := p2.x.Cmp(&point.x)
+				if c1 == 0 || c2 == 0 || c1 != c2 {
+					// The point lies on this horizontal segment of the polygon.
+					return true
+				}
 			}
 		} else {
-			if p1.y.Cmp(&point.y) == c && p2.y.Cmp(&point.y) == -c {
+			cy1 := p1.y.Cmp(&point.y)
+			cy2 := p2.y.Cmp(&point.y)
+			if cy1 == 0 || cy2 == 0 || (cy1 == c && cy2 == -c) {
 				// The polygon segment crosses the horizontal line vertically.
 				// If both points overlap horizontally with the horizontal segment,
 				// the we know immediately that there's an intersection.
-				c1 := p1.x.Cmp(&point.x)
-				c2 := p2.x.Cmp(&point.x)
-				if c1 >= 0 && c2 >= 0 {
+				cx1 := p1.x.Cmp(&point.x)
+				cx2 := p2.x.Cmp(&point.x)
+				if (cx1 == 0 && cy1 == 0) || (cx2 == 0 && cy2 == 0) {
+					// The point is one of the polygon vertices.
+					return true
+				} else if cx1 >= 0 && cx2 >= 0 {
 					crossings++
-				} else if c1 >=0 || c2 >= 0 {
+				} else if cx1 >= 0 || cx2 >= 0 {
 					// This is the more complicated case. The segment crosses the horizontal
 					// line vertically, but we have to figure out whether or not it's too far
 					// to the left to touch it. This requires doing some actual arithmetic,
@@ -1729,12 +1753,17 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 					var ydiff, xdiff, yd Scalar
 					ydiff.Sub(&p1.y, &p2.y)
 					xdiff.Sub(&p2.x, &p1.x)
-					yd.Sub(&p1.x, &point.x)
+					yd.Sub(&p1.y, &point.y)
 					ydiff.Inv(&ydiff)
 					yd.Mul(&yd, &ydiff)
 					yd.Mul(&yd, &xdiff)
-					yd.Add(&p1.x, &xdiff)
-					if yd.Cmp(&point.x) >= 0 {
+					yd.Add(&p1.x, &yd)
+					c := yd.Cmp(&point.x)
+					if c == 0 {
+						// The point lies on a segement of the polygon.
+						return true
+					}
+					if c > 0 {
 						crossings++
 					}
 				}
