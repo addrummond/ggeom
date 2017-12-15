@@ -1748,7 +1748,7 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 				} else if cx1 >= 0 || cx2 >= 0 {
 					// This is the more complicated case. The segment crosses the horizontal
 					// line vertically, but we have to figure out whether or not it's too far
-					// to the left to touch it. This requires doing some actual arithmetic,
+					// to the left to intersect it. This requires doing some actual arithmetic,
 					// which hopefully won't happen too often.
 					var ydiff, xdiff, yd Scalar
 					ydiff.Sub(&p1.y, &p2.y)
