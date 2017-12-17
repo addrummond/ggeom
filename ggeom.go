@@ -1774,15 +1774,23 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 	return (crossings % 2) == 1
 }
 
-/*
-func WeilerAtherton(polygon1, polygon2 *Polygon2) {
-	// Shallow copying Vec2s is ok if we don't modify them.
-	n := len(polygon1.verts) + len(polygon2.verts)
-	combined := make([]Vec2, n, n)
-	copy(combined, polygon1.verts)
-	copy(combined[len(polygon1.verts):len(combined)], polygon2.verts)
+func WeilerAtherton(subject, clipping *Polygon2) {
+	n := len(subject.verts) + len(clipping.verts)
 
-	intersections, _ := SegmentLoopIntersections(combined, []int{len(polygon1.verts)})
+	subjectInsideClipping := makeBoolArray(len(subject.verts))
+
+	for i, v := range subject.verts {
+		if PointInsidePolygon(v, clipping) {
+			setBoolArray(subjectInsideClipping, i, true)
+		}
+	}
+
+	// Shallow copying Vec2s is ok if we don't modify them.
+	combined := make([]Vec2, n, n)
+	copy(combined, subject.verts)
+	copy(combined[len(subject.verts):len(combined)], clipping.verts)
+
+	intersections, _ := SegmentLoopIntersections(combined, []int{len(subject.verts)})
 	intermediates := make([][]*Vec2, n, n)
 
 	for itn, v := range intersections {
@@ -1796,8 +1804,48 @@ func WeilerAtherton(polygon1, polygon2 *Polygon2) {
 		sort.Sort(intermediateSort{v1.x.Cmp(&v2.x), v1.y.Cmp(&v2.y), im})
 	}
 
+	// Find a vertex of 'subject' outside of 'clipping'.
+	var i int, v *Vec2
+	for i, v = range subject {
+		if PointOutsidePolygon(v, clipping) {
+			break
+		}
+	}
+
+	currentPolygon := subject
+	ioff := 0
+	for i, v := currentPolygon.verts {
+		if len(intermediates[ioff+i]) > 0 {
+
+			if ioff == 0 {
+				ioff = len(subject.verts)
+			} else {
+				ioff = 0
+			}
+		}
+	}
+	
+
+	/*
+	for itn, v := range intersections {
+		intermediates[itn.seg1] = append(intermediates[itn.seg1], v)
+		intermediates[itn.seg2] = append(intermediates[itn.seg2], v)
+	}
+
+	for i, im := range intermediates {
+		v1 := &combined[i]
+		v2 := &combined[(i+1)%len(combined)]
+		sort.Sort(intermediateSort{v1.x.Cmp(&v2.x), v1.y.Cmp(&v2.y), im})
+	}
+
+	/*
+
+	visited := makeBoolArray(len(
+
+	for i, im := range intermediates {
+		
+	}*/
 }
-*/
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
 	outline := traceOutline(vertices)
