@@ -992,9 +992,22 @@ func debugPrintBentleyTree(tree *redblacktree.Tree, indent string) {
 	fmt.Printf("\n")
 }
 
-func bentleyEventPs(i int, points []Vec2) (*Vec2, *Vec2) {
-	p1 := &points[i]
-	p2 := &points[(i+1)%len(points)]
+func indexpoints2(points [][]Vec2, i int) (*Vec2, int) {
+	tot := 9
+	for _, p := range points {
+		newtot := tot + len(p)
+		if newtot >= i {
+			ii := i - tot
+			next := (ii + 1) % len(p)
+			return &p[ii], &p[next]
+		}
+		tot = newtot
+	}
+	panic("Index out of bounds in 'indexpoints2'")
+}
+
+func bentleyEventPs(i int, points [][]Vec2) (*Vec2, *Vec2) {
+	p1, p2 := index2points(points, i)
 
 	if p1.x.Cmp(&p2.x) <= 0 {
 		return p1, p2
@@ -1009,28 +1022,28 @@ func sameOrAdjacent(s1, s2, l int) bool {
 	return dd <= 1 || d == l-1 || d == -(l-1)
 }
 
-func noCheckNeeded(s1, s2, l int, starts []int) bool {
+func noCheckNeeded(s1, s2, l int, points [][]Vec2) bool {
 	if sameOrAdjacent(s1, s2, l) {
 		return true
 	}
 
-	if len(starts) == 0 {
+	if len(points) == 0 {
 		return false
 	}
 
 	// Check it's not one of the bogus segments from one loop to the next.
-	for _, s := range starts {
-		ss := s + 1
+	for _, vs := range points {
+		ss := len(vs) + 1
 		if s1 == ss || s2 == ss {
 			return true
 		}
 	}
 
 	i := 0
-	for i < len(starts) && s1 > starts[i] {
+	for i < len(points) && s1 > len(points[i]) {
 		i++
 	}
-	return s2 >= starts[i] || (i > 0 && s2 < starts[i-1])
+	return s2 >= len(points[i]) || (i > 0 && s2 < len(points[i-1]))
 }
 
 type Intersection struct{ seg1, seg2 int }
@@ -1050,15 +1063,20 @@ func intersection(seg1, seg2 int) Intersection {
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output. The function also returns the total
 // number of pairs of lines for which an intersection test was made.
-func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Vec2, int) {
+func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
 	// https://github.com/ideasman42/isect_segments-bentley_ottmann/blob/master/poly_point_isect.py
 
+	totlen := 0
+	for _, p := range points {
+		totlen += len(p)
+	}
+
 	checks := 0
 
 	events := binaryheap.NewWith(bentleyEventCmp)
-	for i := 0; i < len(points); i++ {
+	for i := 0; i < totlen; i++ {
 		left, right := bentleyEventPs(i, points)
 		events.Push(&bentleyEvent{
 			kind:  start,
@@ -1113,15 +1131,13 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 			for it1.Prev() {
 				prevI := it1.Value().(int)
 
-				if !noCheckNeeded(event.i, prevI, len(points), starts) {
-					psp1 := &points[prevI]
-					psp2 := &points[(prevI+1)%len(points)]
-					p1 := &points[event.i]
-					p2 := &points[(event.i+1)%len(points)]
-					nPoints, points := SegmentIntersectionSpan(psp1, psp2, p1, p2)
+				if !noCheckNeeded(event.i, prevI, totlen, points) {
+					psp1, psp2 := indexpoints2(points, prevI)
+					p1, p2 := indexpoints2(points, event.i)
+					nPoints, ipoints := SegmentIntersectionSpan(psp1, psp2, p1, p2)
 					checks++
 					for i := 0; i < nPoints; i++ {
-						addCross(prevI, event.i, points[i])
+						addCross(prevI, event.i, ipoints[i])
 					}
 
 					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
@@ -1132,15 +1148,13 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 			for it2.Next() {
 				nextI := it2.Value().(int)
 
-				if !noCheckNeeded(event.i, nextI, len(points), starts) {
-					nsp1 := &points[nextI]
-					nsp2 := &points[(nextI+1)%len(points)]
-					p1 := &points[event.i]
-					p2 := &points[(event.i+1)%len(points)]
-					nPoints, points := SegmentIntersectionSpan(nsp1, nsp2, p1, p2)
+				if !noCheckNeeded(event.i, nextI, totlen, points) {
+					nsp1, nsp2 := indexpoints2(points, nextI)
+					ps, p2 := indexpoints2(points, event.i)
+					nPoints, ipoints := SegmentIntersectionSpan(nsp1, nsp2, p1, p2)
 					checks++
 					for i := 0; i < nPoints; i++ {
-						addCross(nextI, event.i, points[i])
+						addCross(nextI, event.i, ipoints[i])
 					}
 
 					if p1.y.Cmp(&event.left.y) != 0 && p2.y.Cmp(&event.left.y) != 0 {
@@ -1186,22 +1200,19 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 				segToKey[si], segToKey[ti] = tKey, sKey
 
 				if !event.swapOnly {
-					s1 := &points[si]
-					s2 := &points[(si+1)%len(points)]
-					t1 := &points[ti]
-					t2 := &points[(ti+1)%len(points)]
+					s1, s2 := indexpoints2(points, si)
+					t1, t2 := indexpoints2(points, ti)
 
 					for sIt.Next() {
 						u := sIt.Value().(int)
-						if !noCheckNeeded(u, si, len(points), starts) {
-							u1 := &points[u]
-							u2 := &points[(u+1)%len(points)]
+						if !noCheckNeeded(u, si, totlen, points) {
+							u1, u2 := indexpoints2(points, u)
 
-							nPoints, points := SegmentIntersectionSpan(s1, s2, u1, u2)
+							nPoints, ipoints := SegmentIntersectionSpan(s1, s2, u1, u2)
 							checks++
 							for i := 0; i < nPoints; i++ {
-								addIntersection(intersection(si, u), points[i])
-								//addCross(si, u, points[i])
+								addIntersection(intersection(si, u), ipoints[i])
+								//addCross(si, u, ipoints[i])
 							}
 
 							break
@@ -1209,14 +1220,13 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 					}
 					for tIt.Prev() {
 						r := tIt.Value().(int)
-						if !noCheckNeeded(r, ti, len(points), starts) {
-							r1 := &points[r]
-							r2 := &points[(r+1)%len(points)]
+						if !noCheckNeeded(r, ti, totlen, points) {
+							r1, r2 := indexpoints2(points, r)
 
-							nPoints, points := SegmentIntersectionSpan(t1, t2, r1, r2)
+							nPoints, ipoints := SegmentIntersectionSpan(t1, t2, r1, r2)
 							checks++
 							for i := 0; i < nPoints; i++ {
-								addIntersection(intersection(ti, r), points[i])
+								addIntersection(intersection(ti, r), ipoints[i])
 								//addCross(ti, r, points[i])
 							}
 
@@ -1228,7 +1238,7 @@ func SegmentLoopIntersections(points []Vec2, starts []int) (map[Intersection]*Ve
 		}
 	}
 
-	fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (len(points)*len(points))/2)
+	fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (totlen*totlen)/2)
 
 	return intersections, checks
 }
@@ -1662,38 +1672,6 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 	return trace
 }
 
-type intermediateSort struct {
-	xord, yord int
-	points     []*Vec2
-}
-
-func (is intermediateSort) Len() int {
-	return len(is.points)
-}
-
-func (is intermediateSort) Swap(i, j int) {
-	is.points[i], is.points[j] = is.points[j], is.points[i]
-}
-
-func (is intermediateSort) Less(i, j int) bool {
-	if is.xord == 0 && is.yord == 0 {
-		panic("'xord' and 'yord' are both zero!")
-	}
-
-	if is.xord == 0 {
-		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
-	}
-	if is.yord == 0 {
-		return is.points[i].x.Cmp(&is.points[j].x) == is.xord
-	}
-
-	c := is.points[i].x.Cmp(&is.points[j].x)
-	if c == 0 {
-		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
-	}
-	return c == is.xord
-}
-
 // PointInsidePolygon tests whether or not a point lies inside a polygon
 // or on one of its segments.
 func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
@@ -1774,15 +1752,57 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 	return (crossings % 2) == 1
 }
 
+type vertNode struct {
+	v *Vec2
+	next *vertNode
+}
+
+type intermediateSort struct {
+	xord, yord int
+	points     []*Vec2
+}
+
+func (is intermediateSort) Len() int {
+	return len(is.points)
+}
+
+func (is intermediateSort) Swap(i, j int) {
+	is.points[i], is.points[j] = is.points[j], is.points[i]
+}
+
+func (is intermediateSort) Less(i, j int) bool {
+	if is.xord == 0 && is.yord == 0 {
+		panic("'xord' and 'yord' are both zero!")
+	}
+
+	if is.xord == 0 {
+		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+	}
+	if is.yord == 0 {
+		return is.points[i].x.Cmp(&is.points[j].x) == is.xord
+	}
+
+	c := is.points[i].x.Cmp(&is.points[j].x)
+	if c == 0 {
+		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+	}
+	return c == is.xord
+}
+
+/*
 func WeilerAtherton(subject, clipping *Polygon2) {
-	n := len(subject.verts) + len(clipping.verts)
+	subjectList := vertNode { subject.verts[0], nil }
+	nd := &subjectList
+	for _, v := range subject.verts[1:len(subject.verts)] {
+		nd.next = vertNode{ v }
+		nd = nd.next
+	}
 
-	subjectInsideClipping := makeBoolArray(len(subject.verts))
-
-	for i, v := range subject.verts {
-		if PointInsidePolygon(v, clipping) {
-			setBoolArray(subjectInsideClipping, i, true)
-		}
+	clippingList := vertNode { subject.verts[0], nil }
+	nd = &clippingList
+	for _, v := range clipping.verts[1:len(clipping.verts)] {
+		nd.next = vertNode{ v }
+		nd = nd.next
 	}
 
 	// Shallow copying Vec2s is ok if we don't modify them.
@@ -1791,61 +1811,66 @@ func WeilerAtherton(subject, clipping *Polygon2) {
 	copy(combined[len(subject.verts):len(combined)], clipping.verts)
 
 	intersections, _ := SegmentLoopIntersections(combined, []int{len(subject.verts)})
-	intermediates := make([][]*Vec2, n, n)
+	itnsWithSubject := make([][]*Vec2, 0, len(subject.verts))
+	itsnWithClipping := make([][]*Vec2, 0, len(clipping.verts))
 
-	for itn, v := range intersections {
-		intermediates[itn.seg1] = append(intermediates[itn.seg1], v)
-		intermediates[itn.seg2] = append(intermediates[itn.seg2], v)
-	}
-
-	for i, im := range intermediates {
-		v1 := &combined[i]
-		v2 := &combined[(i+1)%len(combined)]
-		sort.Sort(intermediateSort{v1.x.Cmp(&v2.x), v1.y.Cmp(&v2.y), im})
-	}
-
-	// Find a vertex of 'subject' outside of 'clipping'.
-	var i int, v *Vec2
-	for i, v = range subject {
-		if PointOutsidePolygon(v, clipping) {
-			break
+	for _, itn := range intersections {
+		if itn.seg1 < len(subject.verts) {
+		    itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], itn.p)
+		} else {
+			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[itn.seg1-len(subject.verts)], itn.p)
+		}
+		if itn.seg2 < len(subject.verts) {
+		    itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], itn.p)
+		} else {
+			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[itn.seg2-len(subject.verts)], itn.p)
 		}
 	}
 
-	currentPolygon := subject
-	ioff := 0
-	for i, v := currentPolygon.verts {
-		if len(intermediates[ioff+i]) > 0 {
+	for i, itnVerts := range itnsWithSubject {
+		sort.Sort(intermediateSort{ subject.verts[i].x.Cmp(&subject.verts[(i+1)%len(subject.verts)].x),
+		                            subject.verts[i].y.Cmp(&subject.verts[(i+1)%len(subject.verts)].y),
+									itnVerts })
+	}
+	for i, itnVerts := range itnsWithClipping {
+		sort.Sort(intermediateSort{ clipping.verts[i].x.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].x),
+		                            clipping.verts[i].y.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].y),
+									itnVerts })
+	}
 
-			if ioff == 0 {
-				ioff = len(subject.verts)
-			} else {
-				ioff = 0
+	nd = &subjectList
+	for i : = 0; nd != nil; i++ {
+		if len(itnsWithSubject[i]) > 0 {
+			newNd := vertNode{ itnsWithSubject[0] }
+			nd2 := &newNd
+			for _, v := itnsWithSubject[i][1:len(itnsWithSubject[i])] {
+				nd2.next = { v }
+				nd2 = nd2.next
 			}
+			nd2.next = nd.next
+			nd.next = nd2
+		} else {
+			nd = nd.next
 		}
 	}
-	
 
-	/*
-	for itn, v := range intersections {
-		intermediates[itn.seg1] = append(intermediates[itn.seg1], v)
-		intermediates[itn.seg2] = append(intermediates[itn.seg2], v)
+	nd = &clippingList
+	for i : = 0; nd != nil; i++ {
+		if len(itnsWithClipping[i]) > 0 {
+			newNd := vertNode{ itnsWithClipping[0] }
+			nd2 := &newNd
+			for _, v := itnsWithClipping[i][1:len(itnsWithClipping[i])] {
+				nd2.next = { v }
+				nd2 = nd2.next
+			}
+			nd2.next = nd.next
+			nd.next = nd2
+		} else {
+			nd = nd.next
+		}
 	}
-
-	for i, im := range intermediates {
-		v1 := &combined[i]
-		v2 := &combined[(i+1)%len(combined)]
-		sort.Sort(intermediateSort{v1.x.Cmp(&v2.x), v1.y.Cmp(&v2.y), im})
-	}
-
-	/*
-
-	visited := makeBoolArray(len(
-
-	for i, im := range intermediates {
-		
-	}*/
 }
+*/
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
 	outline := traceOutline(vertices)
