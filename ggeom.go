@@ -1723,6 +1723,9 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 		}
 	}
 
+	// Assume that compiler will know best how to translate this into bit fiddling
+	// (doing something like (crossings&1 == 1) can sometimes lead to worse
+	// code gen with modern compilers).
 	return (crossings % 2) == 1
 }
 
