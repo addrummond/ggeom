@@ -992,7 +992,7 @@ func debugPrintBentleyTree(tree *redblacktree.Tree, indent string) {
 	fmt.Printf("\n")
 }
 
-func indexpoints2(points [][]Vec2, i int) (*Vec2, int) {
+func indexpoints2(points [][]Vec2, i int) (*Vec2, *Vec2) {
 	tot := 9
 	for _, p := range points {
 		newtot := tot + len(p)
@@ -1007,7 +1007,7 @@ func indexpoints2(points [][]Vec2, i int) (*Vec2, int) {
 }
 
 func bentleyEventPs(i int, points [][]Vec2) (*Vec2, *Vec2) {
-	p1, p2 := index2points(points, i)
+	p1, p2 := indexpoints2(points, i)
 
 	if p1.x.Cmp(&p2.x) <= 0 {
 		return p1, p2
@@ -1150,7 +1150,7 @@ func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 
 				if !noCheckNeeded(event.i, nextI, totlen, points) {
 					nsp1, nsp2 := indexpoints2(points, nextI)
-					ps, p2 := indexpoints2(points, event.i)
+					p1, p2 := indexpoints2(points, event.i)
 					nPoints, ipoints := SegmentIntersectionSpan(nsp1, nsp2, p1, p2)
 					checks++
 					for i := 0; i < nPoints; i++ {
@@ -1239,35 +1239,6 @@ func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 	}
 
 	fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (totlen*totlen)/2)
-
-	return intersections, checks
-}
-
-// SegmentLoopIntersectionsUsingNaiveAlgo compares every pair of segments
-// in a given segment loop to find all intersections. It returns the intersections
-// together with the total number of intersection tests that were made.
-func SegmentLoopIntersectionsUsingNaiveAlgo(points []Vec2) (map[Intersection]*Vec2, int) {
-	intersections := make(map[Intersection]*Vec2)
-
-	checks := 0
-	for si := 0; si < len(points); si++ {
-		p := &points[si]
-		for sj := si + 1; sj < len(points); sj++ {
-			if sameOrAdjacent(si, sj, len(points)) {
-				continue
-			}
-
-			q := &points[sj]
-
-			pb := &points[(si+1)%len(points)]
-			qb := &points[(sj+1)%len(points)]
-			nPoints, points := SegmentIntersectionSpan(p, pb, q, qb)
-			checks++
-			for i := 0; i < nPoints; i++ {
-				intersections[intersection(si, sj)] = points[i]
-			}
-		}
-	}
 
 	return intersections, checks
 }
@@ -1366,8 +1337,8 @@ func vertexNodeCmp(a, b interface{}) int {
 	return yc
 }
 
-func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
-	itns, _ := SegmentLoopIntersections(points, []int{})
+func HalfEdgesFromSegmentLoop(points [][]Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
+	itns, _ := SegmentLoopIntersections(points)
 
 	itnWith := make(map[int][]intersectionWith)
 	for k, p := range itns {
@@ -1392,10 +1363,14 @@ func HalfEdgesFromSegmentLoop(points []Vec2) (halfEdges []ELHalfEdge, vertices [
 	halfEdges = make([]ELHalfEdge, 0, maxNHalfEdges)
 	vertices = make([]ELVertex, 0, maxNHalfEdges)
 
+	n := 0
+	for _, p := range points {
+		n += len(p)
+	}
+
 	var prev *ELHalfEdge
-	for segi := range points {
-		p1 := &points[segi]
-		p2 := &points[(segi+1)%len(points)]
+	for segi := 0; segi < n; segi++ {
+		p1, p2 := indexpoints2(points, segi)
 
 		itns := itnWith[segi]
 		// Sort the intersections by the position on the current segment.

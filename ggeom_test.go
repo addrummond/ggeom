@@ -534,7 +534,7 @@ func TestSegmentLoopIntersections(t *testing.T) {
 		svgout.Close()
 
 		its1 := tests[i+1]
-		its2, _ := SegmentLoopIntersections(ps, []int{})
+		its2, _ := SegmentLoopIntersections([][]Vec2{ps})
 
 		fmt.Printf("TestSegmentLoopIntersections test %v\n", i/2)
 		fmt.Printf("  Expected intersections: ")
@@ -619,7 +619,7 @@ func TestElementaryCircuits(t *testing.T) {
 
 		p := Polygon2{verts: exampleLoops[i]}
 		q := Polygon2{verts: exampleLoops[i+1]}
-		hedges, vertices := HalfEdgesFromSegmentLoop(GetConvolutionCycle(&p, &q))
+		hedges, vertices := HalfEdgesFromSegmentLoop([][]Vec2{GetConvolutionCycle(&p, &q)})
 		_ = hedges
 		fmt.Printf("First vert (least) %v,%v  index=%v\n", vertices[0].P.ApproxX(), vertices[0].P.ApproxY(), vertexIndex(&vertices[0], &vertices[0]))
 		circuits := ElementaryCircuits(vertices)
@@ -714,20 +714,8 @@ func TestConvolve(t *testing.T) {
 		}
 		fmt.Printf("}\n\n")
 
-		itns, checks := SegmentLoopIntersections(cs, []int{})
-		itnsNaive, checksNaive := SegmentLoopIntersectionsUsingNaiveAlgo(cs)
-		_ = itnsNaive
-		//itns = itnsNaive
-
-		if checks >= checksNaive {
-			t.Errorf("Bad performance in 'SegmentLoopIntersections' -- used as many intersection checks or more than 'SegmentLoopIntersectionsUsingNaiveAlgo' (%v vs. %v)", checks, checksNaive)
-		} else {
-			fmt.Printf("Bentley Ottman: %v checks; naive algo: %v checks\n", checks, checksNaive)
-		}
-
-		if len(itns) != len(itnsNaive) {
-			t.Errorf("Naive segment loop intersection algo found more intersections than Bentley Ottman implementation for test %v: %v vs. %v\n", i/3, len(itnsNaive), len(itns))
-		}
+		itns, checks := SegmentLoopIntersections([][]Vec2{cs})
+		fmt.Printf("%v intersection checks performed\n", checks)
 
 		fmt.Printf("The expected (left) vs. computed conv cycle for test %v:\n", i/3)
 		l := len(cs)
@@ -769,7 +757,7 @@ func TestConvolve(t *testing.T) {
 		fmt.Printf("}\n")
 
 		crosses := make([][]Vec2, 0)
-		for _, p := range itnsNaive {
+		for _, p := range itns {
 			crosses = append(crosses, SofVec2([][]float64{{p.ApproxX(), p.ApproxY()}, {p.ApproxX(), p.ApproxY()}}))
 		}
 
