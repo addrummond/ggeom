@@ -993,7 +993,7 @@ func debugPrintBentleyTree(tree *redblacktree.Tree, indent string) {
 }
 
 func indexpoints2(points [][]Vec2, i int) (*Vec2, *Vec2) {
-	tot := 9
+	tot := 0
 	for _, p := range points {
 		newtot := tot + len(p)
 		if newtot >= i {
@@ -1357,16 +1357,15 @@ func HalfEdgesFromSegmentLoop(points [][]Vec2) (halfEdges []ELHalfEdge, vertices
 	// vertexTree -> *ELVertex
 	vertexTree := redblacktree.NewWith(vertexNodeCmp)
 
-	// In the worst case, each intersection splits two segments in two, and thus increases
-	// the number of segments by three. We also have two half edges for every edge.
-	maxNHalfEdges := (len(points) + (len(itns) * 3)) * 2
-	halfEdges = make([]ELHalfEdge, 0, maxNHalfEdges)
-	vertices = make([]ELVertex, 0, maxNHalfEdges)
-
 	n := 0
 	for _, p := range points {
 		n += len(p)
 	}
+
+	maxNHalfEdges := (n + (len(itns) * 3)) * 2
+	maxNVertices := maxNHalfEdges
+	halfEdges = make([]ELHalfEdge, 0, maxNHalfEdges)
+	vertices = make([]ELVertex, 0, maxNVertices)
 
 	var prev *ELHalfEdge
 	for segi := 0; segi < n; segi++ {
@@ -1391,7 +1390,7 @@ func HalfEdgesFromSegmentLoop(points [][]Vec2) (halfEdges []ELHalfEdge, vertices
 
 			it, _ := vertexTree.PutIfNotExists(vertexKey{p}, func() interface{} {
 				vertices = append(vertices, ELVertex{p, make([]*ELHalfEdge, 0, 2)})
-				if len(vertices) > maxNHalfEdges {
+				if len(vertices) > maxNVertices {
 					panic("Maximum length of 'vertices' exceeded in 'HalfEdgesFromSegmentLoop' [1]")
 				}
 				return &vertices[len(vertices)-1]
