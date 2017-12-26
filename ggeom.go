@@ -1732,6 +1732,7 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 type vertNode struct {
 	v *Vec2
 	next *vertNode
+	inside bool
 }
 
 type intermediateSort struct {
@@ -1764,6 +1765,39 @@ func (is intermediateSort) Less(i, j int) bool {
 		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
 	}
 	return c == is.xord
+}
+
+func Polygon2Union(subject, clipping *Polygon2) {
+	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
+	itnsWithSubject := make([][]*Vec2, 0, len(subject.verts))
+	itsnWithClipping := make([][]*Vec2, 0, len(clipping.verts))
+
+	for _, itn := range intersections {
+		if itn.seg1 < len(subject.verts) {
+		    itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], itn.p)
+		} else {
+			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[itn.seg1-len(subject.verts)], itn.p)
+		}
+		if itn.seg2 < len(subject.verts) {
+		    itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], itn.p)
+		} else {
+			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[itn.seg2-len(subject.verts)], itn.p)
+		}
+	}
+
+	subjectList := vertNode { subject.verts[0], nil, PointInsidePolygon(subject.verts[0], clipping) }
+	nd := &subjectList
+	for _, v := range subject.verts[1:len(subject.verts)] {
+		nd.next = vertNode{ v, nil, PointInsidePolygon(v, clipping) }
+		nd = nd.next
+	}
+
+	clippingList := vertNode { subject.verts[0], nil }
+	nd = &clippingList
+	for _, v := range clipping.verts[1:len(clipping.verts)] {
+		nd.next = vertNode{ v }
+		nd = nd.next
+	}
 }
 
 /*
