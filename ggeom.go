@@ -1785,11 +1785,25 @@ func Polygon2Union(subject, clipping *Polygon2) {
 		}
 	}
 
+	for i, itnVerts := range itnsWithSubject {
+		sort.Sort(intermediateSort{ subject.verts[i].x.Cmp(&subject.verts[(i+1)%len(subject.verts)].x),
+		                            subject.verts[i].y.Cmp(&subject.verts[(i+1)%len(subject.verts)].y),
+									itnVerts })
+	}
+	for i, itnVerts := range itnsWithClipping {
+		sort.Sort(intermediateSort{ clipping.verts[i].x.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].x),
+		                            clipping.verts[i].y.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].y),
+									itnVerts })
+	}
+
 	subjectList := vertNode { subject.verts[0], nil, PointInsidePolygon(subject.verts[0], clipping) }
 	nd := &subjectList
+	i := 0
 	for _, v := range subject.verts[1:len(subject.verts)] {
 		nd.next = vertNode{ v, nil, PointInsidePolygon(v, clipping) }
 		nd = nd.next
+
+		i++
 	}
 
 	clippingList := vertNode { subject.verts[0], nil }
