@@ -1730,14 +1730,19 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 }
 
 type vertNode struct {
-	v *Vec2
-	next *vertNode
+	v      *Vec2
+	next   *vertNode
 	inside bool
+	twin   *vertNode
+}
+
+type vertNodeTwins struct {
+	vn1, vn2 *vertNode
 }
 
 type intermediateSort struct {
 	xord, yord int
-	points     []*Vec2
+	points     []vertNodeTwins
 }
 
 func (is intermediateSort) Len() int {
@@ -1754,65 +1759,84 @@ func (is intermediateSort) Less(i, j int) bool {
 	}
 
 	if is.xord == 0 {
-		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+		return is.points[i].vn1.v.y.Cmp(&is.points[j].vn1.v.y) == is.yord
 	}
 	if is.yord == 0 {
-		return is.points[i].x.Cmp(&is.points[j].x) == is.xord
+		return is.points[i].vn1.v.x.Cmp(&is.points[j].vn1.v.x) == is.xord
 	}
 
-	c := is.points[i].x.Cmp(&is.points[j].x)
+	c := is.points[i].vn1.v.x.Cmp(&is.points[j].vn1.v.x)
 	if c == 0 {
-		return is.points[i].y.Cmp(&is.points[j].y) == is.yord
+		return is.points[i].vn1.v.y.Cmp(&is.points[j].vn1.v.y) == is.yord
 	}
 	return c == is.xord
 }
 
+// Polygon2Union computes the union of two 2D polygons without holes.
+// See the following for a useful description of the Weiler-Atherton algorithm.
+//
+//     http://pilat.free.fr/english/pdf/weiler.pdf
 func Polygon2Union(subject, clipping *Polygon2) {
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
-	itnsWithSubject := make([][]*Vec2, 0, len(subject.verts))
-	itsnWithClipping := make([][]*Vec2, 0, len(clipping.verts))
 
-	for _, itn := range intersections {
+	itnsWithSubject := make([][]vertNodeTwins, 0, len(subject.verts))
+	itnsWithClipping := make([][]vertNodeTwins, 0, len(clipping.verts))
+
+	for itn, p := range intersections {
 		if itn.seg1 < len(subject.verts) {
-		    itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], itn.p)
+			itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
 		} else {
-			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[itn.seg1-len(subject.verts)], itn.p)
+			i := itn.seg1 - len(subject.verts)
+			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[i], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
 		}
 		if itn.seg2 < len(subject.verts) {
-		    itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], itn.p)
+			itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
 		} else {
-			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[itn.seg2-len(subject.verts)], itn.p)
+			i := itn.seg2 - len(subject.verts)
+			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[i], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
 		}
 	}
 
 	for i, itnVerts := range itnsWithSubject {
-		sort.Sort(intermediateSort{ subject.verts[i].x.Cmp(&subject.verts[(i+1)%len(subject.verts)].x),
-		                            subject.verts[i].y.Cmp(&subject.verts[(i+1)%len(subject.verts)].y),
-									itnVerts })
+		sort.Sort(intermediateSort{subject.verts[i].x.Cmp(&subject.verts[(i+1)%len(subject.verts)].x),
+			subject.verts[i].y.Cmp(&subject.verts[(i+1)%len(subject.verts)].y),
+			itnVerts})
 	}
 	for i, itnVerts := range itnsWithClipping {
-		sort.Sort(intermediateSort{ clipping.verts[i].x.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].x),
-		                            clipping.verts[i].y.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].y),
-									itnVerts })
+		sort.Sort(intermediateSort{clipping.verts[i].x.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].x),
+			clipping.verts[i].y.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].y),
+			itnVerts})
 	}
 
-	subjectList := vertNode { subject.verts[0], nil, PointInsidePolygon(subject.verts[0], clipping) }
+	subjectList := vertNode{&subject.verts[0], nil, PointInsidePolygon(&subject.verts[0], clipping), nil}
 	nd := &subjectList
-	i := 0
-	for _, v := range subject.verts[1:len(subject.verts)] {
-		nd.next = vertNode{ v, nil, PointInsidePolygon(v, clipping) }
+	for i := range subject.verts[1:len(subject.verts)] {
+		for j := range itnsWithSubject[i] {
+			nd.next = itnsWithSubject[i][j].vn1
+			nd = nd.next
+		}
+		nd.next = &vertNode{&subject.verts[i], nil, PointInsidePolygon(&subject.verts[i], clipping), nil}
 		nd = nd.next
-
-		i++
 	}
+	nd.next = &subjectList
 
-	clippingList := vertNode { subject.verts[0], nil }
+	clippingList := vertNode{&clipping.verts[0], nil, true, nil}
 	nd = &clippingList
-	for _, v := range clipping.verts[1:len(clipping.verts)] {
-		nd.next = vertNode{ v }
+	for i := range clipping.verts[1:len(clipping.verts)] {
+		for j := range itnsWithClipping[i] {
+			nd.next = &vertNode{itnsWithClipping[i][j].vn1.v, nil, true, itnsWithClipping[i][j].vn1}
+			nd = nd.next
+			itnsWithClipping[i][j].vn1.twin = nd
+		}
+
+		nd.next = &vertNode{&clipping.verts[i], nil, true, nil}
 		nd = nd.next
 	}
+	nd.next = &clippingList
+
 }
+
+// ^ make sure to test with polygons that overlap at a point.
 
 /*
 func WeilerAtherton(subject, clipping *Polygon2) {
