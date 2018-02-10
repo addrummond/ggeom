@@ -1571,9 +1571,9 @@ func clearBoolArray(a []uint64) {
 // every intersection. We know that no hole will ever share an
 // edge with the outline. Thus, by excluding edges on the outline
 // from our subsequent search for cycles, we can reduce the size
-// of the graph and speed up the computation somewhat. (Since any
+// of the graph and speed up the computation somewhat (since any
 // cycles that we miss will be non-hole cycles which we can
-// safely ignore.)
+// safely ignore).
 // Assumes that vertex indices start at zero.
 func traceOutline(vertices []ELVertex) []*ELVertex {
 	currentVertex := &vertices[0]
