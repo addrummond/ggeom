@@ -1058,7 +1058,7 @@ func intersection(seg1, seg2 int) Intersection {
 
 // SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
 // the input segments are connected in a loop. The loop is implicitly closed
-// by segment from last point to first point. The function returns all intersections
+// by a segment from the last point to the first point. The function returns all intersections
 // except for the points in the original input (which could all be considered
 // intersection points). Points at intersection of n distinct pairs
 // of line segments appear n times in the output. The function also returns the total
