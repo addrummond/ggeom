@@ -233,7 +233,7 @@ var i = 0;
 
 function draw() {
     for (var j = 0; j < lines.length; ++j) {
-		ctx.lineWidth = 6;		
+		ctx.lineWidth = 6;
         if (j < i)
             ctx.strokeStyle = '#aaaaaa';
         else if (j == i)
@@ -272,11 +272,11 @@ function draw() {
 	ctx.moveTo(lines[i][0][0], lines[i][0][1]);
 	ctx.lineTo(lines[i][1][0], lines[i][1][1]);
 	ctx.stroke();
-	ctx.fillStyle = '#000000';	
+	ctx.fillStyle = '#000000';
 	ctx.beginPath();
 	ctx.arc(lines[i][0][0], lines[i	][0][1], 8, 0, 2*Math.PI, false);
 	ctx.fill();
-	
+
 	var incidentEdges = incident[i];
 	ctx.lineWidth = 2;
 	for (var j = 0; j < incidentEdges.length; ++j) {
