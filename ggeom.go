@@ -467,10 +467,6 @@ func Orientation(p, q, r *Vec2) int {
 // an arbitrarily chosen member of the subset of {p1,p2,q1,q2} that lies
 // along the intersection.
 func segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
-	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
-		return false, nil // the segments definitely don't intersect; won't be a degenerate case
-	}
-
 	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
 	// and http://www.cdn.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 	// and http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
@@ -498,10 +494,6 @@ func segmentsIntersectNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 }
 
 func segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2 *Vec2) (bool, *Vec2, *Vec2) {
-	if FastSegmentsDontIntersect(p1, p2, q1, q2) {
-		return false, nil, nil // the segments definitely don't intersect; won't be a degenerate case
-	}
-
 	// See https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
 	// and http://www.cdn.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 	// and http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
@@ -723,69 +715,6 @@ func SegmentIntersectionSpan(p1, p2, q1, q2 *Vec2) (int, [2]*Vec2) {
 	}
 
 	return 0, [2]*Vec2{nil, nil}
-}
-
-var pinf = math.Inf(1)
-var ninf = math.Inf(-1)
-
-// FastSegmentsDontIntersect tests whether it is possible to quickly determine that the segments
-// do not intersect using inexact arithmetic. We do a simple
-// check that rejects segment pairs that have no x or y
-// overlap. The good thing about this test is that it's easy
-// to get the reasoning about floating point precision
-// correct, since the test can be done using comparisons
-// withouot any arithmetic.
-func FastSegmentsDontIntersect(s1a, s1b, s2a, s2b *Vec2) bool {
-	if inRange(&s1a.x) && inRange(&s1a.y) && inRange(&s1b.x) && inRange(&s1b.y) && inRange(&s2a.x) && inRange(&s2a.y) && inRange(&s2b.x) && inRange(&s2b.y) {
-		f1ax := s1a.ApproxX()
-		f1ay := s1a.ApproxY()
-		f1bx := s1b.ApproxX()
-		f1by := s1b.ApproxY()
-
-		f2ax := s2a.ApproxX()
-		f2ay := s2a.ApproxY()
-		f2bx := s2b.ApproxX()
-		f2by := s2b.ApproxY()
-
-		// Assuming that math.Rat is doing it's job correctly,
-		// we can be sure that the true value of each coordinate lies between
-		// the next lowest and next highest float64.
-		f1axl := math.Nextafter(f1ax, ninf)
-		f1ayl := math.Nextafter(f1ay, ninf)
-		f1bxl := math.Nextafter(f1bx, ninf)
-		f1byl := math.Nextafter(f1by, ninf)
-
-		f1axh := math.Nextafter(f1ax, pinf)
-		f1ayh := math.Nextafter(f1ay, pinf)
-		f1bxh := math.Nextafter(f1bx, pinf)
-		f1byh := math.Nextafter(f1by, pinf)
-
-		f2axl := math.Nextafter(f2ax, ninf)
-		f2ayl := math.Nextafter(f2ay, ninf)
-		f2bxl := math.Nextafter(f2bx, ninf)
-		f2byl := math.Nextafter(f2by, ninf)
-
-		f2axh := math.Nextafter(f2ax, pinf)
-		f2ayh := math.Nextafter(f2ay, pinf)
-		f2bxh := math.Nextafter(f2bx, pinf)
-		f2byh := math.Nextafter(f2by, pinf)
-
-		s2rightofs1 := f2axl > f1axh && f2axl > f1bxh && f2bxl > f1axh && f2bxl > f1bxh
-		s1rightofs2 := f2axh < f1axl && f2axh < f1bxl && f2bxh < f1axl && f2bxh < f1bxl
-
-		if s1rightofs2 || s2rightofs1 {
-			return true
-		}
-
-		s2aboves1 := f2ayl > f1ayh && f2ayl > f1byh && f2byl > f1ayh && f2byl > f1byh
-		s1aboves2 := f2ayh < f1ayl && f2ayh < f1byl && f1byh < f1ayl && f2byh < f1byl
-
-		if s1aboves2 || s2aboves1 {
-			return true
-		}
-	}
-
-	return false
 }
 
 // NondegenerateSegmentIntersection returns the intersection point of

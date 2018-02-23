@@ -386,31 +386,6 @@ func TestIsBetweenAnticlockwise(t *testing.T) {
 	}
 }
 
-func TestFastSegmentsDontIntersect(t *testing.T) {
-	trueTests := SofSofVec2([][][]float64{
-		// Two parallel non-colinear vertical lines
-		{{-1, 1}, {-1, 0}, {1, 1}, {1, 0}},
-	})
-
-	falseTests := SofSofVec2([][][]float64{
-		// Two parallel non-colinear vertical lines with too-big coords
-		{{-1, math.MaxFloat64}, {-1, 0}, {1, math.MaxFloat64}, {1, 0}},
-		// Two parallel non-colinear diagonal lines with overlapping bounding rects
-		{{-1, -2}, {1, 2}, {-1.1, -2}, {0.9, 2}},
-	})
-
-	for _, vs := range trueTests {
-		if !FastSegmentsDontIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
-			t.Error()
-		}
-	}
-	for _, vs := range falseTests {
-		if FastSegmentsDontIntersect(&vs[0], &vs[1], &vs[2], &vs[3]) {
-			t.Error()
-		}
-	}
-}
-
 func TestNondegenerateSegmentIntersection(t *testing.T) {
 	tests := SofSofVec2([][][]float64{
 		{{-1, -1}, {1, 1}, {-1, 1}, {1, -1}, {0, 0}},            // A cross centered on zero
