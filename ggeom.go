@@ -1666,9 +1666,16 @@ type vertNodeTwins struct {
 	vn1, vn2 *vertNode
 }
 
+func makeVertNodeTwins(v *Vec2, inside bool) vertNodeTwins {
+	n1 := vertNode{v, nil, inside, nil}
+	n2 := vertNode{v, nil, inside, &n1}
+	n1.twin = &n2
+	return vertNodeTwins{&n1, &n2}
+}
+
 type intermediateSort struct {
 	xord, yord int
-	points     []vertNodeTwins
+	points     []*vertNode
 }
 
 func (is intermediateSort) Len() int {
@@ -1685,41 +1692,65 @@ func (is intermediateSort) Less(i, j int) bool {
 	}
 
 	if is.xord == 0 {
-		return is.points[i].vn1.v.y.Cmp(&is.points[j].vn1.v.y) == is.yord
+		return is.points[i].v.y.Cmp(&is.points[j].v.y) == is.yord
 	}
 	if is.yord == 0 {
-		return is.points[i].vn1.v.x.Cmp(&is.points[j].vn1.v.x) == is.xord
+		return is.points[i].v.x.Cmp(&is.points[j].v.x) == is.xord
 	}
 
-	c := is.points[i].vn1.v.x.Cmp(&is.points[j].vn1.v.x)
+	c := is.points[i].v.x.Cmp(&is.points[j].v.x)
 	if c == 0 {
-		return is.points[i].vn1.v.y.Cmp(&is.points[j].vn1.v.y) == is.yord
+		return is.points[i].v.y.Cmp(&is.points[j].v.y) == is.yord
 	}
 	return c == is.xord
 }
 
-// Polygon2Union computes the union of two 2D polygons without holes.
-// See the following for a useful description of the Weiler-Atherton algorithm.
+// Polygon2Union computes the union of two non-self-intersecting 2D polygons
+// without holes. See the following for some useful comments on the
+// Weiler-Atherton algorithm.
 //
 //     http://pilat.free.fr/english/pdf/weiler.pdf
-func Polygon2Union(subject, clipping *Polygon2) {
+//
+// The basic strategy (from the Wikipedia article):
+//
+//     1. List the vertices of the clipping-region polygon A and those of the
+//        subject polygon B.
+//     2. Label the listed vertices of subject polygon B as either inside or
+//        outside of clipping region A.
+//     3. Find all the polygon intersections and insert them into both lists,
+//        linking the lists at the intersections.
+//     4. Generate a list of "inbound" intersections – the intersections where
+//        the vector from the intersection to the subsequent vertex of subject
+//        polygon B begins inside the clipping region. [NOTE: I find this
+//        description the property of being an inbound intersection confusing.
+//        See comments in code below for my interpretation of it.]
+//     5. Follow each intersection clockwise around the linked lists until the
+//        start position is found.
+//
+// The PDF linked above has a good informal description of what to do following
+// step 4.
+//
+// TODO TODO TODO: make sure to test with polygons that overlap at a point.
+func Polygon2Union(subject, clipping *Polygon2) [][]Vec2 {
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
 
-	itnsWithSubject := make([][]vertNodeTwins, 0, len(subject.verts))
-	itnsWithClipping := make([][]vertNodeTwins, 0, len(clipping.verts))
+	itnsWithSubject := make([][]*vertNode, 0, len(subject.verts))
+	itnsWithClipping := make([][]*vertNode, 0, len(clipping.verts))
 
 	for itn, p := range intersections {
+		twins := makeVertNodeTwins(p, true)
+
 		if itn.seg1 < len(subject.verts) {
-			itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
+			itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], twins.vn1)
 		} else {
 			i := itn.seg1 - len(subject.verts)
-			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[i], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
+			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[i], twins.vn2)
 		}
 		if itn.seg2 < len(subject.verts) {
-			itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
+			itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], twins.vn1)
 		} else {
 			i := itn.seg2 - len(subject.verts)
-			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[i], vertNodeTwins{&vertNode{p, nil, true, nil}, nil})
+			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[i], twins.vn2)
 		}
 	}
 
@@ -1738,7 +1769,7 @@ func Polygon2Union(subject, clipping *Polygon2) {
 	nd := &subjectList
 	for i := range subject.verts[1:len(subject.verts)] {
 		for j := range itnsWithSubject[i] {
-			nd.next = itnsWithSubject[i][j].vn1
+			nd.next = itnsWithSubject[i][j]
 			nd = nd.next
 		}
 		nd.next = &vertNode{&subject.verts[i], nil, PointInsidePolygon(&subject.verts[i], clipping), nil}
@@ -1750,102 +1781,55 @@ func Polygon2Union(subject, clipping *Polygon2) {
 	nd = &clippingList
 	for i := range clipping.verts[1:len(clipping.verts)] {
 		for j := range itnsWithClipping[i] {
-			nd.next = &vertNode{itnsWithClipping[i][j].vn1.v, nil, true, itnsWithClipping[i][j].vn1}
+			nd.next = itnsWithClipping[i][j]
 			nd = nd.next
-			itnsWithClipping[i][j].vn1.twin = nd
 		}
 
-		nd.next = &vertNode{&clipping.verts[i], nil, true, nil}
+		nd.next = &vertNode{&clipping.verts[i], nil, PointInsidePolygon(&clipping.verts[i], subject), nil}
 		nd = nd.next
 	}
 	nd.next = &clippingList
 
-}
-
-// ^ make sure to test with polygons that overlap at a point.
-
-/*
-func WeilerAtherton(subject, clipping *Polygon2) {
-	subjectList := vertNode { subject.verts[0], nil }
-	nd := &subjectList
-	for _, v := range subject.verts[1:len(subject.verts)] {
-		nd.next = vertNode{ v }
-		nd = nd.next
-	}
-
-	clippingList := vertNode { subject.verts[0], nil }
-	nd = &clippingList
-	for _, v := range clipping.verts[1:len(clipping.verts)] {
-		nd.next = vertNode{ v }
-		nd = nd.next
-	}
-
-	// Shallow copying Vec2s is ok if we don't modify them.
-	combined := make([]Vec2, n, n)
-	copy(combined, subject.verts)
-	copy(combined[len(subject.verts):len(combined)], clipping.verts)
-
-	intersections, _ := SegmentLoopIntersections(combined, []int{len(subject.verts)})
-	itnsWithSubject := make([][]*Vec2, 0, len(subject.verts))
-	itsnWithClipping := make([][]*Vec2, 0, len(clipping.verts))
-
-	for _, itn := range intersections {
-		if itn.seg1 < len(subject.verts) {
-		    itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], itn.p)
-		} else {
-			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[itn.seg1-len(subject.verts)], itn.p)
-		}
-		if itn.seg2 < len(subject.verts) {
-		    itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], itn.p)
-		} else {
-			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[itn.seg2-len(subject.verts)], itn.p)
-		}
-	}
-
-	for i, itnVerts := range itnsWithSubject {
-		sort.Sort(intermediateSort{ subject.verts[i].x.Cmp(&subject.verts[(i+1)%len(subject.verts)].x),
-		                            subject.verts[i].y.Cmp(&subject.verts[(i+1)%len(subject.verts)].y),
-									itnVerts })
-	}
-	for i, itnVerts := range itnsWithClipping {
-		sort.Sort(intermediateSort{ clipping.verts[i].x.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].x),
-		                            clipping.verts[i].y.Cmp(&clipping.verts[(i+1)%len(clipping.verts)].y),
-									itnVerts })
-	}
-
+	// Step 4. Generate list of 'inbound' intersections. Note that a node
+	// where 'twin' is non-nil is an intersection node. If P is an intersection
+	// point and Q is the next point in the list for the subject polygon, then
+	// P is inbound iff the segment PQ overlaps the clipping polygon at a point
+	// other than P itself. This is the case iff Q is inside the clipping
+	// polygon (bearing in mind that the next point in the subject list may
+	// itself be an intersection point, and that all intersection points count
+	// as being inside the clipping polygon).
+	inbound := make([]*vertNode, 0)
 	nd = &subjectList
-	for i : = 0; nd != nil; i++ {
-		if len(itnsWithSubject[i]) > 0 {
-			newNd := vertNode{ itnsWithSubject[0] }
-			nd2 := &newNd
-			for _, v := itnsWithSubject[i][1:len(itnsWithSubject[i])] {
-				nd2.next = { v }
+	for nd.next != &subjectList {
+		if nd.twin != nil { // this is an intersection point
+			if nd.next.inside {
+				inbound = append(inbound, nd)
+			}
+		}
+		nd = nd.next
+	}
+
+	output := make([][]Vec2, 0)
+	for _, nd := range inbound {
+		points := make([]Vec2, 0)
+		nd2 := nd
+		for {
+			points = append(points, *nd2.v.Copy())
+
+			if nd2.twin != nil && !nd2.twin.inside {
+				nd2 = nd2.twin.next
+			} else {
 				nd2 = nd2.next
 			}
-			nd2.next = nd.next
-			nd.next = nd2
-		} else {
-			nd = nd.next
+
+			if nd2 == nd {
+				break
+			}
 		}
 	}
 
-	nd = &clippingList
-	for i : = 0; nd != nil; i++ {
-		if len(itnsWithClipping[i]) > 0 {
-			newNd := vertNode{ itnsWithClipping[0] }
-			nd2 := &newNd
-			for _, v := itnsWithClipping[i][1:len(itnsWithClipping[i])] {
-				nd2.next = { v }
-				nd2 = nd2.next
-			}
-			nd2.next = nd.next
-			nd.next = nd2
-		} else {
-			nd = nd.next
-		}
-	}
+	return output
 }
-*/
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
 	outline := traceOutline(vertices)
