@@ -1704,7 +1704,7 @@ func (is intermediateSort) Less(i, j int) bool {
 	return c == is.xord
 }
 
-// Polygon2Union computes the intersection of two non-self-intersecting 2D
+// Polygon2Intersection computes the intersection of two non-self-intersecting
 // polygons without holes. See the following for some useful comments on the
 // Weiler-Atherton algorithm.
 //
