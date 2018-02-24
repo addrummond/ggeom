@@ -1266,6 +1266,8 @@ func vertexNodeCmp(a, b interface{}) int {
 	return yc
 }
 
+// HalfEdgesFromSegmentLoop converts a list of points representing a segment
+// loop to a list of half edges together with a list of vertices.
 func HalfEdgesFromSegmentLoop(points [][]Vec2) (halfEdges []ELHalfEdge, vertices []ELVertex) {
 	itns, _ := SegmentLoopIntersections(points)
 

@@ -743,3 +743,27 @@ func TestConvolve(t *testing.T) {
 		debugDrawLineStrips(canvas, strips, []string{"stroke: black; stroke-width: 4; fill: none", "stroke: red; fill: red; stroke-width: 1; fill: none", "stroke: green; fill: green; stroke-width: 1"})
 	}
 }
+
+func TestPolygon2Union(t *testing.T) {
+	type test struct {
+		p1     []Vec2
+		p2     []Vec2
+		result [][]Vec2
+	}
+
+	tests := []test{
+		// Two intersecting rectangles
+		test{
+			p1: SofVec2([][]float64{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}),
+			p2: SofVec2([][]float64{{2, 2}, {0.5, 2}, {0.5, 1}, {2, 0.5}}),
+			result: SofSofVec2([][][]float64{
+				{{1, 1}, {0.5, 1}, {0.5, 0.5}, {1, 0.5}},
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		r := Polygon2Union(&Polygon2{tt.p1}, &Polygon2{tt.p2})
+		fmt.Printf("%v", r)
+	}
+}
