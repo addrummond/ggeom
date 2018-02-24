@@ -952,9 +952,22 @@ func sameOrAdjacent(s1, s2, l int) bool {
 }
 
 func noCheckNeeded(s1, s2, l int, points [][]Vec2) bool {
+	tot := 0
+	for _, p := range points {
+		newtot := tot + len(p)
+		if newtot > s1 {
+			if s2 < tot || s2 >= newtot {
+				return false
+			}
+			return sameOrAdjacent(s1-tot, s2-tot, len(p))
+		}
+		tot += len(p)
+	}
 	return sameOrAdjacent(s1, s2, l)
 }
 
+// Intersection represents an intersection of two segment in a segment loop,
+// identified via their indices.
 type Intersection struct{ seg1, seg2 int }
 
 func intersection(seg1, seg2 int) Intersection {
@@ -1147,7 +1160,7 @@ func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 		}
 	}
 
-	fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (totlen*totlen)/2)
+	//fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (totlen*totlen)/2)
 
 	return intersections, checks
 }
@@ -1717,13 +1730,15 @@ func (is intermediateSort) Less(i, j int) bool {
 // step 4.
 //
 // TODO TODO TODO: make sure to test with polygons that overlap at a point.
-func Polygon2Union(subject, clipping *Polygon2) [][]Vec2 {
+func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
 
 	itnsWithSubject := make([][]*vertNode, len(subject.verts))
 	itnsWithClipping := make([][]*vertNode, len(clipping.verts))
 
 	for itn, p := range intersections {
+		fmt.Printf("INTERSECTION AT (%v,%v) SEG %v WITH %v\n", p.ApproxX(), p.ApproxY(), itn.seg1, itn.seg2)
+
 		twins := makeVertNodeTwins(p, true)
 
 		if itn.seg1 < len(subject.verts) {
@@ -1795,8 +1810,10 @@ func Polygon2Union(subject, clipping *Polygon2) [][]Vec2 {
 		nd = nd.next
 	}
 
-	output := make([][]Vec2, 0)
+	output := make([]Polygon2, 0)
 	for _, nd := range inbound {
+		fmt.Printf("Inbound %v, %v\n", nd.v.ApproxX(), nd.v.ApproxY())
+
 		points := make([]Vec2, 0)
 		nd2 := nd
 		for {
@@ -1812,6 +1829,12 @@ func Polygon2Union(subject, clipping *Polygon2) [][]Vec2 {
 				break
 			}
 		}
+
+		if len(points) < 3 {
+			panic("Unexpected array valu in Polygon2Union")
+		}
+
+		output = append(output, Polygon2{points})
 	}
 
 	return output

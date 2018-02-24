@@ -755,7 +755,7 @@ func TestPolygon2Union(t *testing.T) {
 		// Two intersecting rectangles
 		test{
 			p1: SofVec2([][]float64{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}),
-			p2: SofVec2([][]float64{{2, 2}, {0.5, 2}, {0.5, 1}, {2, 0.5}}),
+			p2: SofVec2([][]float64{{2, 2}, {0.5, 2}, {0.5, 0.5}, {2, 0.5}}),
 			result: SofSofVec2([][][]float64{
 				{{1, 1}, {0.5, 1}, {0.5, 0.5}, {1, 0.5}},
 			}),
@@ -764,6 +764,13 @@ func TestPolygon2Union(t *testing.T) {
 
 	for _, tt := range tests {
 		r := Polygon2Union(&Polygon2{tt.p1}, &Polygon2{tt.p2})
-		fmt.Printf("%v", r)
+		fmt.Printf("RESULT:\n")
+
+		for _, polygon := range r {
+			fmt.Printf("Polygon:\n")
+			for _, vert := range polygon.verts {
+				fmt.Printf("    (%v,%v)\n", vert.ApproxX(), vert.ApproxY())
+			}
+		}
 	}
 }
