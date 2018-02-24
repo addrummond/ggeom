@@ -1731,27 +1731,29 @@ func (is intermediateSort) Less(i, j int) bool {
 //
 // TODO TODO TODO: make sure to test with polygons that overlap at a point.
 func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
+	if len(subject.verts) < 3 || len(clipping.verts) < 3 {
+		panic("Bad arguments to Polygon2Union")
+	}
+
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
 
 	itnsWithSubject := make([][]*vertNode, len(subject.verts))
 	itnsWithClipping := make([][]*vertNode, len(clipping.verts))
 
 	for itn, p := range intersections {
-		fmt.Printf("INTERSECTION AT (%v,%v) SEG %v WITH %v\n", p.ApproxX(), p.ApproxY(), itn.seg1, itn.seg2)
-
 		twins := makeVertNodeTwins(p, true)
 
 		if itn.seg1 < len(subject.verts) {
 			itnsWithSubject[itn.seg1] = append(itnsWithSubject[itn.seg1], twins.vn1)
 		} else {
 			i := itn.seg1 - len(subject.verts)
-			itnsWithClipping[itn.seg1-len(subject.verts)] = append(itnsWithClipping[i], twins.vn2)
+			itnsWithClipping[i] = append(itnsWithClipping[i], twins.vn2)
 		}
 		if itn.seg2 < len(subject.verts) {
 			itnsWithSubject[itn.seg2] = append(itnsWithSubject[itn.seg2], twins.vn1)
 		} else {
 			i := itn.seg2 - len(subject.verts)
-			itnsWithClipping[itn.seg2-len(subject.verts)] = append(itnsWithClipping[i], twins.vn2)
+			itnsWithClipping[i] = append(itnsWithClipping[i], twins.vn2)
 		}
 	}
 
@@ -1766,30 +1768,14 @@ func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
 			itnVerts})
 	}
 
-	subjectList := vertNode{&subject.verts[0], nil, PointInsidePolygon(&subject.verts[0], clipping), nil}
-	nd := &subjectList
-	for i := range subject.verts[1:len(subject.verts)] {
-		for j := range itnsWithSubject[i] {
-			nd.next = itnsWithSubject[i][j]
-			nd = nd.next
-		}
-		nd.next = &vertNode{&subject.verts[i], nil, PointInsidePolygon(&subject.verts[i], clipping), nil}
-		nd = nd.next
-	}
-	nd.next = &subjectList
+	subjectList := vertsToNodeList(subject.verts, itnsWithSubject, clipping)
+	clippingList := vertsToNodeList(clipping.verts, itnsWithClipping, subject)
+	_ = clippingList
 
-	clippingList := vertNode{&clipping.verts[0], nil, true, nil}
-	nd = &clippingList
-	for i := range clipping.verts[1:len(clipping.verts)] {
-		for j := range itnsWithClipping[i] {
-			nd.next = itnsWithClipping[i][j]
-			nd = nd.next
-		}
-
-		nd.next = &vertNode{&clipping.verts[i], nil, PointInsidePolygon(&clipping.verts[i], subject), nil}
-		nd = nd.next
-	}
-	nd.next = &clippingList
+	//fmt.Printf("Subject list:\n")
+	//debugPrintVertNodeList(subjectList)
+	//fmt.Printf("Clipping list:\n")
+	//debugPrintVertNodeList(clippingList)
 
 	// Step 4. Generate list of 'inbound' intersections. Note that a node
 	// where 'twin' is non-nil is an intersection node. If P is an intersection
@@ -1800,44 +1786,79 @@ func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
 	// itself be an intersection point, and that all intersection points count
 	// as being inside the clipping polygon).
 	inbound := make([]*vertNode, 0)
-	nd = &subjectList
-	for nd.next != &subjectList {
+	nd := subjectList
+	for {
 		if nd.twin != nil { // this is an intersection point
 			if nd.next.inside {
 				inbound = append(inbound, nd)
 			}
 		}
 		nd = nd.next
+		if nd == subjectList {
+			break
+		}
 	}
 
 	output := make([]Polygon2, 0)
 	for _, nd := range inbound {
-		fmt.Printf("Inbound %v, %v\n", nd.v.ApproxX(), nd.v.ApproxY())
-
 		points := make([]Vec2, 0)
 		nd2 := nd
 		for {
 			points = append(points, *nd2.v.Copy())
 
-			if nd2.twin != nil && !nd2.twin.inside {
+			if nd2.twin != nil && !nd2.next.inside {
 				nd2 = nd2.twin.next
 			} else {
 				nd2 = nd2.next
 			}
 
-			if nd2 == nd {
+			if nd2 == nd || nd2 == nd.twin {
 				break
 			}
 		}
 
 		if len(points) < 3 {
-			panic("Unexpected array valu in Polygon2Union")
+			panic("Unexpected array value in Polygon2Union")
 		}
 
 		output = append(output, Polygon2{points})
 	}
 
 	return output
+}
+
+func vertsToNodeList(verts []Vec2, itns [][]*vertNode, polygon *Polygon2) *vertNode {
+	var list *vertNode
+	nd := &list
+	for i := 0; i < len(verts); i++ {
+		*nd = &vertNode{&verts[i], nil, PointInsidePolygon(&verts[i], polygon), nil}
+		nd = &((*nd).next)
+		for j := range itns[i] {
+			*nd = itns[i][j]
+			nd = &((*nd).next)
+		}
+	}
+	if list != nil {
+		*nd = list
+	}
+
+	return list
+}
+
+func debugPrintVertNodeList(list *vertNode) {
+	nd := list
+	for {
+		fmt.Printf("    (%v,%v) %v", nd.v.ApproxX(), nd.v.ApproxY(), nd.inside)
+		if nd.twin != nil {
+			fmt.Printf(" *I")
+		}
+		fmt.Printf("\n")
+
+		nd = nd.next
+		if nd == list {
+			break
+		}
+	}
 }
 
 func ElementaryCircuits(vertices []ELVertex) [][]*ELVertex {
