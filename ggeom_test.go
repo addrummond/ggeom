@@ -744,7 +744,7 @@ func TestConvolve(t *testing.T) {
 	}
 }
 
-func TestPolygon2Union(t *testing.T) {
+func TestPolygon2Intersection(t *testing.T) {
 	type test struct {
 		p1     []Vec2
 		p2     []Vec2
@@ -763,8 +763,8 @@ func TestPolygon2Union(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		r := Polygon2Union(&Polygon2{tt.p1}, &Polygon2{tt.p2})
-		fmt.Printf("RESULT:\n")
+		r := Polygon2Intersection(&Polygon2{tt.p1}, &Polygon2{tt.p2})
+		fmt.Printf("Result:\n")
 
 		for _, polygon := range r {
 			fmt.Printf("Polygon:\n")

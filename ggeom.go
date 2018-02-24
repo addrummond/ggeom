@@ -1704,8 +1704,8 @@ func (is intermediateSort) Less(i, j int) bool {
 	return c == is.xord
 }
 
-// Polygon2Union computes the union of two non-self-intersecting 2D polygons
-// without holes. See the following for some useful comments on the
+// Polygon2Union computes the intersection of two non-self-intersecting 2D
+// polygons without holes. See the following for some useful comments on the
 // Weiler-Atherton algorithm.
 //
 //     http://pilat.free.fr/english/pdf/weiler.pdf
@@ -1730,9 +1730,9 @@ func (is intermediateSort) Less(i, j int) bool {
 // step 4.
 //
 // TODO TODO TODO: make sure to test with polygons that overlap at a point.
-func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
+func Polygon2Intersection(subject, clipping *Polygon2) []Polygon2 {
 	if len(subject.verts) < 3 || len(clipping.verts) < 3 {
-		panic("Bad arguments to Polygon2Union")
+		panic("Bad arguments to Polygon2Intersection")
 	}
 
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
@@ -1818,7 +1818,7 @@ func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
 		}
 
 		if len(points) < 3 {
-			panic("Unexpected array value in Polygon2Union")
+			panic("Unexpected array value in Polygon2Intersection")
 		}
 
 		output = append(output, Polygon2{points})
