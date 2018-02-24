@@ -1590,12 +1590,14 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 
 		c := p1.y.Cmp(&p2.y)
 		if c == 0 {
-			// This segment of the polygon is horizontal. If the point lies on the segment,
-			// return true. Otherwise, even if the segment extending from the point goes along
-			// the polygon intersection, we don't count this as a crossing. Consider e.g. the
-			// following, where the point to be tested is marked by '.'. If '.' has the same
-			// y coordinate as the horizontal segment labeled S, then if S adds a crossing
-			// to the counter, the total number of crossings is even, giving the wrong result.
+			// This segment of the polygon is horizontal. If the point lies on
+			// the segment, return true. Otherwise, even if the segment
+			// extending from the point lines along the horizontal polygon
+			// segment, we don't count this as a crossing. Consider e.g. the
+			// following, where the point to be tested is marked by '.'. If '.'
+			// has the same y coordinate as the horizontal segment labeled S,
+			// then if S adds a crossing to the counter, the total number of
+			// crossings is even, giving the wrong result.
 			//
 			//    ___        ___
 			//    |  \      /  |
@@ -1617,8 +1619,9 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 			cy2 := p2.y.Cmp(&point.y)
 			if cy1 == 0 || cy2 == 0 || (cy1 == c && cy2 == -c) {
 				// The polygon segment crosses the horizontal line vertically.
-				// If both points overlap horizontally with the horizontal segment,
-				// the we know immediately that there's an intersection.
+				// If both points overlap horizontally with the horizontal
+				// segment, then we know immediately that there's an
+				// intersection.
 				cx1 := p1.x.Cmp(&point.x)
 				cx2 := p2.x.Cmp(&point.x)
 				if (cx1 == 0 && cy1 == 0) || (cx2 == 0 && cy2 == 0) {
@@ -1627,10 +1630,11 @@ func PointInsidePolygon(point *Vec2, polygon *Polygon2) bool {
 				} else if cx1 >= 0 && cx2 >= 0 {
 					crossings++
 				} else if cx1 >= 0 || cx2 >= 0 {
-					// This is the more complicated case. The segment crosses the horizontal
-					// line vertically, but we have to figure out whether or not it's too far
-					// to the left to intersect it. This requires doing some actual arithmetic,
-					// which hopefully won't happen too often.
+					// This is the more complicated case. The segment crosses
+					// the horizontal line vertically, but we have to figure out
+					// whether or not it's too far to the left to intersect it.
+					// This requires doing some actual arithmetic, which
+					// hopefully won't happen too often.
 					var ydiff, xdiff, yd Scalar
 					ydiff.Sub(&p1.y, &p2.y)
 					xdiff.Sub(&p2.x, &p1.x)
