@@ -1848,9 +1848,7 @@ func vertsToNodeList(verts []Vec2, itns [][]*vertNode, polygon *Polygon2) *vertN
 			nd = &((*nd).next)
 		}
 	}
-	if list != nil {
-		*nd = list
-	}
+	*nd = list
 
 	return list
 }
