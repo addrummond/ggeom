@@ -925,7 +925,7 @@ func indexpoints2(points [][]Vec2, i int) (*Vec2, *Vec2) {
 	tot := 0
 	for _, p := range points {
 		newtot := tot + len(p)
-		if newtot >= i {
+		if newtot > i {
 			ii := i - tot
 			next := (ii + 1) % len(p)
 			return &p[ii], &p[next]
@@ -952,27 +952,7 @@ func sameOrAdjacent(s1, s2, l int) bool {
 }
 
 func noCheckNeeded(s1, s2, l int, points [][]Vec2) bool {
-	if sameOrAdjacent(s1, s2, l) {
-		return true
-	}
-
-	if len(points) == 0 {
-		return false
-	}
-
-	// Check it's not one of the bogus segments from one loop to the next.
-	for _, vs := range points {
-		ss := len(vs) + 1
-		if s1 == ss || s2 == ss {
-			return true
-		}
-	}
-
-	i := 0
-	for i < len(points) && s1 > len(points[i]) {
-		i++
-	}
-	return s2 >= len(points[i]) || (i > 0 && s2 < len(points[i-1]))
+	return sameOrAdjacent(s1, s2, l)
 }
 
 type Intersection struct{ seg1, seg2 int }
@@ -1740,8 +1720,8 @@ func (is intermediateSort) Less(i, j int) bool {
 func Polygon2Union(subject, clipping *Polygon2) [][]Vec2 {
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
 
-	itnsWithSubject := make([][]*vertNode, 0, len(subject.verts))
-	itnsWithClipping := make([][]*vertNode, 0, len(clipping.verts))
+	itnsWithSubject := make([][]*vertNode, len(subject.verts))
+	itnsWithClipping := make([][]*vertNode, len(clipping.verts))
 
 	for itn, p := range intersections {
 		twins := makeVertNodeTwins(p, true)
