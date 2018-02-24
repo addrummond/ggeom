@@ -1704,9 +1704,21 @@ func (is intermediateSort) Less(i, j int) bool {
 	return c == is.xord
 }
 
+// Polygon2Union computes the intersection of two non-self-intersecting
+// polygons without holes.
+func Polygon2Union(subject, clipping *Polygon2) []Polygon2 {
+	return weilerAtherton(subject, clipping, false)
+}
+
 // Polygon2Intersection computes the intersection of two non-self-intersecting
-// polygons without holes. See the following for some useful comments on the
-// Weiler-Atherton algorithm.
+// polygons without holes.
+func Polygon2Intersection(subject, clipping *Polygon2) []Polygon2 {
+	return weilerAtherton(subject, clipping, true)
+}
+
+// See the following for some useful comments on the Weiler-Atherton algorithm,
+// which can be used to compute the intersection or union of two
+// non-self-intersecting polygons without holes.
 //
 //     http://pilat.free.fr/english/pdf/weiler.pdf
 //
@@ -1726,11 +1738,9 @@ func (is intermediateSort) Less(i, j int) bool {
 //     5. Follow each intersection clockwise around the linked lists until the
 //        start position is found.
 //
-// The PDF linked above has a good informal description of what to do following
-// step 4.
-//
-// TODO TODO TODO: make sure to test with polygons that overlap at a point.
-func Polygon2Intersection(subject, clipping *Polygon2) []Polygon2 {
+// The PDF linked above has a good informal description of step 5. Note that
+// this code goes counterclockwise rather than clockwise.
+func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 	if len(subject.verts) < 3 || len(clipping.verts) < 3 {
 		panic("Bad arguments to Polygon2Intersection")
 	}
@@ -1789,7 +1799,7 @@ func Polygon2Intersection(subject, clipping *Polygon2) []Polygon2 {
 	nd := subjectList
 	for {
 		if nd.twin != nil { // this is an intersection point
-			if nd.next.inside {
+			if nd.next.inside == exiting {
 				inbound = append(inbound, nd)
 			}
 		}
@@ -1806,7 +1816,7 @@ func Polygon2Intersection(subject, clipping *Polygon2) []Polygon2 {
 		for {
 			points = append(points, *nd2.v.Copy())
 
-			if nd2.twin != nil && !nd2.next.inside {
+			if nd2.twin != nil && nd2.next.inside != exiting {
 				nd2 = nd2.twin.next
 			} else {
 				nd2 = nd2.next
