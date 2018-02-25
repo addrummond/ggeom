@@ -651,7 +651,7 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 	}
 }
 
-// NonFunkySegment intersection returns a boolean indicating whether or
+// NonFunkySegmentIntersection returns a boolean indicating whether or
 // not the two segments have a non-funky intersection, and a point
 // which is the intersection point if they do, or (0,0) otherwise.
 //
@@ -978,13 +978,14 @@ func intersection(seg1, seg2 int) Intersection {
 	return Intersection{seg2, seg1}
 }
 
-// SegmentLoopIntersections implements the Bentley Ottmann algorithm for the case where
-// the input segments are connected in a loop. The loop is implicitly closed
-// by a segment from the last point to the first point. The function returns all intersections
-// except for the points in the original input (which could all be considered
-// intersection points). Points at intersection of n distinct pairs
-// of line segments appear n times in the output. The function also returns the total
-// number of pairs of lines for which an intersection test was made.
+// SegmentLoopIntersections implements the Bentley Ottmann algorithm for a set
+// of loops. A loop is an slice of points interpreted as a list of line
+// segments. The loop is implicitly closed  by a segment from the last point to
+// the first. The function returns all intersections except for the points in
+// the original input (which could all be considered intersection points).
+// Points at intersection of n distinct pairs of line segments appear n times
+// in the output. The function also returns the total number of pairs of lines
+// for which an intersection test was made.
 func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 	// Some useful pseudocode at https://www.hackerearth.com/practice/math/geometry/line-intersection-using-bentley-ottmann-algorithm/tutorial/
 	// http://jeffe.cs.illinois.edu/teaching/373/notes/x06-sweepline.pdf
@@ -1746,6 +1747,7 @@ func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 	}
 
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
+	fmt.Printf("N intersections %v\n", intersections)
 
 	itnsWithSubject := make([][]*vertNode, len(subject.verts))
 	itnsWithClipping := make([][]*vertNode, len(clipping.verts))
@@ -1808,6 +1810,7 @@ func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 			break
 		}
 	}
+	fmt.Printf("N inbound %v\n", len(inbound))
 
 	output := make([]Polygon2, 0)
 	for _, nd := range inbound {

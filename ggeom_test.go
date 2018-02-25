@@ -760,6 +760,14 @@ func TestPolygon2Intersection(t *testing.T) {
 				{{1, 1}, {0.5, 1}, {0.5, 0.5}, {1, 0.5}},
 			}),
 		},
+		// Two rectangles that intersect at a single point.
+		test{
+			p1: SofVec2([][]float64{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}),
+			p2: SofVec2([][]float64{{2, 2}, {1, 2}, {1, 1}, {2, 1}}),
+			result: SofSofVec2([][][]float64{
+				{{1, 1}, {0.5, 1}, {0.5, 0.5}, {1, 0.5}},
+			}),
+		},
 	}
 
 	for _, tt := range tests {
