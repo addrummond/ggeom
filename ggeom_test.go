@@ -671,6 +671,11 @@ func TestPointInsidePolygon(t *testing.T) {
 	}
 }
 
+func f(v *Scalar) float64 {
+	r, _ := v.Float64()
+	return r
+}
+
 func TestConvolve(t *testing.T) {
 	for i := 0; i < len(exampleLoops); i += 3 {
 		p := Polygon2{verts: exampleLoops[i]}

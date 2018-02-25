@@ -657,9 +657,8 @@ func GetSegmentIntersectionInfo(p1, p2, q1, q2 *Vec2) SegmentIntersectionInfo {
 //
 // An intersection is non-funky iff:
 //
-//     (i)   There is a unique intersection point,
-//     (ii)  the segments are not parallel, and
-//     (iii) the intersection point is not one of the segments' vertices.
+//     (i)   There is a unique intersection point and
+//     (ii)  the intersection point is not one of the segments' vertices.
 func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	var v Vec2
 
@@ -680,6 +679,14 @@ func NonFunkySegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	return false, &v
 }
 
+// SegmentIntersection determines whether or not two line segments intersect,
+// and returns an intersection point if applicable. If the segments p1->p2
+// and q1->q2 intersect (that is, if there exists at least one point that lies
+// on both segments, inclusive of their defining points) then the first return
+// value is true and the second return value is an intersection point.
+// Otherwise, the first return value is false and the second return value is
+// the point (0,0). In cases where there is more than one intersection point,
+// the intersection point returned is chosen arbitrarily.
 func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
 	if adj {
@@ -698,28 +705,10 @@ func SegmentIntersection(p1, p2, q1, q2 *Vec2) (bool, *Vec2) {
 	return false, nil
 }
 
-func SegmentIntersectionSpan(p1, p2, q1, q2 *Vec2) (int, [2]*Vec2) {
-	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
-	if adj {
-		return 1, [2]*Vec2{pt, nil}
-	}
-
-	intersect, degeneratePt1, degeneratePt2 := segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2)
-	if intersect {
-		if degeneratePt1 != nil {
-			return 2, [2]*Vec2{degeneratePt1, degeneratePt2}
-			//return 1, [2]*Vec2{degeneratePt1, nil}
-		}
-
-		return 1, [2]*Vec2{NondegenerateSegmentIntersection(p1, p2, q1, q2), nil}
-	}
-
-	return 0, [2]*Vec2{nil, nil}
-}
-
-// NondegenerateSegmentIntersection returns the intersection point of
-// two segements on the assumption that the segments intersect at a
-// single point and are not parallel.
+// NondegenerateSegmentIntersection returns the intersection point of two
+// segments on the assumption that the segments intersect at a single point and
+// are not parallel. The return value is meaningless if these preconditions are
+// not met.
 func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	var x, y, m, n, tmp Scalar
 
@@ -730,7 +719,8 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 		// points on the line.
 		x.Set(&s1a.x)
 
-		// Second line cannot be vertical as we are handling non-degenerate cases only.
+		// Second line cannot be vertical as we are handling non-degenerate
+		// cases only.
 		y.Sub(&s2b.y, &s2a.y)
 		n.Sub(&s2b.x, &s2a.x)
 		n.Inv(&n)
@@ -760,7 +750,8 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 		// The line is vertical.
 		x.Set(&s2a.x)
 
-		// First line cannot be vertical as we are handling non-degenerate cases only.
+		// First line cannot be vertical as we are handling non-degenerate
+		// cases only.
 		var c Scalar
 		c.Mul(&m, &s1a.x)
 		c.Sub(&s1a.y, &c)
@@ -810,9 +801,23 @@ func NondegenerateSegmentIntersection(s1a, s1b, s2a, s2b *Vec2) *Vec2 {
 	return &Vec2{x, y}
 }
 
-func f(v *Scalar) float64 {
-	r, _ := v.Float64()
-	return r
+func SegmentIntersectionSpan(p1, p2, q1, q2 *Vec2) (int, [2]*Vec2) {
+	adj, pt := segmentsAdjacent(p1, p2, q1, q2)
+	if adj {
+		return 1, [2]*Vec2{pt, nil}
+	}
+
+	intersect, degeneratePt1, degeneratePt2 := segmentsIntersectSpanNoAdjacencyCheck(p1, p2, q1, q2)
+	if intersect {
+		if degeneratePt1 != nil {
+			return 2, [2]*Vec2{degeneratePt1, degeneratePt2}
+			//return 1, [2]*Vec2{degeneratePt1, nil}
+		}
+
+		return 1, [2]*Vec2{NondegenerateSegmentIntersection(p1, p2, q1, q2), nil}
+	}
+
+	return 0, [2]*Vec2{nil, nil}
 }
 
 // SegmentYValueAtX returns min(sa.y, sb.y) if line is vertical.
