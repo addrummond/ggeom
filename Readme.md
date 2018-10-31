@@ -14,6 +14,6 @@ Algorithms implemented so far:
 
 * The elementary circuits of the convolution of one 2D polygon with another. (This is the computation at the heart of Wein's algorithm for computing offset polygons.)
 
-This code is released under a BSD license. CGAL has a more battle-tested [implementation](https://doc.cgal.org/latest/Straight_skeleton_2/index.html) of poylgon offsetting, but it's GPL licensed.
+This code is released under a two-clause BSD license. CGAL has a more battle-tested [implementation](https://doc.cgal.org/latest/Straight_skeleton_2/index.html) of poylgon offsetting, but it's GPL licensed.
 
 Scalar values are represented as `big.Rat` values. By redefining the `Scalar` typedef in `ggeom.go`, you can use any other type which follows the same API.
