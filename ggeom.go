@@ -11,8 +11,6 @@ import (
 	"github.com/emirpasic/gods/trees/binaryheap"
 )
 
-var _ = fmt.Printf
-
 const debug = true
 
 type Scalar = big.Rat
@@ -306,7 +304,6 @@ func getConvolutionCycle(labs map[label]bool, p *Polygon2, pstart int, q *Polygo
 			pseg.Sub(p2, p1)
 
 			if IsBetweenAnticlockwise(&qseg1, &pseg, &qseg2) && !labs[label{i, ip1, j, -1}] {
-				//fmt.Printf("Starting next convolution cycle at %v vert of p at (%v,%v)\n", pstart, p.verts[i].ApproxX(), p.verts[i].ApproxY())
 				cs = appendSingleConvolutionCycle(labs, cs, p, i, q, j)
 			}
 		}
@@ -347,8 +344,6 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 		piTOpiplus1.Sub(&p.verts[ip1], &p.verts[i])
 		qjminus1TOqj.Sub(&q.verts[j], &q.verts[jm1])
 		qjTOqjplus1.Sub(&q.verts[jp1], &q.verts[j])
-		//fmt.Printf("On P=%v, Q=%v\n", i, j)
-		//fmt.Printf("Is between [Q%v,P%v,Q%v] cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", jm1, i, j, incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 
 		// Modified from the Wein paper according to the similar but
 		// slightly different pseudocode listing on p.29 of
@@ -366,13 +361,11 @@ func appendSingleConvolutionCycle(labs map[label]bool, points []Vec2, p *Polygon
 
 		var s Vec2
 		if incp {
-			//fmt.Printf("===> cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incp, qjminus1TOqj.ApproxX(), qjminus1TOqj.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY())
 			s.Add(&p.verts[ip1], &q.verts[j])
 			labs[label{i, ip1, j, -1}] = true
 			i = ip1
 			points = append(points, s)
 		} else {
-			//fmt.Printf("===> Q cc=%v (%v,%v),  (%v,%v)  (%v,%v)\n", incq, piminus1TOpi.ApproxX(), piminus1TOpi.ApproxY(), qjTOqjplus1.ApproxX(), qjTOqjplus1.ApproxY(), piTOpiplus1.ApproxX(), piTOpiplus1.ApproxY())
 			s.Add(&p.verts[i], &q.verts[jp1])
 			labs[label{i, -1, j, jp1}] = true
 			j = jp1
@@ -1166,8 +1159,6 @@ func SegmentLoopIntersections(points [][]Vec2) (map[Intersection]*Vec2, int) {
 		}
 	}
 
-	//fmt.Printf("Used %v checks compared to %v for naive algo\n", checks, (totlen*totlen)/2)
-
 	return intersections, checks
 }
 
@@ -1239,16 +1230,6 @@ func sameDirection(p1, p2, q1, q2 *Vec2) bool {
 	qyd := q1.x.Cmp(&q2.y)
 
 	return pxd == qxd && pyd == qyd
-}
-
-// sometimes useful for debugging 'HalfEdgesFromSegmentLoop'
-func checkVertDuplicates(verts []ELVertex, callsite int) {
-	fmt.Printf("Added [%v] (%v, %v)\n", callsite, verts[len(verts)-1].P.ApproxX(), verts[len(verts)-1].P.ApproxY())
-	for i := 0; i < len(verts)-2; i++ {
-		if verts[i].P.Eq(verts[len(verts)-1].P) {
-			panic("Duplicate added!")
-		}
-	}
 }
 
 type vertexKey struct {
@@ -1513,8 +1494,6 @@ func traceOutline(vertices []ELVertex) []*ELVertex {
 	visited := makeBoolArray(len(vertices))
 
 	for i := 0; prevVertex == nil || currentVertex != &vertices[0]; i++ {
-		fmt.Printf("LOOP WITH %v\n", vertexIndex(&vertices[0], currentVertex))
-
 		if i > len(vertices) {
 			panic("Too many loop iterations in 'TraceOutine'")
 		}
@@ -1752,7 +1731,6 @@ func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 	}
 
 	intersections, _ := SegmentLoopIntersections([][]Vec2{subject.verts, clipping.verts})
-	fmt.Printf("N intersections %v\n", intersections)
 
 	itnsWithSubject := make([][]*vertNode, len(subject.verts))
 	itnsWithClipping := make([][]*vertNode, len(clipping.verts))
@@ -1789,11 +1767,6 @@ func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 	clippingList := vertsToNodeList(clipping.verts, itnsWithClipping, subject)
 	_ = clippingList
 
-	//fmt.Printf("Subject list:\n")
-	//debugPrintVertNodeList(subjectList)
-	//fmt.Printf("Clipping list:\n")
-	//debugPrintVertNodeList(clippingList)
-
 	// Step 4. Generate list of 'inbound' intersections. Note that a node
 	// where 'twin' is non-nil is an intersection node. If P is an intersection
 	// point and Q is the next point in the list for the subject polygon, then
@@ -1815,7 +1788,6 @@ func weilerAtherton(subject, clipping *Polygon2, exiting bool) []Polygon2 {
 			break
 		}
 	}
-	fmt.Printf("N inbound %v\n", len(inbound))
 
 	output := make([]Polygon2, 0)
 	for _, nd := range inbound {
